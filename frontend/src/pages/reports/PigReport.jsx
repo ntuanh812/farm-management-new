@@ -234,6 +234,6 @@ export default function PigReport() {
           </Form.Item>
         </Form>
       </Modal>
-    </div> {/* .reports-page */}
+    </div> 
   )
 }

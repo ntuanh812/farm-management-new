@@ -224,7 +224,7 @@ export default function VetReview() {
           </Form.Item>
         </Form>
       </Modal>
-      </div> {/* .reports-page__body */}
-    </div>  {/* .reports-page */}
+      </div> 
+    </div>  
   )
 }
