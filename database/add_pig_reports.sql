@@ -1,0 +1,33 @@
+-- ============================================================
+-- THÊM BẢNG pig_reports (báo cáo lợn bệnh từ nhân viên)
+-- Chạy file này sau khi đã import schema.sql + seed.sql
+-- ============================================================
+
+USE farmpro_pig;
+
+CREATE TABLE IF NOT EXISTS pig_reports (
+  id            INT PRIMARY KEY AUTO_INCREMENT,
+  pig_id        VARCHAR(20)  NOT NULL COMMENT 'Mã lợn',
+  barn_id       INT          NOT NULL COMMENT 'Chuồng',
+  reporter_id   INT          NOT NULL COMMENT 'Nhân viên báo cáo',
+  description   TEXT         NOT NULL COMMENT 'Mô tả triệu chứng',
+  images        JSON                  COMMENT 'Danh sách đường dẫn ảnh',
+  status        ENUM('cho_xu_ly','dang_xu_ly','da_xu_ly') DEFAULT 'cho_xu_ly',
+  vet_note      TEXT                  COMMENT 'Ghi chú phản hồi của bác sĩ',
+  vet_doctor_id INT                   COMMENT 'Bác sĩ xử lý',
+  created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (barn_id)       REFERENCES barns(id)      ON DELETE CASCADE,
+  FOREIGN KEY (reporter_id)   REFERENCES employees(id)  ON DELETE CASCADE,
+  FOREIGN KEY (vet_doctor_id) REFERENCES employees(id)  ON DELETE SET NULL,
+
+  INDEX idx_status    (status),
+  INDEX idx_reporter  (reporter_id),
+  INDEX idx_barn      (barn_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Dữ liệu mẫu
+INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images, status) VALUES
+('PIG001', 1, 2, 'Lợn bỏ ăn từ sáng, đi loạng choạng, da có vết đỏ ở bụng', '[]', 'cho_xu_ly'),
+('PIG005', 2, 3, 'Tiêu chảy nặng, phân lỏng màu vàng, lợn gầy rõ rệt', '[]', 'dang_xu_ly');
