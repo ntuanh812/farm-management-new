@@ -24,7 +24,7 @@ const { Option } = Select;
 // =========================================================
 // LABELS
 // =========================================================
-const purposeLabels = {
+const barnTypeLabels = {
   nai: "Chuồng nái",
   duc: "Chuồng đực",
   con: "Chuồng con",
@@ -32,8 +32,19 @@ const purposeLabels = {
   cach_ly: "Cách ly",
 };
 
+const barnTypeColors = {
+  nai: "magenta",
+  duc: "red",
+  con: "gold",
+  thit: "green",
+  cach_ly: "volcano",
+};
+
 export default function PigBarns() {
 
+  // =========================================================
+  // STATES
+  // =========================================================
   const [barns, setBarns] = useState([]);
 
   const [open, setOpen] = useState(false);
@@ -46,10 +57,8 @@ export default function PigBarns() {
 
   const [form] = Form.useForm();
 
-  // =========================================================
-  // TOKEN
-  // =========================================================
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token");
 
   // =========================================================
   // FETCH BARNS
@@ -64,39 +73,33 @@ export default function PigBarns() {
         "http://localhost:3000/api/barns",
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization:
+              `Bearer ${token}`,
           },
         }
       );
 
-      console.log("BARNS:", res.data);
-
       const barnsData =
-        res.data?.data ||
-        res.data?.barns ||
-        (Array.isArray(res.data)
-          ? res.data
-          : []);
+        res.data?.data || [];
 
-      setBarns(barnsData);
+      setBarns(
+        Array.isArray(barnsData)
+          ? barnsData
+          : []
+      );
 
     } catch (err) {
 
       console.error(err);
 
-      if (err.response?.status === 401) {
-        message.error(
-          "Phiên đăng nhập hết hạn"
-        );
-      } else {
-        message.error(
-          "Không tải được danh sách chuồng"
-        );
-      }
+      message.error(
+        "Không tải được danh sách chuồng"
+      );
 
       setBarns([]);
 
     } finally {
+
       setLoading(false);
     }
   };
@@ -106,6 +109,24 @@ export default function PigBarns() {
   }, []);
 
   // =========================================================
+  // OPEN CREATE
+  // =========================================================
+  const openCreateModal = () => {
+
+    setEditingBarn(null);
+
+    form.resetFields();
+
+    form.setFieldsValue({
+      barn_type: "thit",
+      status: "active",
+      capacity: 1,
+    });
+
+    setOpen(true);
+  };
+
+  // =========================================================
   // EDIT
   // =========================================================
   const handleEdit = (barn) => {
@@ -113,9 +134,12 @@ export default function PigBarns() {
     setEditingBarn(barn);
 
     form.setFieldsValue({
+      code: barn.code,
       name: barn.name,
-      purpose: barn.purpose,
+      barn_type: barn.barn_type,
       capacity: barn.capacity,
+      status: barn.status,
+      note: barn.note,
     });
 
     setOpen(true);
@@ -132,7 +156,8 @@ export default function PigBarns() {
         `http://localhost:3000/api/barns/${barn.id}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization:
+              `Bearer ${token}`,
           },
         }
       );
@@ -147,18 +172,10 @@ export default function PigBarns() {
 
       console.error(err);
 
-      if (err.response?.status === 400) {
-
-        message.error(
-          err.response.data.message
-        );
-
-      } else {
-
-        message.error(
-          "Không thể xóa chuồng"
-        );
-      }
+      message.error(
+        err.response?.data?.message ||
+        "Không thể xóa chuồng"
+      );
     }
   };
 
@@ -172,7 +189,9 @@ export default function PigBarns() {
       const values =
         await form.validateFields();
 
-      // ===== UPDATE =====
+      // =====================================================
+      // UPDATE
+      // =====================================================
       if (editingBarn) {
 
         await axios.put(
@@ -180,7 +199,8 @@ export default function PigBarns() {
           values,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization:
+                `Bearer ${token}`,
             },
           }
         );
@@ -190,7 +210,9 @@ export default function PigBarns() {
         );
       }
 
-      // ===== CREATE =====
+      // =====================================================
+      // CREATE
+      // =====================================================
       else {
 
         await axios.post(
@@ -198,7 +220,8 @@ export default function PigBarns() {
           values,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization:
+                `Bearer ${token}`,
             },
           }
         );
@@ -220,25 +243,24 @@ export default function PigBarns() {
 
       console.error(err);
 
-      if (err.response?.status === 401) {
-
-        message.error(
-          "Bạn chưa đăng nhập"
-        );
-
-      } else {
-
-        message.error(
-          "Không thể lưu chuồng"
-        );
-      }
+      message.error(
+        err.response?.data?.message ||
+        "Không thể lưu chuồng"
+      );
     }
   };
 
   // =========================================================
-  // TABLE COLUMNS
+  // TABLE
   // =========================================================
   const columns = [
+
+    {
+      title: "Mã chuồng",
+      dataIndex: "code",
+      width: 140,
+    },
+
     {
       title: "Tên chuồng",
       dataIndex: "name",
@@ -246,12 +268,18 @@ export default function PigBarns() {
 
     {
       title: "Loại",
-      dataIndex: "purpose",
+      dataIndex: "barn_type",
 
-      render: (p) => (
-        <Tag color="blue">
-          {purposeLabels[p] ||
-            "Không xác định"}
+      render: (type) => (
+
+        <Tag
+          color={
+            barnTypeColors[type]
+          }
+        >
+          {
+            barnTypeLabels[type]
+          }
         </Tag>
       ),
     },
@@ -265,7 +293,8 @@ export default function PigBarns() {
 
     {
       title: "Hiện tại",
-      dataIndex: "current_quantity",
+      dataIndex:
+        "current_quantity",
 
       render: (v, record) => (
 
@@ -286,6 +315,7 @@ export default function PigBarns() {
       dataIndex: "status",
 
       render: (s) => (
+
         <Tag
           color={
             s === "active"
@@ -302,14 +332,14 @@ export default function PigBarns() {
 
     {
       title: "Ngày tạo",
-      dataIndex: "createdAt",
-      width: 180,
+      dataIndex: "created_at",
 
       render: (d) =>
         d
-          ? new Date(d).toLocaleString(
-              "vi-VN"
-            )
+          ? new Date(d)
+              .toLocaleDateString(
+                "vi-VN"
+              )
           : "-",
     },
 
@@ -319,9 +349,9 @@ export default function PigBarns() {
       width: 220,
 
       render: (_, record) => (
+
         <Space>
 
-          {/* EDIT */}
           <Button
             type="primary"
             onClick={() =>
@@ -331,7 +361,6 @@ export default function PigBarns() {
             Sửa
           </Button>
 
-          {/* DELETE */}
           <Popconfirm
             title="Xóa chuồng"
             description="Bạn có chắc muốn xóa chuồng này?"
@@ -341,9 +370,17 @@ export default function PigBarns() {
               handleDelete(record)
             }
           >
-            <Button danger>
+
+            <Button
+              danger
+              disabled={
+                record.current_quantity >
+                0
+              }
+            >
               Xóa
             </Button>
+
           </Popconfirm>
 
         </Space>
@@ -352,11 +389,29 @@ export default function PigBarns() {
   ];
 
   // =========================================================
-  // SAFE ARRAY
+  // STATS
   // =========================================================
-  const safeBarns = Array.isArray(barns)
-    ? barns
-    : [];
+  const totalBarns =
+    barns.length;
+
+  const sowBarns =
+    barns.filter(
+      (b) =>
+        b.barn_type === "nai"
+    ).length;
+
+  const meatBarns =
+    barns.filter(
+      (b) =>
+        b.barn_type === "thit"
+    ).length;
+
+  const isolateBarns =
+    barns.filter(
+      (b) =>
+        b.barn_type ===
+        "cach_ly"
+    ).length;
 
   return (
     <div className="dashboard">
@@ -389,11 +444,11 @@ export default function PigBarns() {
             </div>
 
             <div className="stat-card__value">
-              {safeBarns.length}
+              {totalBarns}
             </div>
           </Card>
 
-          {/* NÁI */}
+          {/* SOW */}
           <Card className="stat-card stat-card--pigs">
 
             <div className="stat-card__header">
@@ -408,16 +463,11 @@ export default function PigBarns() {
             </div>
 
             <div className="stat-card__value">
-              {
-                safeBarns.filter(
-                  (b) =>
-                    b.purpose === "nai"
-                ).length
-              }
+              {sowBarns}
             </div>
           </Card>
 
-          {/* THỊT */}
+          {/* THIT */}
           <Card className="stat-card stat-card--staff">
 
             <div className="stat-card__header">
@@ -432,16 +482,11 @@ export default function PigBarns() {
             </div>
 
             <div className="stat-card__value">
-              {
-                safeBarns.filter(
-                  (b) =>
-                    b.purpose === "thit"
-                ).length
-              }
+              {meatBarns}
             </div>
           </Card>
 
-          {/* CÁCH LY */}
+          {/* CACH LY */}
           <Card className="stat-card stat-card--daily-tasks">
 
             <div className="stat-card__header">
@@ -456,13 +501,7 @@ export default function PigBarns() {
             </div>
 
             <div className="stat-card__value">
-              {
-                safeBarns.filter(
-                  (b) =>
-                    b.purpose ===
-                    "cach_ly"
-                ).length
-              }
+              {isolateBarns}
             </div>
           </Card>
         </div>
@@ -473,27 +512,15 @@ export default function PigBarns() {
 
         <Card className="filter-card">
 
-          <Space wrap>
+          <Button
+            type="primary"
+            onClick={
+              openCreateModal
+            }
+          >
+            Thêm chuồng
+          </Button>
 
-            <Button
-              type="primary"
-              onClick={() => {
-
-                setEditingBarn(null);
-
-                form.resetFields();
-
-                form.setFieldsValue({
-                  purpose: "thit",
-                });
-
-                setOpen(true);
-              }}
-            >
-              Thêm chuồng
-            </Button>
-
-          </Space>
         </Card>
 
         {/* ================================================= */}
@@ -506,8 +533,10 @@ export default function PigBarns() {
             rowKey="id"
             loading={loading}
             columns={columns}
-            dataSource={safeBarns}
-            pagination={false}
+            dataSource={barns}
+            pagination={{
+              pageSize: 10,
+            }}
           />
         </Card>
       </div>
@@ -541,6 +570,21 @@ export default function PigBarns() {
           layout="vertical"
         >
 
+          {/* CODE */}
+          <Form.Item
+            name="code"
+            label="Mã chuồng"
+            rules={[
+              {
+                required: true,
+                message:
+                  "Nhập mã chuồng",
+              },
+            ]}
+          >
+            <Input placeholder="VD: NAI-A1" />
+          </Form.Item>
+
           {/* NAME */}
           <Form.Item
             name="name"
@@ -556,11 +600,10 @@ export default function PigBarns() {
             <Input placeholder="VD: Chuồng Nái A1" />
           </Form.Item>
 
-          {/* PURPOSE */}
+          {/* TYPE */}
           <Form.Item
-            name="purpose"
+            name="barn_type"
             label="Loại chuồng"
-            initialValue="thit"
             rules={[
               {
                 required: true,
@@ -607,10 +650,40 @@ export default function PigBarns() {
               },
             ]}
           >
+
             <InputNumber
               min={1}
-              style={{ width: "100%" }}
+              style={{
+                width: "100%",
+              }}
             />
+          </Form.Item>
+
+          {/* STATUS */}
+          <Form.Item
+            name="status"
+            label="Trạng thái"
+          >
+
+            <Select>
+
+              <Option value="active">
+                Hoạt động
+              </Option>
+
+              <Option value="inactive">
+                Ngưng hoạt động
+              </Option>
+
+            </Select>
+          </Form.Item>
+
+          {/* NOTE */}
+          <Form.Item
+            name="note"
+            label="Ghi chú"
+          >
+            <Input.TextArea rows={3} />
           </Form.Item>
 
         </Form>

@@ -64,19 +64,6 @@ const sowReproductiveLabels = [
   "Sảy thai",
 ];
 
-const statusColor = {
-  "Chờ phối": "default",
-  "Đã phối": "purple",
-  "Đẻ con": "green",
-  "Cai sữa": "cyan",
-  "Sảy thai": "red",
-  "Bán loại": "volcano",
-  "Chết": "black",
-  "Hậu bị": "blue",
-  "Đang tăng trọng": "processing",
-  "Sẵn sàng xuất": "success",
-};
-
 function displayStatus(pig) {
 
   if (

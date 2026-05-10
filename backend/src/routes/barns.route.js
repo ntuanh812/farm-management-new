@@ -7,50 +7,59 @@ export default async function barnsRoute(app) {
   // GET ALL BARNS
   // =========================================================
   app.get(
-    "/",
-    { preHandler: [verifyToken] },
+  "/",
+  { preHandler: [verifyToken] },
 
-    async (request, reply) => {
+  async (request, reply) => {
+
+    try {
 
       const [rows] = await pool.query(`
         SELECT
           b.id,
+          b.code,
           b.name,
           b.capacity,
+          b.barn_type,
+          b.status,
+          b.note,
+          b.created_at,
 
           COUNT(
             CASE
               WHEN p.lifecycle_status = 'ACTIVE'
               THEN p.id
             END
-          ) AS current_quantity,
-
-          b.barn_type AS purpose,
-          b.status,
-          b.created_at AS createdAt
+          ) AS current_quantity
 
         FROM barns b
 
         LEFT JOIN pigs p
         ON p.barn_id = b.id
 
-        GROUP BY
-          b.id,
-          b.name,
-          b.capacity,
-          b.barn_type,
-          b.status,
-          b.created_at
+        WHERE b.deleted_at IS NULL
 
-        ORDER BY b.name
+        GROUP BY b.id
+
+        ORDER BY b.name ASC
       `);
 
       return reply.send({
         success: true,
         data: rows,
       });
+
+    } catch (err) {
+
+      console.error("GET BARNS ERROR:", err);
+
+      return reply.status(500).send({
+        success: false,
+        message: err.message,
+      });
     }
-  );
+  }
+);
 
   // =========================================================
   // CREATE BARN
@@ -61,33 +70,73 @@ export default async function barnsRoute(app) {
 
     async (request, reply) => {
 
-      const {
-        name,
-        purpose,
-        capacity,
-      } = request.body;
+      try {
 
-      await pool.query(
-        `
-        INSERT INTO barns
-        (
+        const {
+          code,
           name,
+          barn_type,
           capacity,
-          barn_type
-        )
-        VALUES (?, ?, ?)
-        `,
-        [
-          name,
-          capacity,
-          purpose,
-        ]
-      );
+          note,
+        } = request.body;
 
-      return reply.send({
-        success: true,
-        message: "Tạo chuồng thành công",
-      });
+        // CHECK CODE
+        const [exists] = await pool.query(
+          `
+          SELECT id
+          FROM barns
+          WHERE code = ?
+          LIMIT 1
+          `,
+          [code]
+        );
+
+        if (exists.length > 0) {
+
+          return reply.status(400).send({
+            success: false,
+            message:
+              "Mã chuồng đã tồn tại",
+          });
+        }
+
+        await pool.query(
+          `
+          INSERT INTO barns
+          (
+            code,
+            name,
+            capacity,
+            barn_type,
+            note
+          )
+          VALUES (?, ?, ?, ?, ?)
+          `,
+          [
+            code,
+            name,
+            capacity,
+            barn_type,
+            note || null,
+          ]
+        );
+
+        return reply.send({
+          success: true,
+          message:
+            "Thêm chuồng thành công",
+        });
+
+      } catch (err) {
+
+        console.error(err);
+
+        return reply.status(500).send({
+          success: false,
+          message:
+            "Không thể tạo chuồng",
+        });
+      }
     }
   );
 
@@ -100,36 +149,79 @@ export default async function barnsRoute(app) {
 
     async (request, reply) => {
 
-      const { id } = request.params;
+      try {
 
-      const {
-        name,
-        purpose,
-        capacity,
-      } = request.body;
+        const { id } = request.params;
 
-      await pool.query(
-        `
-        UPDATE barns
-        SET
-          name = ?,
-          capacity = ?,
-          barn_type = ?
-        WHERE id = ?
-        `,
-        [
+        const {
+          code,
           name,
+          barn_type,
           capacity,
-          purpose,
-          id,
-        ]
-      );
+          status,
+          note,
+        } = request.body;
 
-      return reply.send({
-        success: true,
-        message:
-          "Cập nhật chuồng thành công",
-      });
+        // CHECK DUPLICATE CODE
+        const [exists] = await pool.query(
+          `
+          SELECT id
+          FROM barns
+          WHERE code = ?
+          AND id != ?
+          LIMIT 1
+          `,
+          [code, id]
+        );
+
+        if (exists.length > 0) {
+
+          return reply.status(400).send({
+            success: false,
+            message:
+              "Mã chuồng đã tồn tại",
+          });
+        }
+
+        await pool.query(
+          `
+          UPDATE barns
+          SET
+            code = ?,
+            name = ?,
+            capacity = ?,
+            barn_type = ?,
+            status = ?,
+            note = ?
+          WHERE id = ?
+          `,
+          [
+            code,
+            name,
+            capacity,
+            barn_type,
+            status,
+            note || null,
+            id,
+          ]
+        );
+
+        return reply.send({
+          success: true,
+          message:
+            "Cập nhật chuồng thành công",
+        });
+
+      } catch (err) {
+
+        console.error(err);
+
+        return reply.status(500).send({
+          success: false,
+          message:
+            "Không thể cập nhật chuồng",
+        });
+      }
     }
   );
 
@@ -142,46 +234,60 @@ export default async function barnsRoute(app) {
 
     async (request, reply) => {
 
-      const { id } = request.params;
+      try {
 
-      // CHECK ACTIVE PIGS
-      const [pigRows] = await pool.query(
-        `
-        SELECT COUNT(*) AS total
-        FROM pigs
-        WHERE barn_id = ?
-        AND lifecycle_status = 'ACTIVE'
-        `,
-        [id]
-      );
+        const { id } = request.params;
 
-      const totalPigs =
-        pigRows[0].total;
+        // CHECK ACTIVE PIGS
+        const [pigRows] = await pool.query(
+          `
+          SELECT COUNT(*) AS total
+          FROM pigs
+          WHERE barn_id = ?
+          AND lifecycle_status = 'ACTIVE'
+          `,
+          [id]
+        );
 
-      // BLOCK DELETE
-      if (totalPigs > 0) {
+        const totalPigs =
+          pigRows[0].total;
 
-        return reply.status(400).send({
+        // BLOCK DELETE
+        if (totalPigs > 0) {
+
+          return reply.status(400).send({
+            success: false,
+            message:
+              "Chuồng vẫn còn vật nuôi. Hãy chuyển chuồng trước khi xóa.",
+          });
+        }
+
+        // SOFT DELETE
+        await pool.query(
+          `
+          UPDATE barns
+          SET deleted_at = NOW()
+          WHERE id = ?
+          `,
+          [id]
+        );
+
+        return reply.send({
+          success: true,
+          message:
+            "Xóa chuồng thành công",
+        });
+
+      } catch (err) {
+
+        console.error(err);
+
+        return reply.status(500).send({
           success: false,
           message:
-            "Chuồng vẫn còn vật nuôi. Hãy chuyển chuồng trước khi xóa.",
+            "Không thể xóa chuồng",
         });
       }
-
-      // DELETE
-      await pool.query(
-        `
-        DELETE FROM barns
-        WHERE id = ?
-        `,
-        [id]
-      );
-
-      return reply.send({
-        success: true,
-        message:
-          "Xóa chuồng thành công",
-      });
     }
   );
 }

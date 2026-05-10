@@ -27,6 +27,8 @@ import barnsRoute from "./routes/barns.route.js";
 
 import pigsRoute from "./routes/pigs.route.js";
 
+import movementsRoute from "./routes/movements.route.js";
+
 // =========================================================
 // APP
 // =========================================================
@@ -132,6 +134,10 @@ app.register(
     prefix: "/api/pigs",
   }
 );
+
+app.register(movementsRoute, {
+  prefix: "/api/movements",
+});
 
 // =========================================================
 // HEALTH CHECK
