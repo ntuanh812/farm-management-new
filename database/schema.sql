@@ -54,12 +54,27 @@ CREATE TABLE accounts (
 CREATE TABLE barns (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name         VARCHAR(100) NOT NULL,
-  capacity     INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'Sức chứa tối đa',
-  barn_type    ENUM('nai','duc','con','thit','cach_ly') NOT NULL DEFAULT 'thit',
-  status       ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  capacity     INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Sức chứa tối đa',
+
+  barn_type    ENUM(
+    'nai',
+    'duc',
+    'con',
+    'thit',
+    'cach_ly'
+  ) NOT NULL DEFAULT 'thit',
+
+  status       ENUM(
+    'active',
+    'inactive'
+  ) NOT NULL DEFAULT 'active',
+
   note         TEXT,
+
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ============================================================
