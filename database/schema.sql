@@ -82,28 +82,54 @@ CREATE TABLE barns (
 -- ============================================================
 CREATE TABLE pigs (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  pig_code          VARCHAR(50)  NOT NULL UNIQUE   COMMENT 'Mã lợn (VD: PIG-001)',
+
+  pig_code          VARCHAR(50) NOT NULL UNIQUE,
+
   name              VARCHAR(100),
+
   barn_id           INT UNSIGNED NOT NULL,
-  category          ENUM('SOW','BOAR','PIGLET','FATTENING') NOT NULL,
-  lifecycle_status  ENUM('ACTIVE','SOLD','DEAD') NOT NULL DEFAULT 'ACTIVE',
-  breed             VARCHAR(100)  COMMENT 'Giống lợn',
-  gender            ENUM('male','female') NOT NULL DEFAULT 'male',
-  dob               DATE          COMMENT 'Ngày sinh',
-  entry_date        DATE          NOT NULL          COMMENT 'Ngày nhập chuồng',
-  entry_weight      DECIMAL(6,2)  COMMENT 'Cân nặng khi nhập (kg)',
-  current_weight    DECIMAL(6,2)  COMMENT 'Cân nặng hiện tại (kg)',
+
+  category          ENUM(
+    'SOW',
+    'BOAR',
+    'PIGLET',
+    'FATTENING'
+  ) NOT NULL,
+
+  lifecycle_status  ENUM(
+    'ACTIVE',
+    'SOLD',
+    'DEAD'
+  ) NOT NULL DEFAULT 'ACTIVE',
+
+  breed             VARCHAR(100),
+
+  gender            ENUM(
+    'male',
+    'female'
+  ) NOT NULL DEFAULT 'male',
+
+  dob               DATE,
+
+  entry_date        DATE NOT NULL,
+
+  entry_weight      DECIMAL(6,2),
+
+  current_weight    DECIMAL(6,2),
+
   note              TEXT,
-  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  created_at        DATETIME NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP,
+
+  updated_at        DATETIME NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP
+                    ON UPDATE CURRENT_TIMESTAMP,
 
   CONSTRAINT fk_pigs_barn
-    FOREIGN KEY (barn_id) REFERENCES barns(id)
-    ON UPDATE CASCADE,
-
-  INDEX idx_pigs_barn      (barn_id),
-  INDEX idx_pigs_category  (category),
-  INDEX idx_pigs_status    (lifecycle_status)
+    FOREIGN KEY (barn_id)
+    REFERENCES barns(id)
+    ON UPDATE CASCADE
 );
 
 -- ============================================================
