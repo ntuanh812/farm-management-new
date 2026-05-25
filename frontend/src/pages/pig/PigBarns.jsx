@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
   Select, InputNumber, message, Popconfirm, Card, Row, Col, Progress
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOutlined, WarningOutlined, TeamOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -54,6 +54,15 @@ export default function PigBarns() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Tính toán thống kê chuồng trại
+  const stats = useMemo(() => {
+    const active = barns.filter(b => b.status === 'ACTIVE').length;
+    const full = barns.filter(b => (b.current_quantity || 0) >= (b.capacity || 1)).length;
+    const totalPigs = barns.reduce((sum, b) => sum + (b.current_quantity || 0), 0);
+    const totalCapacity = barns.reduce((sum, b) => sum + (b.capacity || 0), 0);
+    return { total: barns.length, active, full, totalPigs, totalCapacity };
+  }, [barns]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -186,7 +195,7 @@ export default function PigBarns() {
   ];
 
   return (
-    <div className="pig-barns-page">
+    <div className="dashboard pig-barns-page">
       <PageHeader
         title="Quản lý Chuồng trại"
         subtitle="Theo dõi sức chứa, loại chuồng và trạng thái hoạt động"
@@ -198,6 +207,57 @@ export default function PigBarns() {
           )
         }
       />
+
+      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--barn">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Tổng số chuồng</span>
+              <div className="stat-card__icon"><HomeOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.total}
+              <span className="stat-card__label"> chuồng</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--pigs">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Đang hoạt động</span>
+              <div className="stat-card__icon"><CheckCircleOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.active}
+              <span className="stat-card__label"> chuồng</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--daily-tasks">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Chuồng quá tải</span>
+              <div className="stat-card__icon"><WarningOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.full}
+              <span className="stat-card__label"> chuồng</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--staff">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Sức chứa lợn</span>
+              <div className="stat-card__icon"><TeamOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.totalPigs}
+              <span className="stat-card__label"> / {stats.totalCapacity}</span>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       <Card className="table-card">
         <Table

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Card, Space, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Card, Space, Tag, Row, Col } from 'antd';
+import { PlusOutlined, DeleteOutlined, FallOutlined, TeamOutlined, DashboardOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
@@ -133,7 +133,7 @@ export default function PigDead() {
   ];
 
   return (
-    <div className="pig-dead-page">
+    <div className="dashboard pig-dead-page">
       <PageHeader
         title="Ghi nhận Lợn chết"
         subtitle="Quản lý và thống kê lợn thiệt hại, phương án tiêu hủy"
@@ -143,6 +143,33 @@ export default function PigDead() {
           </Button>
         )}
       />
+
+      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+        <Col xs={24} sm={12} lg={12}>
+          <Card className="stat-card stat-card--daily-tasks">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Tổng số lợn chết</span>
+              <div className="stat-card__icon"><FallOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {deaths.length}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={12}>
+          <Card className="stat-card stat-card--pigs">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Tổng đàn hiện tại</span>
+              <div className="stat-card__icon"><TeamOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {activePigs.length}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       <Card className="table-card">
         <Table 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, UsergroupAddOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
@@ -122,7 +122,7 @@ export default function PigFarrowing() {
   ];
 
   return (
-    <div className="pig-farrowing-page">
+    <div className="dashboard pig-farrowing-page">
       <PageHeader
         title="Quản lý Đẻ con"
         subtitle="Ghi nhận số lượng lợn sơ sinh và tình trạng sinh sản"
@@ -132,6 +132,45 @@ export default function PigFarrowing() {
           </Button>
         )}
       />
+
+      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+        <Col xs={24} sm={12} lg={8}>
+          <Card className="stat-card stat-card--pigs">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Tổng số ổ đẻ</span>
+              <div className="stat-card__icon"><UsergroupAddOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {farrowings.length}
+              <span className="stat-card__label"> ổ</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card className="stat-card stat-card--barn">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Lợn con sơ sinh (Sống)</span>
+              <div className="stat-card__icon"><CheckCircleOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {farrowings.reduce((sum, f) => sum + (f.alive_piglets || 0), 0)}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card className="stat-card stat-card--daily-tasks">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Lợn con (Chết/Tật)</span>
+              <div className="stat-card__icon"><WarningOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {farrowings.reduce((sum, f) => sum + (f.dead_piglets || 0), 0)}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       <Card className="table-card">
         <Table columns={columns} dataSource={farrowings} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />

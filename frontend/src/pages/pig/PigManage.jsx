@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
   Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, ShoppingCartOutlined, HeartOutlined, DashboardOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
@@ -63,6 +63,17 @@ export default function PigManage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Tính toán thống kê từ danh sách lợn
+  const stats = useMemo(() => {
+    const activePigs = pigs.filter(p => p.lifecycleStatus === 'ACTIVE');
+    return {
+      total: activePigs.length,
+      fattening: activePigs.filter(p => p.category === 'FATTENING').length,
+      breeding: activePigs.filter(p => p.category === 'SOW' || p.category === 'BOAR').length,
+      piglet: activePigs.filter(p => p.category === 'PIGLET').length,
+    };
+  }, [pigs]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -180,9 +191,10 @@ export default function PigManage() {
           <Button
             type="text"
             icon={<EditOutlined />}
-            className="text-primary"
+            className={['DEAD', 'SOLD'].includes(record.lifecycleStatus) ? "" : "text-primary"}
             onClick={() => handleOpenEdit(record)}
-            title="Sửa"
+            title={['DEAD', 'SOLD'].includes(record.lifecycleStatus) ? "Không thể sửa cá thể lợn đã chết hoặc xuất bán" : "Sửa"}
+            disabled={['DEAD', 'SOLD'].includes(record.lifecycleStatus)}
           />
           {canDelete && (
             <Popconfirm
@@ -198,7 +210,7 @@ export default function PigManage() {
   ];
 
   return (
-    <div className="pig-manage-page">
+    <div className="dashboard pig-manage-page">
       <PageHeader
         title="Quản lý Đàn Lợn"
         subtitle="Thêm mới, theo dõi trạng thái và cập nhật thông tin cá thể lợn"
@@ -210,6 +222,57 @@ export default function PigManage() {
           )
         }
       />
+
+      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--pigs">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Tổng đàn hiện tại</span>
+              <div className="stat-card__icon"><TeamOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.total}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--daily-tasks">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Lợn thịt (Vỗ béo)</span>
+              <div className="stat-card__icon"><ShoppingCartOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.fattening}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--staff">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Lợn sinh sản (Nái/Đực)</span>
+              <div className="stat-card__icon"><HeartOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.breeding}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="stat-card stat-card--barn">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Lợn con (Theo mẹ/Cai sữa)</span>
+              <div className="stat-card__icon"><DashboardOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {stats.piglet}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       <Card className="table-card">
         <Table

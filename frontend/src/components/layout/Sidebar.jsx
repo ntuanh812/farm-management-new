@@ -18,7 +18,7 @@ const ADMIN_MENU = [
       { key: '/pigmanage/barns',          label: 'Chuồng trại',     icon: <HomeOutlined /> },
       { key: '/pigmanage/pigsty-history', label: 'Chuyển chuồng',   icon: <SwapRightOutlined /> },
       { key: '/pigmanage/pig-dead',       label: 'Lợn chết',        icon: <CloseCircleOutlined /> },
-      { key: '/pigmanage/pig-fattening',  label: 'Vỗ béo / Xuất',   icon: <IdcardOutlined /> },
+      { key: '/pigmanage/pig-fattening',  label: 'Xuất bán',   icon: <IdcardOutlined /> },
     ],
   },
   {
@@ -56,7 +56,7 @@ const EMPLOYEE_MENU = [
       { key: '/employee/pig/barns',    label: 'Chuồng trại',     icon: <HomeOutlined /> },
       { key: '/employee/pig/history',  label: 'Chuyển chuồng',   icon: <SwapRightOutlined /> },
       { key: '/employee/pig/dead',     label: 'Lợn chết',        icon: <CloseCircleOutlined /> },
-      { key: '/employee/pig/fattening',label: 'Lợn thịt',          icon: <IdcardOutlined /> },
+      { key: '/employee/pig/fattening',label: 'Xuất bán',          icon: <IdcardOutlined /> },
     ],
   },
   {

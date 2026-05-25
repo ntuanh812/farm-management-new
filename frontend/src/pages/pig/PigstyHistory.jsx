@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  Card, Table, Button, Modal, Form, Select,
+  Card, Table, Button, Modal, Form, Select, Row, Col,
   DatePicker, Input, Space, Tag, message
 } from "antd";
-import { SwapRightOutlined } from "@ant-design/icons";
+import { SwapRightOutlined, SwapOutlined, TeamOutlined } from "@ant-design/icons";
 import axios from "axios";
 import dayjs from "dayjs";
 import { useAuthStore } from "@/store/authStore";
@@ -206,20 +206,34 @@ export default function PigstyHistory() {
         }
       />
 
-      <div className="dashboard__maincontent">
-        <div className="stats-grid">
+      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+        <Col xs={24} sm={12} lg={12}>
           <Card className="stat-card stat-card--barn">
             <div className="stat-card__header">
-              <span className="stat-card__title">Tổng lượt chuyển</span>
-              <div className="stat-card__icon">🏠</div>
+              <span className="stat-card__title">Tổng lượt chuyển chuồng</span>
+              <div className="stat-card__icon"><SwapOutlined /></div>
             </div>
             <div className="stat-card__value">
-              {movements.length} <span className="stat-card__label">lượt</span>
+              {movements.length}
+              <span className="stat-card__label"> lượt</span>
             </div>
           </Card>
-        </div>
+        </Col>
+        <Col xs={24} sm={12} lg={12}>
+          <Card className="stat-card stat-card--pigs">
+            <div className="stat-card__header">
+              <span className="stat-card__title">Lợn đang có mặt tại trại</span>
+              <div className="stat-card__icon"><TeamOutlined /></div>
+            </div>
+            <div className="stat-card__value">
+              {activePigs.length}
+              <span className="stat-card__label"> con</span>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
-        <Card className="table-card mt-24">
+      <Card className="table-card">
           <Table
             loading={loading}
             columns={columns}
@@ -227,7 +241,6 @@ export default function PigstyHistory() {
             pagination={{ pageSize: 10 }}
           />
         </Card>
-      </div>
 
       <Modal
         title="Chuyển chuồng"

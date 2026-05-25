@@ -17,6 +17,7 @@ import {
 import dayjs from "dayjs";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import axios from "axios";
+import { TeamOutlined, ExportOutlined, DollarOutlined, DashboardOutlined } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -218,6 +219,7 @@ export default function PigFattening() {
             <Card className="stat-card stat-card--pigs">
               <div className="stat-card__header">
                 <span className="stat-card__title">Đang nuôi</span>
+                <div className="stat-card__icon"><TeamOutlined /></div>
               </div>
               <div className="stat-card__value">
                 {fatteningActive.length}
@@ -230,6 +232,7 @@ export default function PigFattening() {
             <Card className="stat-card stat-card--daily-tasks">
               <div className="stat-card__header">
                 <span className="stat-card__title">Đã xuất</span>
+                <div className="stat-card__icon"><ExportOutlined /></div>
               </div>
               <div className="stat-card__value">
                 {sold.length}
@@ -242,6 +245,7 @@ export default function PigFattening() {
             <Card className="stat-card stat-card--staff">
               <div className="stat-card__header">
                 <span className="stat-card__title">Doanh thu</span>
+                <div className="stat-card__icon"><DollarOutlined /></div>
               </div>
               <div className="stat-card__value">
                 {stats.revenue.toLocaleString()}
@@ -254,6 +258,7 @@ export default function PigFattening() {
             <Card className="stat-card stat-card--barn">
               <div className="stat-card__header">
                 <span className="stat-card__title">Tổng kg</span>
+                <div className="stat-card__icon"><DashboardOutlined /></div>
               </div>
               <div className="stat-card__value">
                 {stats.totalKg}

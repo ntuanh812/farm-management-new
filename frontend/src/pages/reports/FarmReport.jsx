@@ -47,7 +47,7 @@ export default function FarmReport() {
   };
 
   return (
-    <div className="farm-report-page">
+    <div className="dashboard farm-report-page">
       <PageHeader
         title="Báo cáo Tình hình Trang trại"
         subtitle="Tổng quan hoạt động chăn nuôi, sức khỏe, và chi phí"

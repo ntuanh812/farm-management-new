@@ -285,6 +285,18 @@ export default async function pigsRoute(app) {
           note,
         } = request.body;
 
+        // 1. Lấy trạng thái cũ của lợn để so sánh
+        const [oldPig] = await pool.query('SELECT lifecycle_status FROM pigs WHERE id = ?', [id]);
+        const oldStatus = oldPig.length > 0 ? oldPig[0].lifecycle_status : null;
+
+        // KHÓA CHỈNH SỬA NẾU LỢN ĐÃ CHẾT HOẶC ĐÃ BÁN
+        if (oldStatus === 'DEAD' || oldStatus === 'SOLD') {
+          return reply.status(400).send({
+            success: false,
+            message: "Hồ sơ đã bị khóa. Không thể chỉnh sửa thông tin của lợn đã chết hoặc đã xuất bán."
+          });
+        }
+
         await pool.query(
           `
           UPDATE pigs
@@ -319,6 +331,27 @@ export default async function pigsRoute(app) {
             id,
           ]
         );
+
+        // 2. ĐỒNG BỘ: Nếu trạng thái đổi thành DEAD, tự động tạo bản ghi bên Lợn chết
+        if (oldStatus !== 'DEAD' && lifecycle_status === 'DEAD') {
+          await pool.query(
+            `INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, recorded_by, note)
+             VALUES (?, CURDATE(), ?, ?, ?, ?)`,
+            [id, 'Chưa xác định', 'Khác', 'Hệ thống', 'Tự động tạo khi chuyển trạng thái ở Danh sách lợn']
+          );
+        }
+
+        // 3. ĐỒNG BỘ: Nếu trạng thái đổi thành SOLD, tự động tạo bản ghi bên Xuất bán
+        if (oldStatus !== 'SOLD' && lifecycle_status === 'SOLD') {
+          const [batchRes] = await pool.query(
+            'INSERT INTO sale_batches (sold_at, staff_name) VALUES (CURDATE(), ?)',
+            ['Hệ thống']
+          );
+          await pool.query(
+            'INSERT INTO sale_batch_lines (sale_batch_id, ear_tag, weight, price, total_amount, reason, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [batchRes.insertId, pig_code, current_weight || 0, 0, 0, 'Xuất bán tự động', 'Tự động tạo khi chuyển trạng thái ở Danh sách lợn']
+          );
+        }
 
         return reply.send({
           success: true,
