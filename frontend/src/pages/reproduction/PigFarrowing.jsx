@@ -1,322 +1,176 @@
-import React, { useMemo, useState } from "react";
-import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Form,
-  Select,
-  DatePicker,
-  InputNumber,
-  Space,
-} from "antd";
-import dayjs from "dayjs";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { usePigFarmStore } from "../../store/pigFarmStore";
-import { PigCategory, barnLabel, isoToDisplay } from "../../domain/pigFarm";
-import { BreedingStatus, LifecycleStatus } from "../../domain/pigFarm";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import { useAuthStore } from '@/store/authStore';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-const { Option } = Select;
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-export default function Farrowing() {
-  const barns = usePigFarmStore((s) => s.barns);
-  const pigs = usePigFarmStore((s) => s.pigs);
-  const recordFarrowing = usePigFarmStore((s) => s.recordFarrowing);
+export default function PigFarrowing() {
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
 
-  const [filter, setFilter] = useState("raising");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [farrowings, setFarrowings] = useState([]);
+  const [pigs, setPigs] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
 
-  const activeSows = useMemo(
-    () =>
-      pigs.filter(
-        (p) =>
-          p.lifecycleStatus === LifecycleStatus.ACTIVE &&
-          p.category === PigCategory.SOW
-      ),
-    [pigs]
-  );
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
+  const canDelete = user?.role === 'ADMIN';
 
-  const todayStart = dayjs().startOf("day");
-
-  const pregnantWaiting = useMemo(
-    () =>
-      activeSows.filter(
-        (p) =>
-          p.breedingStatus === BreedingStatus.PREGNANT &&
-          p.expectedFarrowAt &&
-          !p.lactation
-      ),
-    [activeSows]
-  );
-
-  const upcoming = useMemo(
-    () =>
-      pregnantWaiting.filter((p) =>
-        dayjs(p.expectedFarrowAt).isSameOrAfter(todayStart, "day")
-      ),
-    [pregnantWaiting, todayStart]
-  );
-
-  const late = useMemo(
-    () =>
-      pregnantWaiting.filter((p) =>
-        dayjs(p.expectedFarrowAt).isBefore(todayStart, "day")
-      ),
-    [pregnantWaiting, todayStart]
-  );
-
-  const mothers = useMemo(
-    () => activeSows.filter((p) => p.lactation),
-    [activeSows]
-  );
-
-  const handleAdd = () => {
-    form.validateFields().then((values) => {
-      recordFarrowing({
-        earTag: values.code,
-        birthAt: values.date.format("YYYY-MM-DD"),
-        totalBorn: values.total,
-        alive: values.alive || 0,
-        dead: values.dead || 0,
-        barnId: values.barnId,
-      });
-
-      setIsModalOpen(false);
-      form.resetFields();
-    });
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resFarrow, resPigs, resStaff] = await Promise.all([
+        axios.get(`${API}/farrowings`, { headers }),
+        axios.get(`${API}/pigs`, { headers }),
+        axios.get(`${API}/employees`, { headers }).catch(() => ({ data: { data: [] } }))
+      ]);
+      setFarrowings(resFarrow.data?.data || []);
+      setPigs(resPigs.data?.data || []);
+      setStaffList(resStaff.data?.data || []);
+    } catch (error) {
+      message.error('Không thể tải dữ liệu đẻ con');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const motherColumns = [
-    { title: "STT", render: (_, __, i) => i + 1 },
-    { title: "Số tai", dataIndex: "earTag" },
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const activeSows = useMemo(() => pigs.filter(p => p.lifecycleStatus === 'ACTIVE' && p.category === 'SOW'), [pigs]);
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API}/farrowings/${id}`, { headers });
+      message.success('Đã xóa bản ghi đẻ con');
+      fetchData();
+    } catch (error) {
+      message.error('Không thể xóa bản ghi này');
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const payload = {
+        ...values,
+        farrow_date: values.farrow_date.format('YYYY-MM-DD'),
+      };
+
+      await axios.post(`${API}/farrowings`, payload, { headers });
+      message.success('Ghi nhận đẻ con thành công');
+      setOpen(false);
+      form.resetFields();
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  };
+
+  const columns = [
     {
-      title: "Ngày đẻ",
-      dataIndex: "lactation",
-      render: (l) => isoToDisplay(l?.birthAt),
+      title: 'Ngày đẻ',
+      dataIndex: 'farrow_date',
+      key: 'farrow_date',
+      render: (date) => dayjs(date).format('DD/MM/YYYY')
     },
-    { title: "Tổng sinh", dataIndex: "lactation", render: (l) => l?.totalBorn },
-    { title: "Chết", dataIndex: "lactation", render: (l) => l?.dead },
-    { title: "Còn sống", dataIndex: "lactation", render: (l) => l?.alive },
     {
-      title: "Số ngày nuôi",
-      render: (r) =>
-        r.lactation?.birthAt
-          ? dayjs().diff(dayjs(r.lactation.birthAt), "day")
-          : "",
+      title: 'Nái mẹ',
+      dataIndex: 'sow_code',
+      key: 'sow_code',
+      render: (text) => <span className="text-pink fw-500">{text}</span>
     },
     {
-      title: "Chuồng",
-      dataIndex: "barnId",
-      render: (id) => barnLabel(barns, id),
+      title: 'Số con sống',
+      dataIndex: 'alive_piglets',
+      key: 'alive_piglets',
+      render: (val) => <strong className="text-success">{val}</strong>
+    },
+    {
+      title: 'Chết/Tật',
+      dataIndex: 'dead_piglets',
+      key: 'dead_piglets',
+      render: (val) => val > 0 ? <strong className="text-danger">{val}</strong> : <span>{val}</span>
+    },
+    {
+      title: 'Tổng trọng lượng',
+      dataIndex: 'total_weight',
+      key: 'total_weight',
+      render: (val) => val ? `${val} kg` : '-'
+    },
+    {
+      title: 'Người đỡ đẻ',
+      dataIndex: 'staff_name',
+      key: 'staff_name'
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      render: (_, record) => canDelete && (
+        <Popconfirm title="Chắc chắn xóa bản ghi này?" onConfirm={() => handleDelete(record.id)}>
+          <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
+        </Popconfirm>
+      ),
     },
   ];
-
-  const upcomingColumns = [
-    { title: "STT", render: (_, __, i) => i + 1 },
-    { title: "Số tai", dataIndex: "earTag" },
-    {
-      title: "Ngày đẻ dự kiến",
-      dataIndex: "expectedFarrowAt",
-      render: (iso) => isoToDisplay(iso),
-    },
-    {
-      title: "Còn lại (ngày)",
-      render: (r) => dayjs(r.expectedFarrowAt).diff(dayjs(), "day"),
-    },
-    {
-      title: "Chuồng",
-      dataIndex: "barnId",
-      render: (id) => barnLabel(barns, id),
-    },
-  ];
-
-  const lateColumns = [
-    { title: "STT", render: (_, __, i) => i + 1 },
-    { title: "Số tai", dataIndex: "earTag" },
-    {
-      title: "Ngày đẻ dự kiến",
-      dataIndex: "expectedFarrowAt",
-      render: (iso) => isoToDisplay(iso),
-    },
-    {
-      title: "Quá hạn (ngày)",
-      render: (r) => dayjs().diff(dayjs(r.expectedFarrowAt), "day"),
-    },
-    {
-      title: "Chuồng",
-      dataIndex: "barnId",
-      render: (id) => barnLabel(barns, id),
-    },
-  ];
-
-  const tableTitle =
-    filter === "raising"
-      ? "Lợn mẹ đang nuôi con"
-      : filter === "upcoming"
-      ? "Sắp đẻ"
-      : "Chậm đẻ";
-
-  const tableData =
-    filter === "raising"
-      ? mothers
-      : filter === "upcoming"
-      ? upcoming
-      : late;
-
-  const tableColumns =
-    filter === "raising"
-      ? motherColumns
-      : filter === "upcoming"
-      ? upcomingColumns
-      : lateColumns;
 
   return (
-    <div className="dashboard">
+    <div className="pig-farrowing-page">
       <PageHeader
-        title="Đẻ con"
-        subtitle="Quản lý sinh sản và nuôi con"
+        title="Quản lý Đẻ con"
+        subtitle="Ghi nhận số lượng lợn sơ sinh và tình trạng sinh sản"
+        actions={canEdit && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            Ghi nhận đẻ
+          </Button>
+        )}
       />
 
-      <div className="dashboard__maincontent">
+      <Card className="table-card">
+        <Table columns={columns} dataSource={farrowings} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
+      </Card>
 
-        {/* ===== STATS ===== */}
-        <div className="stats-grid">
-          <Card className="stat-card stat-card--pigs">
-            <div className="stat-card__header">
-              <span className="stat-card__title">Mẹ nuôi con</span>
-              <div className="stat-card__icon">🐷</div>
-            </div>
-            <div className="stat-card__value">{mothers.length}</div>
-          </Card>
-
-          <Card className="stat-card stat-card--barn">
-            <div className="stat-card__header">
-              <span className="stat-card__title">Sắp đẻ</span>
-              <div className="stat-card__icon">📅</div>
-            </div>
-            <div className="stat-card__value">{upcoming.length}</div>
-          </Card>
-
-          <Card className="stat-card stat-card--daily-tasks">
-            <div className="stat-card__header">
-              <span className="stat-card__title">Chậm đẻ</span>
-              <div className="stat-card__icon">⚠️</div>
-            </div>
-            <div className="stat-card__value">{late.length}</div>
-          </Card>
-        </div>
-
-        {/* ===== FILTER ===== */}
-        <Card className="filter-card">
-          <Space wrap>
-            <Select value={filter} onChange={setFilter}>
-              <Option value="raising">Nuôi con</Option>
-              <Option value="upcoming">Sắp đẻ</Option>
-              <Option value="late">Chậm đẻ</Option>
-            </Select>
-
-            <Button type="primary" onClick={() => setIsModalOpen(true)}>
-              Ghi đẻ
-            </Button>
-          </Space>
-        </Card>
-
-        {/* ===== TABLE ===== */}
-        <Card title={tableTitle} className="table-card">
-          <Table
-            columns={tableColumns}
-            dataSource={tableData}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-          />
-        </Card>
-      </div>
-
-      {/* ===== MODAL ===== */}
-      <Modal
-        title="Ghi đẻ"
-        open={isModalOpen}
-        onOk={handleAdd}
-        onCancel={() => setIsModalOpen(false)}
+      <Modal 
+        title="Ghi nhận nái đẻ" 
+        open={open} 
+        onCancel={() => setOpen(false)} 
+        onOk={handleSubmit} 
+        okText="Lưu thông tin" 
+        cancelText="Hủy"
+        footer={canEdit ? undefined : null}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="code"
-            label="Số tai"
-            rules={[{ required: true }]}
-          >
-            <Select>
-              {[...upcoming, ...late].map((p) => (
-                <Option key={p.id} value={p.earTag}>
-                  {p.earTag}
-                </Option>
-              ))}
+        <Form form={form} layout="vertical" disabled={!canEdit}>
+          <Form.Item name="sow_id" label="Lợn nái mẹ" rules={[{ required: true, message: 'Chọn nái' }]}>
+            <Select showSearch placeholder="Chọn lợn nái">
+              {activeSows.map(p => <Select.Option key={p.id} value={p.id}>{p.earTag}</Select.Option>)}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="date"
-            label="Ngày đẻ"
-            rules={[{ required: true }]}
-          >
-            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+          <Form.Item name="farrow_date" label="Ngày đẻ" rules={[{ required: true, message: 'Chọn ngày đẻ' }]}>
+            <DatePicker className="w-100" format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item
-            name="total"
-            label="Tổng đẻ"
-            rules={[{ required: true }]}
-          >
-            <InputNumber style={{ width: "100%" }} min={0} />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={8}><Form.Item name="alive_piglets" label="Số con sống" rules={[{ required: true }]}><InputNumber min={0} className="w-100" /></Form.Item></Col>
+            <Col span={8}><Form.Item name="dead_piglets" label="Số chết/tật" initialValue={0}><InputNumber min={0} className="w-100" /></Form.Item></Col>
+            <Col span={8}><Form.Item name="total_weight" label="Tổng Kg (ổ)"><InputNumber min={0} step={0.1} className="w-100" /></Form.Item></Col>
+          </Row>
 
-          <Form.Item shouldUpdate>
-            {({ getFieldValue, setFieldsValue }) => {
-              const total = getFieldValue("total");
-
-              return (
-                <>
-                  <Form.Item name="alive" label="Sống">
-                    <InputNumber
-                      style={{ width: "100%" }}
-                      min={0}
-                      onChange={(v) => {
-                        if (total != null) {
-                          setFieldsValue({ dead: total - (v || 0) });
-                        }
-                      }}
-                    />
-                  </Form.Item>
-
-                  <Form.Item name="dead" label="Chết">
-                    <InputNumber
-                      style={{ width: "100%" }}
-                      min={0}
-                      onChange={(v) => {
-                        if (total != null) {
-                          setFieldsValue({ alive: total - (v || 0) });
-                        }
-                      }}
-                    />
-                  </Form.Item>
-                </>
-              );
-            }}
-          </Form.Item>
-
-          <Form.Item
-            name="barnId"
-            label="Chuồng"
-            rules={[{ required: true }]}
-          >
-            <Select>
-              {barns.map((b) => (
-                <Option key={b.id} value={b.id}>
-                  {b.code} — {b.name}
-                </Option>
-              ))}
+          <Form.Item name="staff_name" label="Người phụ trách / Đỡ đẻ">
+            <Select showSearch placeholder="Chọn nhân viên">
+              {staffList.map((x) => <Select.Option key={x.id} value={x.full_name}>{x.full_name}</Select.Option>)}
             </Select>
+          </Form.Item>
+
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea rows={2} placeholder="Sức khỏe nái mẹ, vấn đề phát sinh..." />
           </Form.Item>
         </Form>
       </Modal>

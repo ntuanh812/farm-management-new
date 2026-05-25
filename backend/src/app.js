@@ -15,9 +15,7 @@ import path from "path";
 // =========================================================
 import authRoute from "./routes/auth.route.js";
 
-import employeesRoute from "./routes/employees.route.js";
-
-import accountsRoute from "./routes/accounts.route.js";
+import staffRoute from "./routes/staff.route.js";
 
 import vetDiagnosisRoute from "./routes/vetDiagnosis.route.js";
 
@@ -28,6 +26,22 @@ import barnsRoute from "./routes/barns.route.js";
 import pigsRoute from "./routes/pigs.route.js";
 
 import movementsRoute from "./routes/movements.route.js";
+
+import saleBatchesRoute from "./routes/saleBatches.route.js";
+
+import feedUsagesRoute from "./routes/feedUsages.route.js";
+
+import medicineUsagesRoute from "./routes/medicineUsages.route.js";
+
+import deathsRoute from "./routes/deaths.route.js";
+
+import breedingsRoute from "./routes/breedings.route.js";
+
+import farrowingsRoute from "./routes/farrowings.route.js";
+
+import reportsRoute from "./routes/reports.route.js";
+
+import vaccinationsRoute from "./routes/vaccinations.route.js";
 
 // =========================================================
 // APP
@@ -85,19 +99,10 @@ app.register(
   }
 );
 
-// EMPLOYEES
 app.register(
-  employeesRoute,
+  staffRoute,
   {
-    prefix: "/api/employees",
-  }
-);
-
-// ACCOUNTS
-app.register(
-  accountsRoute,
-  {
-    prefix: "/api/accounts",
+    prefix: "/api/staff",
   }
 );
 
@@ -138,6 +143,70 @@ app.register(
 app.register(movementsRoute, {
   prefix: "/api/movements",
 });
+
+// SALE BATCHES
+app.register(
+  saleBatchesRoute,
+  {
+    prefix: "/api/sale-batches",
+  }
+);
+
+// FEED USAGES
+app.register(
+  feedUsagesRoute,
+  {
+    prefix: "/api/feed-usages",
+  }
+);
+
+// MEDICINE USAGES
+app.register(
+  medicineUsagesRoute,
+  {
+    prefix: "/api/medicine-usages",
+  }
+);
+
+// DEATHS
+app.register(
+  deathsRoute,
+  {
+    prefix: "/api/deaths",
+  }
+);
+
+// BREEDINGS
+app.register(
+  breedingsRoute,
+  {
+    prefix: "/api/breedings",
+  }
+);
+
+// FARROWINGS
+app.register(
+  farrowingsRoute,
+  {
+    prefix: "/api/farrowings",
+  }
+);
+
+// REPORTS
+app.register(
+  reportsRoute,
+  {
+    prefix: "/api/reports-dashboard",
+  }
+);
+
+// VACCINATIONS
+app.register(
+  vaccinationsRoute,
+  {
+    prefix: "/api/vaccinations",
+  }
+);
 
 // =========================================================
 // HEALTH CHECK

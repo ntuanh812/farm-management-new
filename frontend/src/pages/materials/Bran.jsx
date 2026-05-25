@@ -1,254 +1,146 @@
-import React, { useState, useMemo, useEffect } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Tag,
-  Popconfirm,
-  message,
-  Card,
-  Form,
-  Modal,
-  Select,
-  DatePicker,
-  Input,
-  InputNumber,
-} from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { usePigFarmStore } from "../../store/pigFarmStore";
-import { barnLabel } from "../../domain/pigFarm";
-import dayjs from "dayjs";
-import { LifecycleStatus } from "../../domain/pigFarm";
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import { useAuthStore } from '@/store/authStore';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-const USAGE_TYPES = ["Sử dụng chung", "Sử dụng cá nhân"];
-const PRODUCT_NAMES = ["567S( kg) SILO", "566 SILO", "550p/pack"];
-const PRODUCT_CODES = {
-  "567S( kg) SILO": "O0701-150758-514",
-  "566 SILO": "O1002-101831-715",
-  "550p/pack": "O0505-094746-136",
-};
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-function FeedUsageModal({ open, onClose, onSubmit, initialValues, barns, pigs }) {
+// Danh mục cám (Có thể mở rộng lấy từ DB sau)
+const FEED_TYPES = [
+  'Cám lợn con tập ăn', 
+  'Cám lợn thịt 15-30kg', 
+  'Cám lợn thịt 30-60kg', 
+  'Cám lợn xuất chuồng', 
+  'Cám nái mang thai'
+];
+
+export default function Bran() {
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const [feedUsages, setFeedUsages] = useState([]);
+  const [barns, setBarns] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  const isEdit = !!initialValues;
-  const barnIdWatch = Form.useWatch("barnId", form);
 
-  const pigsInBarn = useMemo(() => {
-    if (!barnIdWatch) return [];
-    return pigs.filter(
-      (p) => p.barnId === barnIdWatch && p.lifecycleStatus === LifecycleStatus.ACTIVE
-    );
-  }, [pigs, barnIdWatch]);
+  // Phân quyền
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
+  const canDelete = user?.role === 'ADMIN';
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resUsages, resBarns] = await Promise.all([
+        axios.get(`${API}/feed-usages`, { headers }),
+        axios.get(`${API}/barns`, { headers })
+      ]);
+      setFeedUsages(resUsages.data?.data || []);
+      setBarns(resBarns.data?.data || []);
+    } catch (error) {
+      message.error('Không thể tải dữ liệu sử dụng cám');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (open) {
-      if (initialValues) {
-        form.setFieldsValue({
-          ...initialValues,
-          startDate: dayjs(initialValues.startDate),
-          endDate: dayjs(initialValues.endDate),
-        });
-      } else {
-        form.resetFields();
-      }
-    }
-  }, [open, initialValues, form]);
+    fetchData();
+  }, []);
 
-  const handleProductChange = (name) => {
-    form.setFieldValue("productCode", PRODUCT_CODES[name] || "");
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API}/feed-usages/${id}`, { headers });
+      message.success('Đã xóa bản ghi tiêu thụ cám');
+      fetchData();
+    } catch (error) {
+      message.error('Không thể xóa bản ghi này');
+    }
   };
 
-  const handleOk = async () => {
+  const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      onSubmit({
+      const payload = {
         ...values,
-        startDate: values.startDate.format("YYYY-MM-DD"),
-        endDate: values.endDate.format("YYYY-MM-DD"),
-        pigId: values.pigId || null,
-      });
-    } catch (errorInfo) {
-      console.log("Validation Failed:", errorInfo);
+        used_at: values.used_at.format('YYYY-MM-DD'),
+        staff_name: user?.full_name || user?.username
+      };
+
+      await axios.post(`${API}/feed-usages`, payload, { headers });
+      message.success('Ghi nhận sử dụng cám thành công');
+      setOpen(false);
+      form.resetFields();
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Có lỗi xảy ra');
     }
-  };
-
-  return (
-    <Modal
-      open={open}
-      title={isEdit ? "Sửa sử dụng cám" : "Thêm sử dụng cám"}
-      onCancel={onClose}
-      onOk={handleOk}
-      okText={isEdit ? "Lưu" : "Thêm"}
-      cancelText="Hủy"
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item name="usageType" label="Loại" rules={[{ required: true }]}>
-          <Select>
-            {USAGE_TYPES.map((t) => (
-              <Option key={t} value={t}>
-                {t}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="barnId" label="Chuồng" rules={[{ required: true }]}>
-          <Select>
-            {barns.map((b) => (
-              <Option key={b.id} value={b.id}>
-                {b.code} — {b.name}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="pigId" label="Lợn (tùy chọn)">
-          <Select allowClear>
-            {pigsInBarn.map((p) => (
-              <Option key={p.id} value={p.id}>
-                {p.earTag}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="startDate" label="Từ ngày" rules={[{ required: true }]}>
-          <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
-        </Form.Item>
-        <Form.Item name="endDate" label="Đến ngày" rules={[{ required: true }]}>
-          <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
-        </Form.Item>
-        <Form.Item name="productName" label="Sản phẩm" rules={[{ required: true }]}>
-          <Select onChange={handleProductChange}>
-            {PRODUCT_NAMES.map((p) => (
-              <Option key={p} value={p}>
-                {p}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="productCode" label="Mã">
-          <Input disabled />
-        </Form.Item>
-        <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
-          <Select>
-            <Option value="kg">kg</Option>
-            <Option value="bao">bao</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item name="quantity" label="Số lượng" rules={[{ required: true }]}>
-          <InputNumber style={{ width: "100%" }} min={0} />
-        </Form.Item>
-        <Form.Item name="totalAmount" label="Thành tiền (₫)" rules={[{ required: true }]}>
-          <InputNumber style={{ width: "100%" }} min={0} />
-        </Form.Item>
-        <Form.Item name="performedBy" label="Người thực hiện" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-}
-
-export default function BranUsage() {
-  const barns = usePigFarmStore((s) => s.barns);
-  const pigs = usePigFarmStore((s) => s.pigs);
-  const feedUsages = usePigFarmStore((s) => s.feedUsages);
-  const addFeedUsage = usePigFarmStore((s) => s.addFeedUsage);
-  const updateFeedUsage = usePigFarmStore((s) => s.updateFeedUsage);
-  const deleteFeedUsage = usePigFarmStore((s) => s.deleteFeedUsage);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editRecord, setEditRecord] = useState(null);
-
-  const handleSubmit = (values) => {
-    if (editRecord) {
-      updateFeedUsage(editRecord.id, values);
-      message.success("Đã cập nhật");
-    } else {
-      addFeedUsage(values);
-      message.success("Đã thêm");
-    }
-    setModalOpen(false);
-    setEditRecord(null);
   };
 
   const columns = [
+    { title: 'Ngày', dataIndex: 'used_at', key: 'used_at', render: (date) => dayjs(date).format('DD/MM/YYYY') },
+    { title: 'Chuồng', dataIndex: 'barn_name', key: 'barn_name' },
+    { title: 'Loại cám', dataIndex: 'feed_type', key: 'feed_type' },
+    { title: 'Số lượng (kg)', dataIndex: 'quantity_kg', key: 'quantity_kg', render: (val) => <strong>{val} kg</strong> },
+    { title: 'Người thực hiện', dataIndex: 'staff_name', key: 'staff_name' },
+    { title: 'Ghi chú', dataIndex: 'note', key: 'note' },
     {
-      title: "",
-      render: (_, r) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setEditRecord(r);
-              setModalOpen(true);
-            }}
-          />
-          <Popconfirm
-            title="Xóa?"
-            onConfirm={() => {
-              deleteFeedUsage(r.id);
-              message.success("Đã xóa");
-            }}
-          >
-            <Button danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
+      title: 'Thao tác',
+      key: 'actions',
+      render: (_, record) => canDelete && (
+        <Popconfirm title="Chắc chắn xóa bản ghi này?" onConfirm={() => handleDelete(record.id)}>
+          <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
+        </Popconfirm>
       ),
     },
-    { title: "Loại", dataIndex: "usageType" },
-    {
-      title: "Chuồng",
-      dataIndex: "barnId",
-      render: (id) => <Tag>{barnLabel(barns, id)}</Tag>,
-    },
-    {
-      title: "Lợn",
-      dataIndex: "pigId",
-      render: (pid) => pigs.find((p) => p.id === pid)?.earTag || "—",
-    },
-    { title: "Từ", dataIndex: "startDate" },
-    { title: "Đến", dataIndex: "endDate" },
-    { title: "Sản phẩm", dataIndex: "productName" },
-    { title: "SL", dataIndex: "quantity" },
-    { title: "Tiền", dataIndex: "totalAmount" },
-    { title: "Người TH", dataIndex: "performedBy" },
   ];
 
   return (
     <div className="bran-page">
-      <PageHeader title="Sử dụng cám" subtitle="Quản lý tiêu hao thức ăn" />
+      <PageHeader
+        title="Sử dụng Thức ăn (Cám)"
+        subtitle="Ghi nhận và theo dõi lịch sử tiêu thụ cám của các chuồng"
+        actions={canEdit && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            Ghi nhận cám
+          </Button>
+        )}
+      />
 
-      {/* ACTION */}
-      <div className="page-actions">
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditRecord(null);
-            setModalOpen(true);
-          }}
-          style={{margin:16}}
-        >
-          Thêm mới
-        </Button>
-      </div>
-
-      {/* TABLE */}
       <Card className="table-card">
-        <Table columns={columns} dataSource={feedUsages} rowKey="id" />
+        <Table columns={columns} dataSource={feedUsages} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
       </Card>
 
-      <FeedUsageModal
-        open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditRecord(null);
-        }}
-        onSubmit={handleSubmit}
-        initialValues={editRecord}
-        barns={barns}
-        pigs={pigs}
-      />
+      <Modal 
+        title="Ghi nhận sử dụng cám" 
+        open={open} 
+        onCancel={() => setOpen(false)} 
+        onOk={handleSubmit} 
+        okText="Lưu thông tin" 
+        cancelText="Hủy" 
+        footer={canEdit ? undefined : null}
+      >
+        <Form form={form} layout="vertical" disabled={!canEdit}>
+          <Form.Item name="used_at" label="Ngày cho ăn" rules={[{ required: true, message: 'Chọn ngày' }]}>
+            <DatePicker className="w-100" format="DD/MM/YYYY" />
+          </Form.Item>
+          <Form.Item name="barn_id" label="Chuồng" rules={[{ required: true, message: 'Chọn chuồng' }]}>
+            <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn chuồng..." />
+          </Form.Item>
+          <Form.Item name="feed_type" label="Loại cám" rules={[{ required: true, message: 'Chọn loại cám' }]}>
+            <Select options={FEED_TYPES.map(t => ({ label: t, value: t }))} placeholder="Chọn loại cám..." />
+          </Form.Item>
+          <Form.Item name="quantity_kg" label="Số lượng (kg)" rules={[{ required: true, message: 'Nhập số lượng kg' }]}>
+            <InputNumber min={0.1} step={0.1} className="w-100" />
+          </Form.Item>
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea rows={2} placeholder="Ghi chú bổ sung..." />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

@@ -36,8 +36,7 @@ import VetDiagnosis from '@/pages/health/VetDiagnosis'
 import VetDiagnosisDetail from '@/pages/health/VetDiagnosisDetail'
 
 // Staff
-import Employees from '@/pages/staff/Employees'
-import Accounts  from '@/pages/staff/Accounts'
+import StaffManagement from '@/pages/staff/StaffManagement'
 
 // Reports
 import PigReport from '@/pages/reports/PigReport'
@@ -89,8 +88,7 @@ export const AppRouter = () => {
         <Route path="/health/vaccine"         element={<PigVaccination />} />
         <Route path="/health/vet-diagnosis"   element={<VetDiagnosis />} />
         <Route path="/health/vet-diagnosis/:id" element={<VetDiagnosisDetail />} />
-        <Route path="/staff/employees"        element={<Employees />} />
-        <Route path="/staff/accounts"         element={<Accounts />} />
+        <Route path="/staff/management"       element={<StaffManagement />} />
         <Route path="/reports/pig-report"     element={<PigReport />} />
       </Route>
 

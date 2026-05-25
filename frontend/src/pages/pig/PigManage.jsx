@@ -1,774 +1,282 @@
-import React, { useEffect, useMemo, useState } from "react";
-
+import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  Table,
-  Input,
-  Select,
-  Button,
-  Space,
-  Tag,
-  Modal,
-  Form,
-  InputNumber,
-  DatePicker,
-  message,
-} from "antd";
+  Table, Button, Space, Tag, Modal, Form, Input,
+  Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col
+} from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import { useAuthStore } from '@/store/authStore';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-import axios from "axios";
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-import dayjs from "dayjs";
-
-import { PageHeader } from "../../components/layout/PageHeader";
-
-const { Option } = Select;
-
-// =========================================================
-// LABELS
-// =========================================================
-const categoryLabels = {
-  SOW: "Lợn nái",
-  BOAR: "Lợn đực",
-  PIGLET: "Lợn con",
-  FATTENING: "Lợn thịt",
+const CATEGORY_MAP = {
+  'SOW': 'Nái',
+  'BOAR': 'Đực',
+  'PIGLET': 'Lợn con',
+  'FATTENING': 'Lợn thịt'
 };
 
-const typeMap = {
-  SOW: {
-    label: categoryLabels.SOW,
-    color: "green",
-  },
-
-  BOAR: {
-    label: categoryLabels.BOAR,
-    color: "red",
-  },
-
-  PIGLET: {
-    label: categoryLabels.PIGLET,
-    color: "gold",
-  },
-
-  FATTENING: {
-    label: categoryLabels.FATTENING,
-    color: "blue",
-  },
+const STATUS_MAP = {
+  'ACTIVE': { text: 'Khỏe mạnh', color: 'green' },
+  'SOLD': { text: 'Đã xuất bán', color: 'blue' },
+  'DEAD': { text: 'Đã chết', color: 'red' }
 };
 
-const sowReproductiveLabels = [
-  "Hậu bị",
-  "Chờ phối",
-  "Đã phối",
-  "Đẻ con",
-  "Cai sữa",
-  "Sảy thai",
-];
+const GENDER_MAP = {
+  'male': 'Đực',
+  'female': 'Cái'
+};
 
-function displayStatus(pig) {
+export default function PigManage() {
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
 
-  if (
-    pig.category === "FATTENING"
-  ) {
-    return "Đang tăng trọng";
-  }
-
-  if (pig.reproductiveLabel) {
-    return pig.reproductiveLabel;
-  }
-
-  return "—";
-}
-
-export default function PigManagement() {
-
-  // =========================================================
-  // STATES
-  // =========================================================
   const [pigs, setPigs] = useState([]);
-
   const [barns, setBarns] = useState([]);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [keyword, setKeyword] =
-    useState("");
-
-  const [typeFilter, setTypeFilter] =
-    useState("all");
-
-  const [barnFilter, setBarnFilter] =
-    useState("all");
-
-  const [isModalOpen, setIsModalOpen] =
-    useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
 
-  const token =
-    localStorage.getItem("token");
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
+  const canDelete = user?.role === 'ADMIN';
 
-  // =========================================================
-  // FETCH BARNS
-  // =========================================================
-  const fetchBarns = async () => {
-
+  const fetchData = async () => {
+    setLoading(true);
     try {
+      const [resPigs, resBarns] = await Promise.all([
+        axios.get(`${API}/pigs`, { headers }),
+        axios.get(`${API}/barns`, { headers })
+      ]);
 
-      const res = await axios.get(
-        "http://localhost:3000/api/barns",
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      setBarns(
-        res.data?.data || []
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        "Không tải được chuồng"
-      );
-    }
-  };
-
-  // =========================================================
-  // FETCH PIGS
-  // =========================================================
-  const fetchPigs = async () => {
-
-    try {
-
-      setLoading(true);
-
-      const res = await axios.get(
-        "http://localhost:3000/api/pigs",
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      setPigs(
-        res.data?.data || []
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        "Không tải được đàn lợn"
-      );
-
+      if (resPigs.data.success) setPigs(resPigs.data.data);
+      if (resBarns.data.success) setBarns(resBarns.data.data);
+    } catch (error) {
+      message.error('Không thể tải dữ liệu đàn lợn');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-
-    fetchBarns();
-
-    fetchPigs();
-
+    fetchData();
   }, []);
 
-  // =========================================================
-  // ACTIVE PIGS
-  // =========================================================
-  const activePigs = useMemo(() => {
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    form.resetFields();
+    form.setFieldsValue({ lifecycle_status: 'ACTIVE', gender: 'male' });
+    setOpen(true);
+  };
 
-    return pigs.filter(
-      (p) =>
-        p.lifecycleStatus ===
-        "ACTIVE"
-    );
+  const handleOpenEdit = (record) => {
+    setEditingId(record.id);
+    form.setFieldsValue({
+      pig_code: record.earTag,
+      name: record.name,
+      barn_id: record.barnId,
+      category: record.category,
+      lifecycle_status: record.lifecycleStatus,
+      breed: record.breed,
+      gender: record.gender,
+      dob: record.dob ? dayjs(record.dob) : null,
+      entry_date: record.arrivedAt ? dayjs(record.arrivedAt) : null,
+      entry_weight: record.entry_weight,
+      current_weight: record.weightKg,
+      note: record.note
+    });
+    setOpen(true);
+  };
 
-  }, [pigs]);
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API}/pigs/${id}`, { headers });
+      message.success('Đã xóa lợn thành công');
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể xóa bản ghi này');
+    }
+  };
 
-  // =========================================================
-  // FILTERED
-  // =========================================================
-  const filteredData = useMemo(() => {
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      const payload = {
+        ...values,
+        dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
+        entry_date: values.entry_date ? values.entry_date.format('YYYY-MM-DD') : null,
+      };
 
-    return activePigs
-      .filter((item) => {
+      if (editingId) {
+        await axios.put(`${API}/pigs/${editingId}`, payload, { headers });
+        message.success('Cập nhật thông tin lợn thành công');
+      } else {
+        await axios.post(`${API}/pigs`, payload, { headers });
+        message.success('Thêm lợn mới thành công');
+      }
 
-        return (
-          item.earTag
-            ?.toLowerCase()
-            .includes(
-              keyword.toLowerCase()
-            ) &&
+      setOpen(false);
+      fetchData();
+    } catch (error) {
+      if (error.response) {
+        message.error(error.response.data.message || 'Có lỗi xảy ra');
+      }
+    }
+  };
 
-          (
-            typeFilter === "all" ||
-            item.category ===
-              typeFilter
-          ) &&
-
-          (
-            barnFilter === "all" ||
-            item.barnId ===
-              barnFilter
-          )
-        );
-      })
-
-      .map((p) => ({
-
-        key: p.id,
-
-        ...p,
-
-        displayStatus:
-          displayStatus(p),
-
-        arrivedDisplay:
-          p.arrivedAt
-            ? dayjs(
-                p.arrivedAt
-              ).format(
-                "DD/MM/YYYY"
-              )
-            : "-",
-
-        barnDisplay:
-          barns.find(
-            (b) =>
-              b.id ===
-              p.barnId
-          )?.name || "-",
-      }));
-
-  }, [
-    activePigs,
-    keyword,
-    typeFilter,
-    barnFilter,
-    barns,
-  ]);
-
-  // =========================================================
-  // TABLE
-  // =========================================================
   const columns = [
     {
-      title: "Số tai",
-      dataIndex: "earTag",
+      title: 'Mã (Số tai)',
+      dataIndex: 'earTag',
+      key: 'earTag',
+      render: (text) => <strong>{text}</strong>,
     },
-
     {
-      title: "Loại",
-      dataIndex: "category",
-
-      render: (t) => (
-        <Tag
-          color={
-            typeMap[t]?.color
-          }
-        >
-          {
-            typeMap[t]?.label
-          }
-        </Tag>
-      ),
+      title: 'Chuồng',
+      dataIndex: 'barnName',
+      key: 'barnName',
     },
-
     {
-      title: "Ngày nhập",
-      dataIndex:
-        "arrivedDisplay",
+      title: 'Phân loại',
+      dataIndex: 'category',
+      key: 'category',
+      render: (cat) => CATEGORY_MAP[cat] || cat,
     },
-
     {
-      title: "Tuổi (ngày)",
-      dataIndex: "ageDays",
+      title: 'Giới tính',
+      dataIndex: 'gender',
+      key: 'gender',
+      render: (g) => GENDER_MAP[g] || g,
     },
-
     {
-      title: "Cân (kg)",
-      dataIndex: "weightKg",
-
-      render: (w) =>
-        w ?? "—",
+      title: 'Tuổi (ngày)',
+      dataIndex: 'ageDays',
+      key: 'ageDays',
+      render: (days) => (days !== null ? `${days} ngày` : '-'),
     },
-
     {
-      title: "Chuồng",
-      dataIndex:
-        "barnDisplay",
-
-      render: (t) => (
-        <Tag>{t}</Tag>
+      title: 'Trọng lượng',
+      dataIndex: 'weightKg',
+      key: 'weightKg',
+      render: (w) => (w ? `${w} kg` : '-'),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'lifecycleStatus',
+      key: 'lifecycleStatus',
+      render: (status) => {
+        const cfg = STATUS_MAP[status];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{status}</Tag>;
+      }
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      render: (_, record) => canEdit && (
+        <Space size="middle">
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            className="text-primary"
+            onClick={() => handleOpenEdit(record)}
+            title="Sửa"
+          />
+          {canDelete && (
+            <Popconfirm
+              title="Chắc chắn xóa bản ghi này?"
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
+            </Popconfirm>
+          )}
+        </Space>
       ),
     },
   ];
 
-  // =========================================================
-  // ADD PIG
-  // =========================================================
-  const handleAdd = async () => {
-
-    try {
-
-      const values =
-        await form.validateFields();
-
-      await axios.post(
-        "http://localhost:3000/api/pigs",
-        {
-          pig_code:
-            values.earTag,
-
-          barn_id:
-            values.barnId,
-
-          category:
-            values.category,
-
-          reproductive_label:
-            values.reproductiveLabel,
-
-          entry_date:
-            values.arrivedAt
-              ?.format(
-                "YYYY-MM-DD"
-              ),
-
-          age_days:
-            values.ageDays,
-
-          current_weight:
-            values.weightKg,
-        },
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      message.success(
-        "Nhập lợn thành công"
-      );
-
-      setIsModalOpen(false);
-
-      form.resetFields();
-
-      fetchPigs();
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        "Không thể nhập lợn"
-      );
-    }
-  };
-
   return (
-    <div className="dashboard">
-
+    <div className="pig-manage-page">
       <PageHeader
-        title="Quản lý đàn"
-        subtitle="Danh sách lợn đang nuôi"
-      />
-
-      <div className="dashboard__maincontent">
-
-        {/* ================================================= */}
-        {/* STATS */}
-        {/* ================================================= */}
-
-        <div className="stats-grid">
-
-          {/* TOTAL */}
-          <Card className="stat-card stat-card--pigs">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Tổng đang nuôi
-              </span>
-
-              <div className="stat-card__icon">
-                🐷
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {activePigs.length}
-
-              <span className="stat-card__label">
-                {" "}
-                con
-              </span>
-            </div>
-          </Card>
-
-          {/* SOW */}
-          <Card className="stat-card stat-card--barn">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Lợn nái
-              </span>
-
-              <div className="stat-card__icon">
-                👑
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {
-                activePigs.filter(
-                  (p) =>
-                    p.category ===
-                    "SOW"
-                ).length
-              }
-            </div>
-          </Card>
-
-          {/* FATTENING */}
-          <Card className="stat-card stat-card--staff">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Lợn thịt
-              </span>
-
-              <div className="stat-card__icon">
-                🥩
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {
-                activePigs.filter(
-                  (p) =>
-                    p.category ===
-                    "FATTENING"
-                ).length
-              }
-            </div>
-          </Card>
-
-          {/* PIGLET */}
-          <Card className="stat-card stat-card--daily-tasks">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Lợn con
-              </span>
-
-              <div className="stat-card__icon">
-                🐽
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {
-                activePigs.filter(
-                  (p) =>
-                    p.category ===
-                    "PIGLET"
-                ).length
-              }
-            </div>
-          </Card>
-        </div>
-
-        {/* ================================================= */}
-        {/* FILTER */}
-        {/* ================================================= */}
-
-        <Card className="filter-card">
-
-          <Space wrap>
-
-            <Input
-              placeholder="Tìm số tai"
-              value={keyword}
-              onChange={(e) =>
-                setKeyword(
-                  e.target.value
-                )
-              }
-            />
-
-            {/* TYPE */}
-            <Select
-              value={typeFilter}
-              onChange={
-                setTypeFilter
-              }
-              style={{
-                minWidth: 140,
-              }}
-            >
-
-              <Option value="all">
-                Tất cả
-              </Option>
-
-              {Object.keys(
-                typeMap
-              ).map((k) => (
-
-                <Option
-                  key={k}
-                  value={k}
-                >
-                  {
-                    typeMap[k]
-                      .label
-                  }
-                </Option>
-              ))}
-            </Select>
-
-            {/* BARNS */}
-            <Select
-              value={barnFilter}
-              onChange={
-                setBarnFilter
-              }
-              style={{
-                minWidth: 180,
-              }}
-            >
-
-              <Option value="all">
-                Tất cả chuồng
-              </Option>
-
-              {barns.map((b) => (
-
-                <Option
-                  key={b.id}
-                  value={b.id}
-                >
-                  {b.name}
-                </Option>
-              ))}
-            </Select>
-
-            <Button
-              type="primary"
-              onClick={() =>
-                setIsModalOpen(
-                  true
-                )
-              }
-            >
-              Nhập lợn
+        title="Quản lý Đàn Lợn"
+        subtitle="Thêm mới, theo dõi trạng thái và cập nhật thông tin cá thể lợn"
+        actions={
+          canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAdd}>
+              Nhập đàn mới
             </Button>
-
-          </Space>
-        </Card>
-
-        {/* ================================================= */}
-        {/* TABLE */}
-        {/* ================================================= */}
-
-        <Card className="table-card">
-
-          <Table
-            columns={columns}
-            dataSource={
-              filteredData
-            }
-            loading={loading}
-          />
-        </Card>
-      </div>
-
-      {/* ================================================= */}
-      {/* MODAL */}
-      {/* ================================================= */}
-
-      <Modal
-        open={isModalOpen}
-        onOk={handleAdd}
-        onCancel={() =>
-          setIsModalOpen(
-            false
           )
         }
-        title="Nhập lợn mới"
+      />
+
+      <Card className="table-card">
+        <Table
+          columns={columns}
+          dataSource={pigs}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 800 }}
+        />
+      </Card>
+
+      <Modal
+        title={editingId ? 'Cập nhật cá thể lợn' : 'Thêm lợn mới'}
+        open={open}
+        onCancel={() => setOpen(false)}
+        onOk={handleSubmit}
+        okText="Lưu thông tin"
+        cancelText="Hủy"
+        width={750}
+        footer={canEdit ? undefined : null}
       >
+        <Form form={form} layout="vertical" disabled={!canEdit}>
+          <Row gutter={16}>
+            <Col span={8}><Form.Item name="pig_code" label="Mã lợn / Số tai" rules={[{ required: true, message: 'Nhập mã' }]}><Input placeholder="VD: P001" /></Form.Item></Col>
+            <Col span={8}><Form.Item name="name" label="Tên gọi (nếu có)"><Input placeholder="VD: Nái Mẹ 1" /></Form.Item></Col>
+            <Col span={8}>
+              <Form.Item name="barn_id" label="Chuồng trại" rules={[{ required: true, message: 'Chọn chuồng' }]}>
+                <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn..." />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Form
-          form={form}
-          layout="vertical"
-        >
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="category" label="Phân loại" rules={[{ required: true, message: 'Chọn loại' }]}>
+                <Select options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))} />
+              </Form.Item>
+            </Col>
+            <Col span={8}><Form.Item name="breed" label="Giống lợn"><Input placeholder="VD: Duroc, Landrace" /></Form.Item></Col>
+            <Col span={8}>
+              <Form.Item name="gender" label="Giới tính" rules={[{ required: true }]}>
+                <Select options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          {/* EARTAG */}
-          <Form.Item
-            name="earTag"
-            label="Số tai"
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-
-          {/* CATEGORY */}
-          <Form.Item
-            name="category"
-            label="Loại"
-            initialValue="FATTENING"
-          >
-
-            <Select>
-
-              {Object.keys(
-                typeMap
-              ).map((k) => (
-
-                <Option
-                  key={k}
-                  value={k}
-                >
-                  {
-                    typeMap[k]
-                      .label
-                  }
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          {/* REPRODUCTIVE */}
-          <Form.Item
-            noStyle
-            shouldUpdate={(
-              p,
-              c
-            ) =>
-              p.category !==
-              c.category
-            }
-          >
-            {({
-              getFieldValue,
-            }) =>
-
-              getFieldValue(
-                "category"
-              ) === "SOW" ? (
-
-                <Form.Item
-                  name="reproductiveLabel"
-                  label="Giai đoạn sinh sản"
-                  initialValue="Hậu bị"
-                >
-
-                  <Select>
-
-                    {sowReproductiveLabels.map(
-                      (x) => (
-                        <Option
-                          key={x}
-                          value={x}
-                        >
-                          {x}
-                        </Option>
-                      )
-                    )}
-                  </Select>
+          <Row gutter={16}>
+            <Col span={8}><Form.Item name="dob" label="Ngày sinh"><DatePicker className="w-100" format="DD/MM/YYYY" /></Form.Item></Col>
+            <Col span={8}><Form.Item name="entry_date" label="Ngày nhập đàn" rules={[{ required: true }]}><DatePicker className="w-100" format="DD/MM/YYYY" /></Form.Item></Col>
+            {editingId && (
+              <Col span={8}>
+                <Form.Item name="lifecycle_status" label="Trạng thái sống" rules={[{ required: true }]}>
+                  <Select options={Object.entries(STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))} />
                 </Form.Item>
+              </Col>
+            )}
+          </Row>
 
-              ) : null
-            }
+          <Row gutter={16}>
+            <Col span={8}><Form.Item name="entry_weight" label="Trọng lượng lúc nhập (kg)"><InputNumber min={0} className="w-100" /></Form.Item></Col>
+            <Col span={8}><Form.Item name="current_weight" label="Trọng lượng hiện tại (kg)"><InputNumber min={0} className="w-100" /></Form.Item></Col>
+          </Row>
+
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea rows={2} placeholder="Các đặc điểm nhận dạng hoặc ghi chú khác..." />
           </Form.Item>
-
-          {/* BARN */}
-          <Form.Item
-            name="barnId"
-            label="Chuồng"
-            initialValue={
-              barns[0]?.id
-            }
-          >
-
-            <Select>
-
-              {barns.map((b) => (
-
-                <Option
-                  key={b.id}
-                  value={b.id}
-                >
-                  {b.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          {/* ARRIVED */}
-          <Form.Item
-            name="arrivedAt"
-            label="Ngày nhập"
-            initialValue={dayjs()}
-          >
-
-            <DatePicker
-              style={{
-                width: "100%",
-              }}
-              format="DD/MM/YYYY"
-            />
-          </Form.Item>
-
-          {/* AGE */}
-          <Form.Item
-            name="ageDays"
-            label="Tuổi (ngày)"
-            initialValue={0}
-          >
-
-            <InputNumber
-              style={{
-                width: "100%",
-              }}
-            />
-          </Form.Item>
-
-          {/* WEIGHT */}
-          <Form.Item
-            name="weightKg"
-            label="Cân nặng"
-          >
-
-            <InputNumber
-              style={{
-                width: "100%",
-              }}
-            />
-          </Form.Item>
-
         </Form>
       </Modal>
     </div>

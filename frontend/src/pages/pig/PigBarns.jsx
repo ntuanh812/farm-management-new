@@ -1,691 +1,268 @@
-import React, { useEffect, useState } from "react";
-
+import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Space,
-  Tag,
-  message,
-  Popconfirm,
-} from "antd";
+  Table, Button, Space, Tag, Modal, Form, Input,
+  Select, InputNumber, message, Popconfirm, Card, Row, Col, Progress
+} from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import { useAuthStore } from '@/store/authStore';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-import axios from "axios";
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-import { PageHeader } from "../../components/layout/PageHeader";
-
-const { Option } = Select;
-
-// =========================================================
-// LABELS
-// =========================================================
-const barnTypeLabels = {
-  nai: "Chuồng nái",
-  duc: "Chuồng đực",
-  con: "Chuồng con",
-  thit: "Chuồng thịt",
-  cach_ly: "Cách ly",
+const BARN_TYPES = {
+  'SOW': 'Chuồng Nái',
+  'BOAR': 'Chuồng Đực',
+  'PIGLET': 'Chuồng Lợn Con',
+  'FATTENING': 'Chuồng Vỗ Béo',
+  'QUARANTINE': 'Chuồng Cách Ly'
 };
 
-const barnTypeColors = {
-  nai: "magenta",
-  duc: "red",
-  con: "gold",
-  thit: "green",
-  cach_ly: "volcano",
+const STATUS_CONFIG = {
+  'ACTIVE': { text: 'Hoạt động', color: 'green' },
+  'MAINTENANCE': { text: 'Bảo trì', color: 'orange' },
+  'FULL': { text: 'Đã đầy', color: 'red' }
 };
 
 export default function PigBarns() {
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
 
-  // =========================================================
-  // STATES
-  // =========================================================
   const [barns, setBarns] = useState([]);
-
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [editingBarn, setEditingBarn] =
-    useState(null);
-
+  const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
 
-  const token =
-    localStorage.getItem("token");
+  // Phân quyền: Admin và Nhân viên có quyền thao tác
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
 
-  // =========================================================
-  // FETCH BARNS
-  // =========================================================
-  const fetchBarns = async () => {
-
+  const fetchData = async () => {
+    setLoading(true);
     try {
-
-      setLoading(true);
-
-      const res = await axios.get(
-        "http://localhost:3000/api/barns",
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      const barnsData =
-        res.data?.data || [];
-
-      setBarns(
-        Array.isArray(barnsData)
-          ? barnsData
-          : []
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        "Không tải được danh sách chuồng"
-      );
-
-      setBarns([]);
-
+      const { data } = await axios.get(`${API}/barns`, { headers });
+      if (data.success) {
+        setBarns(data.data);
+      }
+    } catch (error) {
+      message.error('Không thể tải danh sách chuồng trại');
     } finally {
-
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBarns();
+    fetchData();
   }, []);
 
-  // =========================================================
-  // OPEN CREATE
-  // =========================================================
-  const openCreateModal = () => {
-
-    setEditingBarn(null);
-
+  const handleOpenAdd = () => {
+    setEditingId(null);
     form.resetFields();
-
-    form.setFieldsValue({
-      barn_type: "thit",
-      status: "active",
-      capacity: 1,
-    });
-
+    form.setFieldsValue({ status: 'ACTIVE' });
     setOpen(true);
   };
 
-  // =========================================================
-  // EDIT
-  // =========================================================
-  const handleEdit = (barn) => {
-
-    setEditingBarn(barn);
-
+  const handleOpenEdit = (record) => {
+    setEditingId(record.id);
     form.setFieldsValue({
-      code: barn.code,
-      name: barn.name,
-      barn_type: barn.barn_type,
-      capacity: barn.capacity,
-      status: barn.status,
-      note: barn.note,
+      ...record
     });
-
     setOpen(true);
   };
 
-  // =========================================================
-  // DELETE
-  // =========================================================
-  const handleDelete = async (barn) => {
-
+  const handleDelete = async (id) => {
     try {
-
-      await axios.delete(
-        `http://localhost:3000/api/barns/${barn.id}`,
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      message.success(
-        "Xóa chuồng thành công"
-      );
-
-      fetchBarns();
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        err.response?.data?.message ||
-        "Không thể xóa chuồng"
-      );
+      await axios.delete(`${API}/barns/${id}`, { headers });
+      message.success('Đã xóa chuồng thành công');
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể xóa chuồng này');
     }
   };
 
-  // =========================================================
-  // SAVE
-  // =========================================================
-  const handleOk = async () => {
-
+  const handleSubmit = async () => {
     try {
+      const values = await form.validateFields();
 
-      const values =
-        await form.validateFields();
-
-      // =====================================================
-      // UPDATE
-      // =====================================================
-      if (editingBarn) {
-
-        await axios.put(
-          `http://localhost:3000/api/barns/${editingBarn.id}`,
-          values,
-          {
-            headers: {
-              Authorization:
-                `Bearer ${token}`,
-            },
-          }
-        );
-
-        message.success(
-          "Cập nhật chuồng thành công"
-        );
-      }
-
-      // =====================================================
-      // CREATE
-      // =====================================================
-      else {
-
-        await axios.post(
-          "http://localhost:3000/api/barns",
-          values,
-          {
-            headers: {
-              Authorization:
-                `Bearer ${token}`,
-            },
-          }
-        );
-
-        message.success(
-          "Thêm chuồng thành công"
-        );
+      if (editingId) {
+        await axios.put(`${API}/barns/${editingId}`, values, { headers });
+        message.success('Cập nhật chuồng thành công');
+      } else {
+        await axios.post(`${API}/barns`, values, { headers });
+        message.success('Thêm chuồng mới thành công');
       }
 
       setOpen(false);
-
-      setEditingBarn(null);
-
-      form.resetFields();
-
-      fetchBarns();
-
-    } catch (err) {
-
-      console.error(err);
-
-      message.error(
-        err.response?.data?.message ||
-        "Không thể lưu chuồng"
-      );
+      fetchData();
+    } catch (error) {
+      if (error.response) {
+        message.error(error.response.data.message || 'Có lỗi xảy ra');
+      }
     }
   };
 
-  // =========================================================
-  // TABLE
-  // =========================================================
   const columns = [
-
     {
-      title: "Mã chuồng",
-      dataIndex: "code",
-      width: 140,
+      title: 'Mã',
+      dataIndex: 'code',
+      key: 'code',
+      width: 100,
+      render: (text) => <strong>{text}</strong>,
     },
-
     {
-      title: "Tên chuồng",
-      dataIndex: "name",
+      title: 'Tên chuồng',
+      dataIndex: 'name',
+      key: 'name',
     },
-
     {
-      title: "Loại",
-      dataIndex: "barn_type",
-
-      render: (type) => (
-
-        <Tag
-          color={
-            barnTypeColors[type]
-          }
-        >
-          {
-            barnTypeLabels[type]
-          }
-        </Tag>
-      ),
+      title: 'Loại chuồng',
+      dataIndex: 'barn_type',
+      key: 'barn_type',
+      render: (type) => BARN_TYPES[type] || type,
     },
-
     {
-      title: "Sức chứa",
-      dataIndex: "capacity",
-
-      render: (v) => `${v} con`,
+      title: 'Sức chứa / Hiện tại',
+      key: 'capacity',
+      width: 180,
+      render: (_, record) => {
+        const current = record.current_quantity || 0;
+        const capacity = record.capacity || 1;
+        const percent = Math.round((current / capacity) * 100);
+        return (
+          <div className="w-100">
+            <div className="flex-between text-xs mb-4">
+              <span className={percent >= 100 ? "text-danger fw-500" : "fw-500"}>{current} con</span>
+              <span className="text-muted">/ {capacity}</span>
+            </div>
+            <Progress
+              percent={percent}
+              size="small"
+              status={percent >= 100 ? 'exception' : 'active'}
+              strokeColor={percent >= 100 ? '#ff4d4f' : '#52c41a'}
+              showInfo={false}
+            />
+          </div>
+        );
+      }
     },
-
     {
-      title: "Hiện tại",
-      dataIndex:
-        "current_quantity",
-
-      render: (v, record) => (
-
-        <Tag
-          color={
-            v >= record.capacity
-              ? "red"
-              : "green"
-          }
-        >
-          {v}/{record.capacity} con
-        </Tag>
-      ),
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const cfg = STATUS_CONFIG[status];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{status}</Tag>;
+      }
     },
-
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-
-      render: (s) => (
-
-        <Tag
-          color={
-            s === "active"
-              ? "green"
-              : "red"
-          }
-        >
-          {s === "active"
-            ? "Hoạt động"
-            : "Ngưng hoạt động"}
-        </Tag>
-      ),
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      key: 'note',
+      ellipsis: true,
     },
-
     {
-      title: "Ngày tạo",
-      dataIndex: "created_at",
-
-      render: (d) =>
-        d
-          ? new Date(d)
-              .toLocaleDateString(
-                "vi-VN"
-              )
-          : "-",
-    },
-
-    {
-      title: "Hành động",
-      key: "action",
-      width: 220,
-
-      render: (_, record) => (
-
-        <Space>
-
+      title: 'Thao tác',
+      key: 'actions',
+      width: 100,
+      render: (_, record) => canEdit && (
+        <Space size="middle">
           <Button
-            type="primary"
-            onClick={() =>
-              handleEdit(record)
-            }
-          >
-            Sửa
-          </Button>
-
+            type="text"
+            icon={<EditOutlined />}
+            className="text-primary"
+            onClick={() => handleOpenEdit(record)}
+            title="Sửa"
+          />
           <Popconfirm
-            title="Xóa chuồng"
-            description="Bạn có chắc muốn xóa chuồng này?"
-            okText="Xóa"
-            cancelText="Hủy"
-            onConfirm={() =>
-              handleDelete(record)
-            }
+            title="Chắc chắn xóa chuồng này?"
+            description="Chỉ xóa được nếu chuồng không còn lợn."
+            onConfirm={() => handleDelete(record.id)}
           >
-
-            <Button
-              danger
-              disabled={
-                record.current_quantity >
-                0
-              }
-            >
-              Xóa
-            </Button>
-
+            <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
           </Popconfirm>
-
         </Space>
       ),
     },
   ];
 
-  // =========================================================
-  // STATS
-  // =========================================================
-  const totalBarns =
-    barns.length;
-
-  const sowBarns =
-    barns.filter(
-      (b) =>
-        b.barn_type === "nai"
-    ).length;
-
-  const meatBarns =
-    barns.filter(
-      (b) =>
-        b.barn_type === "thit"
-    ).length;
-
-  const isolateBarns =
-    barns.filter(
-      (b) =>
-        b.barn_type ===
-        "cach_ly"
-    ).length;
-
   return (
-    <div className="dashboard">
-
+    <div className="pig-barns-page">
       <PageHeader
-        title="Chuồng trại"
-        subtitle="Quản lý và cấu hình chuồng nuôi"
+        title="Quản lý Chuồng trại"
+        subtitle="Theo dõi sức chứa, loại chuồng và trạng thái hoạt động"
+        actions={
+          canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAdd}>
+              Thêm chuồng mới
+            </Button>
+          )
+        }
       />
 
-      <div className="dashboard__maincontent">
-
-        {/* ================================================= */}
-        {/* STATS */}
-        {/* ================================================= */}
-
-        <div className="stats-grid">
-
-          {/* TOTAL */}
-          <Card className="stat-card stat-card--barn">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Tổng chuồng
-              </span>
-
-              <div className="stat-card__icon">
-                🏠
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {totalBarns}
-            </div>
-          </Card>
-
-          {/* SOW */}
-          <Card className="stat-card stat-card--pigs">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Chuồng nái
-              </span>
-
-              <div className="stat-card__icon">
-                👑
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {sowBarns}
-            </div>
-          </Card>
-
-          {/* THIT */}
-          <Card className="stat-card stat-card--staff">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Chuồng thịt
-              </span>
-
-              <div className="stat-card__icon">
-                🥩
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {meatBarns}
-            </div>
-          </Card>
-
-          {/* CACH LY */}
-          <Card className="stat-card stat-card--daily-tasks">
-
-            <div className="stat-card__header">
-
-              <span className="stat-card__title">
-                Cách ly
-              </span>
-
-              <div className="stat-card__icon">
-                🚨
-              </div>
-            </div>
-
-            <div className="stat-card__value">
-              {isolateBarns}
-            </div>
-          </Card>
-        </div>
-
-        {/* ================================================= */}
-        {/* ACTION */}
-        {/* ================================================= */}
-
-        <Card className="filter-card">
-
-          <Button
-            type="primary"
-            onClick={
-              openCreateModal
-            }
-          >
-            Thêm chuồng
-          </Button>
-
-        </Card>
-
-        {/* ================================================= */}
-        {/* TABLE */}
-        {/* ================================================= */}
-
-        <Card className="table-card">
-
-          <Table
-            rowKey="id"
-            loading={loading}
-            columns={columns}
-            dataSource={barns}
-            pagination={{
-              pageSize: 10,
-            }}
-          />
-        </Card>
-      </div>
-
-      {/* ================================================= */}
-      {/* MODAL */}
-      {/* ================================================= */}
+      <Card className="table-card">
+        <Table
+          columns={columns}
+          dataSource={barns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
+      </Card>
 
       <Modal
-        title={
-          editingBarn
-            ? "Sửa chuồng"
-            : "Thêm chuồng"
-        }
+        title={editingId ? 'Cập nhật thông tin chuồng' : 'Thêm chuồng mới'}
         open={open}
-        onOk={handleOk}
-        okText="Lưu"
+        onCancel={() => setOpen(false)}
+        onOk={handleSubmit}
+        okText="Lưu thông tin"
         cancelText="Hủy"
-        onCancel={() => {
-
-          setOpen(false);
-
-          setEditingBarn(null);
-
-          form.resetFields();
-        }}
+        width={600}
+        footer={canEdit ? undefined : null}
       >
+        <Form form={form} layout="vertical" disabled={!canEdit}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="code" label="Mã chuồng" rules={[{ required: true, message: 'Vui lòng nhập mã chuồng' }]}>
+                <Input placeholder="VD: B01, NAI-01..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="name" label="Tên chuồng" rules={[{ required: true, message: 'Vui lòng nhập tên chuồng' }]}>
+                <Input placeholder="VD: Chuồng nái 1..." />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Form
-          form={form}
-          layout="vertical"
-        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="barn_type" label="Loại chuồng" rules={[{ required: true, message: 'Vui lòng chọn loại chuồng' }]}>
+                <Select placeholder="Chọn loại...">
+                  {Object.entries(BARN_TYPES).map(([key, val]) => (
+                    <Select.Option key={key} value={key}>{val}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="capacity" label="Sức chứa (con)" rules={[{ required: true, message: 'Vui lòng nhập sức chứa' }]}>
+                <InputNumber min={1} className="w-100" placeholder="VD: 50" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          {/* CODE */}
-          <Form.Item
-            name="code"
-            label="Mã chuồng"
-            rules={[
-              {
-                required: true,
-                message:
-                  "Nhập mã chuồng",
-              },
-            ]}
-          >
-            <Input placeholder="VD: NAI-A1" />
+          {editingId && (
+            <Form.Item name="status" label="Trạng thái" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
+              <Select>
+                {Object.entries(STATUS_CONFIG).map(([key, val]) => (
+                  <Select.Option key={key} value={key}>{val.text}</Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
+
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea rows={3} placeholder="Ghi chú thêm về chuồng (nếu có)..." />
           </Form.Item>
-
-          {/* NAME */}
-          <Form.Item
-            name="name"
-            label="Tên chuồng"
-            rules={[
-              {
-                required: true,
-                message:
-                  "Nhập tên chuồng",
-              },
-            ]}
-          >
-            <Input placeholder="VD: Chuồng Nái A1" />
-          </Form.Item>
-
-          {/* TYPE */}
-          <Form.Item
-            name="barn_type"
-            label="Loại chuồng"
-            rules={[
-              {
-                required: true,
-                message:
-                  "Chọn loại chuồng",
-              },
-            ]}
-          >
-
-            <Select>
-
-              <Option value="nai">
-                Chuồng nái
-              </Option>
-
-              <Option value="duc">
-                Chuồng đực
-              </Option>
-
-              <Option value="con">
-                Chuồng con
-              </Option>
-
-              <Option value="thit">
-                Chuồng thịt
-              </Option>
-
-              <Option value="cach_ly">
-                Cách ly
-              </Option>
-
-            </Select>
-          </Form.Item>
-
-          {/* CAPACITY */}
-          <Form.Item
-            name="capacity"
-            label="Sức chứa"
-            rules={[
-              {
-                required: true,
-                message:
-                  "Nhập sức chứa",
-              },
-            ]}
-          >
-
-            <InputNumber
-              min={1}
-              style={{
-                width: "100%",
-              }}
-            />
-          </Form.Item>
-
-          {/* STATUS */}
-          <Form.Item
-            name="status"
-            label="Trạng thái"
-          >
-
-            <Select>
-
-              <Option value="active">
-                Hoạt động
-              </Option>
-
-              <Option value="inactive">
-                Ngưng hoạt động
-              </Option>
-
-            </Select>
-          </Form.Item>
-
-          {/* NOTE */}
-          <Form.Item
-            name="note"
-            label="Ghi chú"
-          >
-            <Input.TextArea rows={3} />
-          </Form.Item>
-
         </Form>
       </Modal>
     </div>

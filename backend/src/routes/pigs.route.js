@@ -1,7 +1,7 @@
 // routes/pigsRoute.js
 
 import pool from "../config/db.js";
-import { verifyToken } from "../middleware/auth.js";
+import { protect } from "../middleware/auth.js";
 
 export default async function pigsRoute(app) {
 
@@ -10,7 +10,7 @@ export default async function pigsRoute(app) {
   // =========================================================
   app.get(
     "/",
-    { preHandler: [verifyToken] },
+    { preHandler: protect('ADMIN', 'FARM_WORKER', 'VET_DOCTOR') },
 
     async (request, reply) => {
 
@@ -87,7 +87,7 @@ export default async function pigsRoute(app) {
   // =========================================================
   app.post(
     "/",
-    { preHandler: [verifyToken] },
+    { preHandler: protect('ADMIN', 'FARM_WORKER') },
 
     async (request, reply) => {
 
@@ -262,7 +262,7 @@ export default async function pigsRoute(app) {
   // =========================================================
   app.put(
     "/:id",
-    { preHandler: [verifyToken] },
+    { preHandler: protect('ADMIN', 'FARM_WORKER') },
 
     async (request, reply) => {
 
@@ -344,7 +344,7 @@ export default async function pigsRoute(app) {
   // =========================================================
   app.delete(
     "/:id",
-    { preHandler: [verifyToken] },
+    { preHandler: protect('ADMIN') },
 
     async (request, reply) => {
 

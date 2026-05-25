@@ -12,9 +12,10 @@ export default async function authRoute(app) {
     }
 
     const [rows] = await pool.query(
-      `SELECT a.*, e.full_name, e.role
+      `SELECT a.*, e.full_name, r.code AS role
        FROM accounts a
        JOIN employees e ON a.employee_id = e.id
+       LEFT JOIN roles r ON e.role_id = r.id
        WHERE a.username = ? AND a.is_active = 1`,
       [username]
     )
@@ -24,7 +25,18 @@ export default async function authRoute(app) {
       return reply.code(401).send({ success: false, message: 'Tài khoản không tồn tại hoặc đã bị khóa' })
     }
 
-    const valid = await bcrypt.compare(password, account.password_hash)
+    let valid = false
+    // Tự động nâng cấp mã hóa: Nếu DB lưu chuỗi thường (từ file seed), kiểm tra và mã hóa lại ngay sau khi đăng nhập!
+    if (!account.password_hash.startsWith('$2')) {
+      if (password === account.password_hash) {
+        valid = true
+        const newHash = await bcrypt.hash(password, 10)
+        await pool.query('UPDATE accounts SET password_hash = ? WHERE id = ?', [newHash, account.id])
+      }
+    } else {
+      valid = await bcrypt.compare(password, account.password_hash)
+    }
+
     if (!valid) {
       return reply.code(401).send({ success: false, message: 'Sai mật khẩu' })
     }

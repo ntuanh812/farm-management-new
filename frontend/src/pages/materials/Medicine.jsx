@@ -1,259 +1,153 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  message,
-  Popconfirm,
-  Card,
-  Select,
-  DatePicker,
-} from "antd";
-import {
-  PlusOutlined,
-  MedicineBoxOutlined,
-  DeleteOutlined,
-  EditOutlined,
-} from "@ant-design/icons";
-import dayjs from "dayjs";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { usePigFarmStore } from "../../store/pigFarmStore";
-import { barnLabel } from "../../domain/pigFarm";
-import { LifecycleStatus } from "../../domain/pigFarm";
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import { useAuthStore } from '@/store/authStore';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-const { Option } = Select;
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const USAGE_TYPES = ["Sử dụng cá nhân", "Sử dụng chung"];
-
-const PRODUCTS = [
-  { code: "M0908-095913", name: "Suifertil, 1L", unit: "chai(1000ml)" },
-  { code: "O1812-104111-199", name: "gendextyl 100ml", unit: "chai(100ml)" },
-  { code: "M0908-092300", name: "Gel lubricante - 1 Lit", unit: "chai(1000ml)" },
+const MEDICINE_TYPES = [
+  'Kháng sinh (Amoxicillin)',
+  'Kháng sinh (Penicillin)',
+  'Thuốc bổ (Vitamin C)',
+  'Thuốc sát trùng (Iodine)',
+  'Thuốc tẩy giun',
+  'Khác'
 ];
 
-const PRODUCT_MAP = Object.fromEntries(PRODUCTS.map((p) => [p.name, p]));
+const UNIT_TYPES = ['ml', 'mg', 'lọ', 'gói', 'viên'];
 
-/* ================= MODAL ================= */
-function MedicineModal({ open, onClose, onSubmit, initialValues, barns, pigs }) {
+export default function Medicine() {
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const [medicineUsages, setMedicineUsages] = useState([]);
+  const [barns, setBarns] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  const isEdit = !!initialValues;
-  const barnIdWatch = Form.useWatch("barnId", form);
 
-  const pigsInBarn = useMemo(() => {
-    if (!barnIdWatch) return [];
-    return pigs.filter(
-      (p) =>
-        p.barnId === barnIdWatch &&
-        p.lifecycleStatus === LifecycleStatus.ACTIVE
-    );
-  }, [pigs, barnIdWatch]);
+  // Phân quyền
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'VET_DOCTOR';
+  const canDelete = user?.role === 'ADMIN';
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resUsages, resBarns] = await Promise.all([
+        axios.get(`${API}/medicine-usages`, { headers }),
+        axios.get(`${API}/barns`, { headers })
+      ]);
+      setMedicineUsages(resUsages.data?.data || []);
+      setBarns(resBarns.data?.data || []);
+    } catch (error) {
+      message.error('Không thể tải dữ liệu sử dụng thuốc');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (open) {
-      if (initialValues) {
-        form.setFieldsValue({
-          ...initialValues,
-          startDate: dayjs(initialValues.startDate),
-          endDate: dayjs(initialValues.endDate),
-        });
-      } else {
-        form.resetFields();
-      }
-    }
-  }, [open, initialValues]);
+    fetchData();
+  }, []);
 
-  const handleProductChange = (name) => {
-    const p = PRODUCT_MAP[name];
-    if (p) form.setFieldsValue({ productCode: p.code, unit: p.unit });
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API}/medicine-usages/${id}`, { headers });
+      message.success('Đã xóa bản ghi sử dụng thuốc');
+      fetchData();
+    } catch (error) {
+      message.error('Không thể xóa bản ghi này');
+    }
   };
 
-  const handleOk = async () => {
-    const values = await form.validateFields();
-    onSubmit({
-      ...values,
-      startDate: values.startDate.format("YYYY-MM-DD"),
-      endDate: values.endDate.format("YYYY-MM-DD"),
-      pigId: values.pigId || null,
-    });
-  };
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const payload = {
+        ...values,
+        used_at: values.used_at.format('YYYY-MM-DD'),
+        staff_name: user?.full_name || user?.username
+      };
 
-  return (
-    <Modal
-      open={open}
-      title={
-        <Space>
-          <MedicineBoxOutlined />
-          {isEdit ? "Sửa sử dụng thuốc" : "Thêm sử dụng thuốc"}
-        </Space>
-      }
-      onCancel={onClose}
-      onOk={handleOk}
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item name="usageType" label="Loại" rules={[{ required: true }]}>
-          <Select>
-            {USAGE_TYPES.map((t) => (
-              <Option key={t} value={t}>
-                {t}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item name="barnId" label="Chuồng" rules={[{ required: true }]}>
-          <Select>
-            {barns.map((b) => (
-              <Option key={b.id} value={b.id}>
-                {b.code} — {b.name}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item name="pigId" label="Lợn">
-          <Select allowClear>
-            {pigsInBarn.map((p) => (
-              <Option key={p.id} value={p.id}>
-                {p.earTag}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item name="startDate" label="Từ ngày" rules={[{ required: true }]}>
-          <DatePicker style={{ width: "100%" }} />
-        </Form.Item>
-
-        <Form.Item name="endDate" label="Đến ngày" rules={[{ required: true }]}>
-          <DatePicker style={{ width: "100%" }} />
-        </Form.Item>
-
-        <Form.Item name="productName" label="Sản phẩm" rules={[{ required: true }]}>
-          <Select onChange={handleProductChange}>
-            {PRODUCTS.map((p) => (
-              <Option key={p.name} value={p.name}>
-                {p.name}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item name="productCode" label="Mã">
-          <Input disabled />
-        </Form.Item>
-
-        <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
-
-        <Form.Item name="quantity" label="Số lượng" rules={[{ required: true }]}>
-          <InputNumber style={{ width: "100%" }} />
-        </Form.Item>
-
-        <Form.Item name="totalAmount" label="Thành tiền" rules={[{ required: true }]}>
-          <InputNumber style={{ width: "100%" }} />
-        </Form.Item>
-
-        <Form.Item name="performedBy" label="Người thực hiện" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-}
-
-/* ================= PAGE ================= */
-export default function MedicineUsage() {
-  const barns = usePigFarmStore((s) => s.barns);
-  const pigs = usePigFarmStore((s) => s.pigs);
-  const medicineUsages = usePigFarmStore((s) => s.medicineUsages);
-
-  const add = usePigFarmStore((s) => s.addMedicineUsage);
-  const update = usePigFarmStore((s) => s.updateMedicineUsage);
-  const remove = usePigFarmStore((s) => s.deleteMedicineUsage);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editRecord, setEditRecord] = useState(null);
-
-  const handleSubmit = (values) => {
-    if (editRecord) {
-      update(editRecord.id, values);
-      message.success("Đã cập nhật");
-    } else {
-      add(values);
-      message.success("Đã thêm");
+      await axios.post(`${API}/medicine-usages`, payload, { headers });
+      message.success('Ghi nhận sử dụng thuốc thành công');
+      setOpen(false);
+      form.resetFields();
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Có lỗi xảy ra');
     }
-    setModalOpen(false);
-    setEditRecord(null);
   };
 
   const columns = [
+    { title: 'Ngày', dataIndex: 'used_at', key: 'used_at', render: (date) => dayjs(date).format('DD/MM/YYYY') },
+    { title: 'Chuồng', dataIndex: 'barn_name', key: 'barn_name' },
+    { title: 'Tên thuốc/Vật tư', dataIndex: 'medicine_name', key: 'medicine_name', render: text => <strong className="text-primary">{text}</strong> },
+    { title: 'Số lượng', key: 'quantity', render: (_, r) => `${r.quantity} ${r.unit}` },
+    { title: 'Người thực hiện', dataIndex: 'staff_name', key: 'staff_name' },
+    { title: 'Ghi chú', dataIndex: 'note', key: 'note' },
     {
-      title: "",
-      render: (_, r) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => { setEditRecord(r); setModalOpen(true); }} />
-          <Popconfirm title="Xóa?" onConfirm={() => { remove(r.id); message.success("Đã xóa"); }}>
-            <Button danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
+      title: 'Thao tác',
+      key: 'actions',
+      render: (_, record) => canDelete && (
+        <Popconfirm title="Chắc chắn xóa bản ghi này?" onConfirm={() => handleDelete(record.id)}>
+          <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
+        </Popconfirm>
       ),
     },
-    { title: "Loại", dataIndex: "usageType" },
-    {
-      title: "Chuồng",
-      dataIndex: "barnId",
-      render: (id) => barnLabel(barns, id),
-    },
-    {
-      title: "Lợn",
-      dataIndex: "pigId",
-      render: (pid) => pigs.find((p) => p.id === pid)?.earTag || "—",
-    },
-    { title: "Sản phẩm", dataIndex: "productName" },
-    { title: "SL", dataIndex: "quantity" },
-    { title: "Tiền", dataIndex: "totalAmount" },
   ];
 
   return (
     <div className="medicine-page">
-      <PageHeader title="Sử dụng thuốc" subtitle="Quản lý thuốc" />
+      <PageHeader
+        title="Sử dụng Thuốc & Vật tư thú y"
+        subtitle="Ghi nhận và theo dõi lịch sử cấp phát thuốc tại các chuồng"
+        actions={canEdit && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            Ghi nhận thuốc
+          </Button>
+        )}
+      />
 
-      {/* ===== ACTIONS ===== */}
-      <div className="page-actions">
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditRecord(null);
-            setModalOpen(true);
-          }}
-          style={{ margin: 16 }}
-        >
-          Thêm mới
-        </Button>
-      </div>
-
-      {/* ===== TABLE ===== */}
       <Card className="table-card">
-        <Table columns={columns} dataSource={medicineUsages} rowKey="id" />
+        <Table columns={columns} dataSource={medicineUsages} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
       </Card>
 
-      <MedicineModal
-        open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditRecord(null);
-        }}
-        onSubmit={handleSubmit}
-        initialValues={editRecord}
-        barns={barns}
-        pigs={pigs}
-      />
+      <Modal 
+        title="Ghi nhận sử dụng thuốc/vật tư" 
+        open={open} 
+        onCancel={() => setOpen(false)} 
+        onOk={handleSubmit} 
+        okText="Lưu thông tin" 
+        cancelText="Hủy" 
+        footer={canEdit ? undefined : null}
+      >
+        <Form form={form} layout="vertical" disabled={!canEdit}>
+          <Form.Item name="used_at" label="Ngày cấp/sử dụng" rules={[{ required: true, message: 'Chọn ngày' }]}>
+            <DatePicker className="w-100" format="DD/MM/YYYY" />
+          </Form.Item>
+          <Form.Item name="barn_id" label="Chuồng" rules={[{ required: true, message: 'Chọn chuồng' }]}>
+            <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn chuồng..." />
+          </Form.Item>
+          <Form.Item name="medicine_name" label="Tên thuốc/Vật tư" rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
+            <Select mode="tags" maxCount={1} options={MEDICINE_TYPES.map(t => ({ label: t, value: t }))} placeholder="VD: Kháng sinh, Vitamin..." />
+          </Form.Item>
+          <Space align="baseline">
+            <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
+              <InputNumber min={0.1} step={0.1} className="w-100" />
+            </Form.Item>
+            <Form.Item name="unit" label="Đơn vị" rules={[{ required: true, message: 'Chọn đơn vị' }]}>
+              <Select options={UNIT_TYPES.map(u => ({ label: u, value: u }))} placeholder="VD: ml" className="w-120" />
+            </Form.Item>
+          </Space>
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea rows={2} placeholder="Liệu trình, mục đích sử dụng..." />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

@@ -1,311 +1,388 @@
-import { useState, useEffect } from 'react'
-import { Table, Button, Modal, Form, Input, Select, DatePicker, Tag, Popconfirm, Row, Col, Space, InputNumber } from 'antd'
-import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
-import dayjs from 'dayjs'
-import axios from 'axios'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { useAuthStore } from '@/store/authStore'
+import React, { useState, useEffect } from 'react';
+import { 
+  Table, Button, Space, Tag, Modal, Form, Input, 
+  Select, DatePicker, message, Popconfirm, Card, Row, Col, InputNumber, Tooltip
+} from 'antd';
+import { 
+  PlusOutlined, EditOutlined, DeleteOutlined, 
+  MinusCircleOutlined, MedicineBoxOutlined
+} from '@ant-design/icons';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import { useAuthStore } from '@/store/authStore';
+import { PageHeader } from '@/components/layout/PageHeader';
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const STATUS_COLOR = { dang_dieu_tri: 'orange', da_khoi: 'green', tu_vong: 'red' }
-const STATUS_LABEL = { dang_dieu_tri: 'Đang điều trị', da_khoi: 'Đã khỏi', tu_vong: 'Tử vong' }
-const SEV_COLOR    = { nhe: 'blue', vua: 'orange', nang: 'red' }
-const SEV_LABEL    = { nhe: 'Nhẹ', vua: 'Vừa', nang: 'Nặng' }
+const STATUS_CONFIG = {
+  'dang_dieu_tri': { text: 'Đang điều trị', color: 'orange' },
+  'da_khoi': { text: 'Đã khỏi', color: 'green' },
+  'chet': { text: 'Chết', color: 'red' },
+};
+
+const SEVERITY_CONFIG = {
+  'nhe': { text: 'Nhẹ', color: 'blue' },
+  'trung_binh': { text: 'Trung bình', color: 'orange' },
+  'nang': { text: 'Nặng', color: 'red' },
+};
 
 export default function VetDiagnosis() {
-  const [form]       = Form.useForm()
-  const navigate     = useNavigate()
-  const { user, getAuthHeader } = useAuthStore()
-  const isVetOrAdmin = ['ADMIN', 'VET_DOCTOR'].includes(user?.role)
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
 
-  const [list, setList]         = useState([])
-  const [barns, setBarns]       = useState([])
-  const [medicines, setMeds]    = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [open, setOpen]         = useState(false)
-  const [editing, setEditing]   = useState(null) // null = thêm mới, object = sửa
-  const [medRows, setMedRows]   = useState([])   // thuốc trong form
+  // States
+  const [diagnoses, setDiagnoses] = useState([]);
+  const [barns, setBarns] = useState([]);
+  const [medicinesList, setMedicinesList] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Filter state
-  const [filterBarn,   setFilterBarn]   = useState(null)
-  const [filterStatus, setFilterStatus] = useState(null)
+  // Filters
+  const [filterBarn, setFilterBarn] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(null);
 
-  const headers = getAuthHeader()
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form] = Form.useForm();
 
-  // Fetch dữ liệu
-  const fetchList = async () => {
-    setLoading(true)
+  // Dynamic Medicine Rows (Pattern theo REVIEW.md)
+  const [medRows, setMedRows] = useState([]);
+
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'VET_DOCTOR';
+
+  // Fetch Data
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const params = {}
-      if (filterBarn)   params.barn_id = filterBarn
-      if (filterStatus) params.status  = filterStatus
-      const { data } = await axios.get(`${API}/vet-diagnosis`, { headers, params })
-      setList(data.data || [])
-    } catch { setList([]) }
-    setLoading(false)
-  }
+      // Gọi API danh sách chẩn đoán với params
+      const params = {};
+      if (filterBarn) params.barn_id = filterBarn;
+      if (filterStatus) params.status = filterStatus;
+
+      const resDiag = await axios.get(`${API}/vet-diagnosis`, { headers, params });
+      if (resDiag.data.success) {
+        setDiagnoses(resDiag.data.data);
+      }
+
+      // Fetch phụ trợ (Barns & Medicines)
+      const [resBarns, resMeds] = await Promise.all([
+        axios.get(`${API}/barns`, { headers }),
+        axios.get(`${API}/medicines`, { headers }).catch(() => ({ data: { data: [] } })) // Giả định /medicines
+      ]);
+      
+      if (resBarns.data?.success) setBarns(resBarns.data.data);
+      if (resMeds.data?.success) setMedicinesList(resMeds.data.data);
+      
+    } catch (error) {
+      message.error('Không thể tải dữ liệu Thú y');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchList()
-    // Lấy danh sách chuồng và thuốc để dùng trong form
-    axios.get(`${API}/employees`, { headers })  // Dùng tạm — thực tế fetch /barns, /medicines
-      .catch(() => {})
-    // Giả lập barns + meds nếu chưa có API riêng
-    setBarns([
-      { id: 1, name: 'Chuồng Nái A1' }, { id: 2, name: 'Chuồng Đực B1' },
-      { id: 3, name: 'Chuồng Con C1' }, { id: 4, name: 'Chuồng Thịt D1' },
-      { id: 5, name: 'Chuồng Cách Ly E1' },
-    ])
-    setMeds([
-      { id: 1, name: 'Amoxicillin 20%', unit: 'ml' },
-      { id: 2, name: 'Oxytetracycline', unit: 'ml' },
-      { id: 5, name: 'Vitamin C', unit: 'gói' },
-      { id: 6, name: 'Dexamethasone', unit: 'ml' },
-    ])
-  }, [filterBarn, filterStatus])
+    fetchData();
+  }, [filterBarn, filterStatus]);
 
-  const openAdd = () => {
-    setEditing(null)
-    setMedRows([])
-    form.resetFields()
-    setOpen(true)
-  }
+  // Medicine Actions
+  const addMedRow = () => {
+    setMedRows(prev => [...prev, { medicine_id: null, dosage: '', unit: '', duration_days: 1 }]);
+  };
 
-  const openEdit = (record) => {
-    setEditing(record)
-    setMedRows(record.medicines || [])
-    form.setFieldsValue({
-      ...record,
-      diagnosis_date:  record.diagnosis_date  ? dayjs(record.diagnosis_date)  : null,
-      next_check_date: record.next_check_date ? dayjs(record.next_check_date) : null,
-    })
-    setOpen(true)
-  }
+  const removeMedRow = (idx) => {
+    setMedRows(prev => prev.filter((_, i) => i !== idx));
+  };
 
-  const handleSubmit = async (values) => {
-    const payload = {
-      ...values,
-      diagnosis_date:  values.diagnosis_date?.format('YYYY-MM-DD'),
-      next_check_date: values.next_check_date?.format('YYYY-MM-DD'),
-      medicines: medRows,
-    }
+  const updateMedRow = (idx, field, val) => {
+    setMedRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+  };
+
+  // Form Actions
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    form.resetFields();
+    setMedRows([]);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = async (id) => {
     try {
-      if (editing) {
-        await axios.put(`${API}/vet-diagnosis/${editing.id}`, payload, { headers })
-      } else {
-        await axios.post(`${API}/vet-diagnosis`, payload, { headers })
+      const res = await axios.get(`${API}/vet-diagnosis/${id}`, { headers });
+      if (res.data.success) {
+        const data = res.data.data;
+        form.setFieldsValue({
+          ...data,
+          diagnosis_date: data.diagnosis_date ? dayjs(data.diagnosis_date) : null,
+          next_check_date: data.next_check_date ? dayjs(data.next_check_date) : null,
+        });
+        setMedRows(data.medicines || []);
+        setEditingId(id);
+        setIsModalOpen(true);
       }
-      setOpen(false)
-      fetchList()
-    } catch (err) {
-      Modal.error({ title: 'Lỗi', content: err.response?.data?.message || 'Có lỗi xảy ra' })
+    } catch (error) {
+      message.error('Không tải được thông tin chi tiết');
     }
-  }
+  };
 
   const handleDelete = async (id) => {
-    await axios.delete(`${API}/vet-diagnosis/${id}`, { headers })
-    fetchList()
-  }
+    try {
+      await axios.delete(`${API}/vet-diagnosis/${id}`, { headers });
+      message.success('Xóa phiếu chẩn đoán thành công');
+      fetchData();
+    } catch (error) {
+      message.error('Không thể xóa phiếu');
+    }
+  };
 
-  // Thêm/xóa hàng thuốc trong form
-  const addMedRow    = () => setMedRows(prev => [...prev, { medicine_id: null, dosage: '', unit: '', duration_days: 1 }])
-  const removeMedRow = (idx) => setMedRows(prev => prev.filter((_, i) => i !== idx))
-  const updateMedRow = (idx, field, val) =>
-    setMedRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r))
+  const handleSubmit = async (values) => {
+    try {
+      const payload = {
+        ...values,
+        diagnosis_date: values.diagnosis_date?.format('YYYY-MM-DD'),
+        next_check_date: values.next_check_date?.format('YYYY-MM-DD'),
+        medicines: medRows.filter(m => m.medicine_id) // Lọc bỏ dòng trống
+      };
 
+      if (editingId) {
+        await axios.put(`${API}/vet-diagnosis/${editingId}`, payload, { headers });
+        message.success('Cập nhật phiếu chẩn đoán thành công');
+      } else {
+        await axios.post(`${API}/vet-diagnosis`, payload, { headers });
+        message.success('Tạo phiếu chẩn đoán thành công');
+      }
+      
+      setIsModalOpen(false);
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Có lỗi xảy ra khi lưu phiếu');
+    }
+  };
+
+  // Columns
   const columns = [
-    { title: 'Mã lợn',   dataIndex: 'pig_code',  key: 'pig_code', width: 100 },
-    { title: 'Chuồng',   dataIndex: 'barn_name', key: 'barn_name', width: 130 },
-    { title: 'Ngày',     dataIndex: 'diagnosis_date', key: 'date', width: 110 },
     {
-      title: 'Bệnh', key: 'disease',
-      render: (_, r) => r.final_disease || r.suspected_disease || '—',
+      title: 'Ngày khám',
+      dataIndex: 'diagnosis_date',
+      key: 'diagnosis_date',
+      render: (date) => dayjs(date).format('DD/MM/YYYY'),
     },
     {
-      title: 'Mức độ', dataIndex: 'severity_level', key: 'severity', width: 90,
-      render: v => <Tag color={SEV_COLOR[v]}>{SEV_LABEL[v]}</Tag>,
+      title: 'Mã Lợn',
+      dataIndex: 'pig_id',
+      key: 'pig_id',
+      render: (text) => <strong>{text}</strong>,
     },
     {
-      title: 'Trạng thái', dataIndex: 'status', key: 'status', width: 130,
-      render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v]}</Tag>,
+      title: 'Chuồng',
+      dataIndex: 'barn_name',
+      key: 'barn_name',
     },
-    { title: 'Bác sĩ', dataIndex: 'vet_name', key: 'vet', width: 130 },
     {
-      title: 'Thao tác', key: 'action', width: 130,
+      title: 'Chẩn đoán',
+      key: 'disease',
       render: (_, record) => (
-        <Space>
-          <Button size="small" icon={<EyeOutlined />}
-            onClick={() => navigate(`/health/vet-diagnosis/${record.id}`)} />
-          {isVetOrAdmin && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
-          )}
-          {isVetOrAdmin && (
-            <Popconfirm title="Xác nhận xóa?" onConfirm={() => handleDelete(record.id)}>
-              <Button size="small" danger icon={<DeleteOutlined />} />
+        <div>
+          <div className="text-danger fw-500">
+            {record.final_disease || record.suspected_disease || 'Chưa rõ'}
+          </div>
+          <div className="text-xs text-muted">{record.symptoms}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Mức độ',
+      dataIndex: 'severity_level',
+      key: 'severity_level',
+      render: (level) => {
+        const cfg = SEVERITY_CONFIG[level];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : '-';
+      }
+    },
+    {
+      title: 'Bác sỹ',
+      dataIndex: 'vet_name',
+      key: 'vet_name',
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const cfg = STATUS_CONFIG[status];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{status}</Tag>;
+      }
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            className="text-primary" 
+            onClick={() => handleOpenEdit(record.id)} 
+            title="Xem / Sửa"
+          />
+          {user?.role === 'ADMIN' && (
+            <Popconfirm title="Chắc chắn xóa phiếu này?" onConfirm={() => handleDelete(record.id)}>
+              <Button type="text" icon={<DeleteOutlined />} danger title="Xóa" />
             </Popconfirm>
           )}
         </Space>
       ),
     },
-  ]
+  ];
 
   return (
-    <div className="vetdiagnosis-page">
-      <PageHeader
-        title="Chuẩn đoán bệnh"
-        subtitle="Quản lý phiếu chuẩn đoán và điều trị"
-        extra={isVetOrAdmin && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}
-            style={{ background: '#2d5a27' }}>
-            Thêm phiếu
-          </Button>
-        )}
+    <div className="vet-diagnosis-page">
+      <PageHeader 
+        title="Chẩn đoán thú y" 
+        subtitle="Hồ sơ bệnh án và cấp phát thuốc cho đàn lợn"
+        actions={
+          canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAdd}>
+              Lập phiếu khám mới
+            </Button>
+          )
+        }
       />
 
-      {/* Filter */}
-      <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col>
-          <Select placeholder="Lọc theo chuồng" allowClear style={{ width: 180 }}
-            onChange={setFilterBarn} options={barns.map(b => ({ value: b.id, label: b.name }))} />
-        </Col>
-        <Col>
-          <Select placeholder="Lọc theo trạng thái" allowClear style={{ width: 180 }}
-            onChange={setFilterStatus}
-            options={[
-              { value: 'dang_dieu_tri', label: 'Đang điều trị' },
-              { value: 'da_khoi',       label: 'Đã khỏi' },
-              { value: 'tu_vong',       label: 'Tử vong' },
-            ]}
+      <Card className="table-card">
+        <Space className="mb-16">
+          <Select
+            placeholder="Lọc theo chuồng"
+            className="w-200"
+            allowClear
+            onChange={setFilterBarn}
+            options={barns.map(b => ({ label: b.name, value: b.id }))}
           />
-        </Col>
-      </Row>
+          <Select
+            placeholder="Trạng thái điều trị"
+            className="w-180"
+            allowClear
+            onChange={setFilterStatus}
+          >
+            {Object.entries(STATUS_CONFIG).map(([val, cfg]) => (
+              <Select.Option key={val} value={val}>{cfg.text}</Select.Option>
+            ))}
+          </Select>
+        </Space>
 
-      <Table
-        dataSource={list}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-        scroll={{ x: 800 }}
-      />
+        <Table 
+          columns={columns} 
+          dataSource={diagnoses} 
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
+      </Card>
 
-      {/* Modal Form */}
+      {/* MODAL THÊM/SỬA PHIẾU KHÁM */}
       <Modal
-        title={editing ? 'Cập nhật phiếu chuẩn đoán' : 'Thêm phiếu chuẩn đoán'}
-        open={open}
-        onCancel={() => setOpen(false)}
+        title={editingId ? 'Cập nhật phiếu chẩn đoán' : 'Lập phiếu chẩn đoán mới'}
+        open={isModalOpen}
+        onCancel={() => setIsModalOpen(false)}
         onOk={() => form.submit()}
-        okText={editing ? 'Cập nhật' : 'Thêm'}
-        width={700}
+        width={850}
+        okText="Lưu hồ sơ"
+        cancelText="Hủy"
+        footer={canEdit ? undefined : null} // Ẩn nút lưu nếu không có quyền
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="pig_id" label="Mã lợn (ID)" rules={[{ required: true }]}>
-                <InputNumber style={{ width: '100%' }} placeholder="ID lợn" />
+        <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={!canEdit}>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="pig_id" label="Mã lợn bệnh" rules={[{ required: true, message: 'Nhập mã lợn' }]}>
+                <Input placeholder="VD: PIG001" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="barn_id" label="Chuồng" rules={[{ required: true }]}>
-                <Select options={barns.map(b => ({ value: b.id, label: b.name }))} />
+            <Col span={8}>
+              <Form.Item name="barn_id" label="Chuồng đang ở" rules={[{ required: true, message: 'Chọn chuồng' }]}>
+                <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn chuồng" />
               </Form.Item>
             </Col>
-          </Row>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="diagnosis_date" label="Ngày chuẩn đoán" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="next_check_date" label="Ngày tái khám">
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+            <Col span={8}>
+              <Form.Item name="diagnosis_date" label="Ngày khám" rules={[{ required: true, message: 'Chọn ngày khám' }]}>
+                <DatePicker className="w-100" format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={12}>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="symptoms" label="Triệu chứng" rules={[{ required: true, message: 'Nhập triệu chứng' }]}>
+                <Input.TextArea rows={2} placeholder="Sốt cao, bỏ ăn..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="suspected_disease" label="Bệnh nghi ngờ / Chẩn đoán">
+                <Input.TextArea rows={2} placeholder="Nghi ngờ Tụ huyết trùng..." />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="temperature" label="Nhiệt độ (°C)">
-                <InputNumber style={{ width: '100%' }} step={0.1} />
+                <InputNumber className="w-100" min={35} max={45} step={0.1} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="weight" label="Cân nặng (kg)">
-                <InputNumber style={{ width: '100%' }} step={0.1} />
+              <Form.Item name="severity_level" label="Mức độ nghiêm trọng">
+                <Select placeholder="Chọn mức độ">
+                  <Select.Option value="nhe">Nhẹ</Select.Option>
+                  <Select.Option value="trung_binh">Trung bình</Select.Option>
+                  <Select.Option value="nang">Nặng</Select.Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="severity_level" label="Mức độ" rules={[{ required: true }]}>
-                <Select options={[
-                  { value: 'nhe', label: 'Nhẹ' },
-                  { value: 'vua', label: 'Vừa' },
-                  { value: 'nang', label: 'Nặng' },
-                ]} />
+              <Form.Item name="status" label="Trạng thái">
+                <Select>
+                  <Select.Option value="dang_dieu_tri">Đang điều trị</Select.Option>
+                  <Select.Option value="da_khoi">Đã khỏi</Select.Option>
+                  <Select.Option value="chet">Chết</Select.Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="symptoms" label="Triệu chứng" rules={[{ required: true }]}>
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="suspected_disease" label="Bệnh nghi ngờ">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="final_disease" label="Kết luận bệnh">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="treatment_plan" label="Phác đồ điều trị">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="status" label="Trạng thái" initialValue="dang_dieu_tri">
-            <Select options={[
-              { value: 'dang_dieu_tri', label: 'Đang điều trị' },
-              { value: 'da_khoi',       label: 'Đã khỏi' },
-              { value: 'tu_vong',       label: 'Tử vong' },
-            ]} />
-          </Form.Item>
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea rows={2} />
-          </Form.Item>
 
-          {/* Danh sách thuốc đã dùng */}
-          <div style={{ marginBottom: 8, fontWeight: 600 }}>Thuốc đã dùng</div>
-          {medRows.map((row, idx) => (
-            <Row gutter={8} key={idx} style={{ marginBottom: 8 }}>
-              <Col span={9}>
-                <Select
-                  placeholder="Chọn thuốc" style={{ width: '100%' }} value={row.medicine_id}
-                  onChange={v => updateMedRow(idx, 'medicine_id', v)}
-                  options={medicines.map(m => ({ value: m.id, label: m.name }))}
-                />
-              </Col>
-              <Col span={5}>
-                <InputNumber placeholder="Liều" style={{ width: '100%' }} value={row.dosage}
-                  onChange={v => updateMedRow(idx, 'dosage', v)} />
-              </Col>
-              <Col span={4}>
-                <Input placeholder="Đơn vị" value={row.unit}
-                  onChange={e => updateMedRow(idx, 'unit', e.target.value)} />
-              </Col>
-              <Col span={3}>
-                <InputNumber placeholder="Ngày" style={{ width: '100%' }} value={row.duration_days}
-                  onChange={v => updateMedRow(idx, 'duration_days', v)} min={1} />
-              </Col>
-              <Col span={3}>
-                <Button danger onClick={() => removeMedRow(idx)}>Xóa</Button>
-              </Col>
-            </Row>
-          ))}
-          <Button onClick={addMedRow} style={{ marginTop: 4 }}>+ Thêm thuốc</Button>
+          <div className="bg-light p-16 rounded-8 mb-24">
+            <div className="flex-between mb-12">
+              <h4 className="m-0"><MedicineBoxOutlined /> Kê đơn thuốc điều trị</h4>
+              {canEdit && (
+                <Button size="small" type="dashed" onClick={addMedRow}>+ Thêm thuốc</Button>
+              )}
+            </div>
+            {medRows.length === 0 ? (
+              <div className="text-muted text-sm text-italic">Chưa cấp thuốc nào.</div>
+            ) : (
+              medRows.map((row, idx) => (
+                <Row gutter={8} key={idx} className="mb-8">
+                  <Col span={8}>
+                    <Select className="w-100" placeholder="Chọn thuốc" value={row.medicine_id} onChange={(v) => updateMedRow(idx, 'medicine_id', v)} options={medicinesList.map(m => ({ label: m.name || `Thuốc #${m.id}`, value: m.id }))} disabled={!canEdit} />
+                  </Col>
+                  <Col span={6}>
+                    <Input placeholder="Liều lượng (VD: 2ml)" value={row.dosage} onChange={(e) => updateMedRow(idx, 'dosage', e.target.value)} disabled={!canEdit} />
+                  </Col>
+                  <Col span={5}>
+                    <InputNumber className="w-100" placeholder="Số ngày" min={1} value={row.duration_days} onChange={(v) => updateMedRow(idx, 'duration_days', v)} disabled={!canEdit} addonAfter="ngày" />
+                  </Col>
+                  {canEdit && (
+                    <Col span={2}>
+                      <Button danger type="text" icon={<MinusCircleOutlined />} onClick={() => removeMedRow(idx)} />
+                    </Col>
+                  )}
+                </Row>
+              ))
+            )}
+          </div>
+
+          <Form.Item name="treatment_plan" label="Phác đồ điều trị bổ sung / Ghi chú">
+            <Input.TextArea rows={2} placeholder="Cách ly lợn, vệ sinh chuồng trại..." />
+          </Form.Item>
         </Form>
       </Modal>
     </div>
-  )
-}
+  );
+};

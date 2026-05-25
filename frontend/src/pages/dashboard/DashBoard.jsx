@@ -25,8 +25,14 @@ import {
 } from "@ant-design/icons";
 
 import axios from "axios";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 
-import { PageHeader } from "../../components/layout/PageHeader";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { useAuthStore } from "@/store/authStore";
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 // =========================================================
 // TIME FORMAT
@@ -84,8 +90,10 @@ export const DashBoard = () => {
   const [activities, setActivities] =
     useState([]);
 
-  const token =
-    localStorage.getItem("token");
+  const [chartData, setChartData] =
+    useState({ revenue: [], feed: [] });
+
+  const { token } = useAuthStore();
 
   // =========================================================
   // FETCH DATA
@@ -106,22 +114,28 @@ export const DashBoard = () => {
           barnRes,
           pigRes,
           employeeRes,
+          reportRes,
         ] = await Promise.all([
 
           axios.get(
-            "http://localhost:3000/api/barns",
+            `${API}/barns`,
             { headers }
-          ),
+          ).catch(() => ({ data: { data: [] } })),
 
           axios.get(
-            "http://localhost:3000/api/pigs",
+            `${API}/pigs`,
             { headers }
-          ),
+          ).catch(() => ({ data: { data: [] } })),
 
           axios.get(
-            "http://localhost:3000/api/employees",
+            `${API}/staff`,
             { headers }
-          ),
+          ).catch(() => ({ data: { data: [] } })),
+
+          axios.get(
+            `${API}/reports-dashboard/overview`,
+            { headers }
+          ).catch(() => ({ data: { data: { charts: { revenue: [], feed: [] } } } })),
         ]);
 
         setBarns(
@@ -135,6 +149,11 @@ export const DashBoard = () => {
         setEmployees(
           employeeRes.data?.data || []
         );
+
+        setChartData({
+          revenue: reportRes.data?.data?.charts?.revenue || [],
+          feed: reportRes.data?.data?.charts?.feed || []
+        });
 
         setActivities([
           {
@@ -377,9 +396,8 @@ export const DashBoard = () => {
           </Row>
 
           {/* ================================================= */}
-          {/* DEMO CHARTS */}
+          {/* CHARTS */}
           {/* ================================================= */}
-
           <Row
             gutter={[20, 20]}
             style={{
@@ -398,28 +416,28 @@ export const DashBoard = () => {
                 <div className="chart-card__header">
 
                   <h3>
-                    Tăng trọng / xuất
+                    Doanh thu xuất bán
                   </h3>
-
-                  <span className="chart-card__badge">
-                    Demo
-                  </span>
                 </div>
 
-                <div className="chart-card__content">
-
-                  <div className="chart-card__placeholder">
-
-                    <div className="placeholder-icon">
-                      📊
+                <div className="chart-card__content" style={{ height: 320, padding: '20px 0' }}>
+                  {chartData.revenue.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData.revenue} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={(val) => `${val / 1000000}M`} axisLine={false} tickLine={false} />
+                        <Tooltip formatter={(value) => `${Number(value).toLocaleString()} VNĐ`} cursor={{fill: 'transparent'}}/>
+                        <Legend />
+                        <Bar dataKey="revenue" name="Doanh thu" fill="#2d5a27" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="chart-card__placeholder">
+                      <div className="placeholder-icon">📊</div>
+                      <p>Chưa có dữ liệu xuất bán</p>
                     </div>
-
-                    <p>
-                      Kết nối bảng
-                      sale_batches +
-                      pigs
-                    </p>
-                  </div>
+                  )}
                 </div>
               </Card>
             </Col>
@@ -436,25 +454,26 @@ export const DashBoard = () => {
                   <h3>
                     Tiêu thụ cám
                   </h3>
-
-                  <span className="chart-card__badge">
-                    Demo
-                  </span>
                 </div>
 
-                <div className="chart-card__content">
-
-                  <div className="chart-card__placeholder">
-
-                    <div className="placeholder-icon">
-                      🌾
+                <div className="chart-card__content" style={{ height: 320, padding: '20px 0' }}>
+                  {chartData.feed.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData.feed} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eee" />
+                        <XAxis type="number" axisLine={false} tickLine={false} />
+                        <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <Tooltip formatter={(value) => `${value} kg`} cursor={{fill: 'transparent'}}/>
+                        <Legend />
+                        <Bar dataKey="value" name="Khối lượng (Kg)" fill="#f4a261" radius={[0, 4, 4, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="chart-card__placeholder">
+                      <div className="placeholder-icon">🌾</div>
+                      <p>Chưa có dữ liệu tiêu thụ cám</p>
                     </div>
-
-                    <p>
-                      Kết nối
-                      feed_usages
-                    </p>
-                  </div>
+                  )}
                 </div>
               </Card>
             </Col>

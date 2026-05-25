@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -14,68 +14,109 @@ import {
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { usePigFarmStore } from "../../store/pigFarmStore";
-import { LifecycleStatus } from "../../domain/pigFarm";
+import axios from "axios";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { useAuthStore } from "@/store/authStore";
 
 const { Option } = Select;
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function PigVaccination() {
-  const pigs = usePigFarmStore((s) => s.pigs);
-  const staff = usePigFarmStore((s) => s.staff);
-  const vaccinations = usePigFarmStore((s) => s.vaccinations);
-  const addVaccination = usePigFarmStore((s) => s.addVaccination);
-  const deleteVaccination = usePigFarmStore((s) => s.deleteVaccination);
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
 
+  // States
+  const [vaccinations, setVaccinations] = useState([]);
+  const [pigs, setPigs] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
 
-  const activePigs = pigs.filter(
-    (p) => p.lifecycleStatus === LifecycleStatus.ACTIVE
-  );
+  // Phân quyền: Chỉ Admin và Bác sĩ thú y được thao tác
+  const canEdit = user?.role === "ADMIN" || user?.role === "VET_DOCTOR";
+
+  // Lấy dữ liệu từ Backend
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resVac, resPigs, resStaff] = await Promise.all([
+        axios.get(`${API}/vaccinations`, { headers }),
+        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      if (resVac.data?.success) setVaccinations(resVac.data.data);
+      if (resPigs.data?.success) setPigs(resPigs.data.data);
+      if (resStaff.data?.success) setStaffList(resStaff.data.data);
+    } catch (error) {
+      message.error("Không thể tải dữ liệu tiêm phòng");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API}/vaccinations/${id}`, { headers });
+      message.success("Đã xóa bản ghi tiêm phòng");
+      fetchData();
+    } catch (error) {
+      message.error("Không thể xóa bản ghi này");
+    }
+  };
 
   const columns = [
     {
       title: "Ngày",
-      dataIndex: "vaccinatedAt",
+      dataIndex: "vaccinated_at",
+      key: "vaccinated_at",
       render: (iso) => (iso ? dayjs(iso).format("DD/MM/YYYY") : ""),
     },
     {
-      title: "Số tai",
-      render: (_, r) =>
-        pigs.find((p) => p.id === r.pigId)?.earTag || r.pigId,
+      title: "Mã lợn",
+      dataIndex: "pig_id",
+      key: "pig_id",
+      render: (text) => <strong>{text}</strong>,
     },
-    { title: "Vaccine", dataIndex: "vaccineName" },
-    { title: "Người thực hiện", dataIndex: "performedBy" },
-    { title: "Ghi chú", dataIndex: "note" },
+    { title: "Vaccine", dataIndex: "vaccine_name", key: "vaccine_name" },
+    { title: "Người thực hiện", dataIndex: "performed_by_name", key: "performed_by_name" },
+    { title: "Ghi chú", dataIndex: "note", key: "note" },
     {
-      title: "",
-      render: (_, r) => (
+      title: "Thao tác",
+      key: "actions",
+      render: (_, r) => canEdit && (
         <Popconfirm
-          title="Xóa?"
-          onConfirm={() => {
-            deleteVaccination(r.id);
-            message.success("Đã xóa");
-          }}
+          title="Xóa bản ghi tiêm phòng này?"
+          onConfirm={() => handleDelete(r.id)}
         >
-          <Button danger icon={<DeleteOutlined />} size="small" />
+          <Button danger type="text" icon={<DeleteOutlined />} title="Xóa" />
         </Popconfirm>
       ),
     },
   ];
 
   const handleOk = () => {
-    form.validateFields().then((v) => {
-      addVaccination({
-        pigId: v.pigId,
-        vaccineName: v.vaccineName,
-        vaccinatedAt: v.vaccinatedAt.format("YYYY-MM-DD"),
-        performedBy: v.performedBy,
-        note: v.note || "",
-      });
-      setOpen(false);
-      form.resetFields();
-      message.success("Đã lưu");
+    form.validateFields().then(async (values) => {
+      try {
+        const payload = {
+          ...values,
+          vaccinated_at: values.vaccinated_at.format("YYYY-MM-DD"),
+        };
+        
+        await axios.post(`${API}/vaccinations`, payload, { headers });
+        message.success("Đã lưu lịch tiêm");
+        setOpen(false);
+        form.resetFields();
+        fetchData();
+      } catch (error) {
+        message.error(error.response?.data?.message || "Lỗi khi lưu lịch tiêm");
+      }
     });
   };
 
@@ -84,26 +125,22 @@ export default function PigVaccination() {
       <PageHeader
         title="Tiêm phòng"
         subtitle="Gắn mũi tiêm với cá thể lợn"
+        actions={
+          canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+              Ghi nhận tiêm
+            </Button>
+          )
+        }
       />
 
-      {/* ===== ACTIONS (giống dashboard) ===== */}
-      <div className="page-actions">
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setOpen(true)}
-          style={{ margin: 16 }}
-        >
-          Ghi nhận tiêm
-        </Button>
-      </div>
-
-      {/* ===== TABLE (giống dashboard) ===== */}
       <Card className="table-card">
         <Table
           rowKey="id"
           columns={columns}
           dataSource={vaccinations}
+          loading={loading}
+          pagination={{ pageSize: 10 }}
         />
       </Card>
 
@@ -118,24 +155,25 @@ export default function PigVaccination() {
         }}
         okText="Lưu"
         cancelText="Hủy"
+        footer={canEdit ? undefined : null}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" disabled={!canEdit}>
           <Form.Item
-            name="pigId"
-            label="Lợn"
+            name="pig_id"
+            label="Mã Lợn"
             rules={[{ required: true }]}
           >
             <Select showSearch optionFilterProp="children">
-              {activePigs.map((p) => (
+              {pigs.map((p) => (
                 <Option key={p.id} value={p.id}>
-                  {p.earTag}
+                  {p.ear_tag || p.id}
                 </Option>
               ))}
             </Select>
           </Form.Item>
 
           <Form.Item
-            name="vaccineName"
+            name="vaccine_name"
             label="Tên vaccine"
             rules={[{ required: true }]}
           >
@@ -143,25 +181,25 @@ export default function PigVaccination() {
           </Form.Item>
 
           <Form.Item
-            name="vaccinatedAt"
+            name="vaccinated_at"
             label="Ngày tiêm"
             rules={[{ required: true }]}
           >
             <DatePicker
-              style={{ width: "100%" }}
+              className="w-100"
               format="DD/MM/YYYY"
             />
           </Form.Item>
 
           <Form.Item
-            name="performedBy"
+            name="performed_by"
             label="Người thực hiện"
             rules={[{ required: true }]}
           >
             <Select>
-              {staff.map((s) => (
-                <Option key={s.id} value={s.fullName}>
-                  {s.fullName}
+              {staffList.map((s) => (
+                <Option key={s.id} value={s.id}>
+                  {s.full_name} ({s.role})
                 </Option>
               ))}
             </Select>

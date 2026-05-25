@@ -3,7 +3,7 @@
 export async function verifyToken(request, reply) {
   try {
     await request.jwtVerify()
-  } catch {
+  } catch (error) {
     reply.status(401).send({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn' })
   }
 }
@@ -11,17 +11,16 @@ export async function verifyToken(request, reply) {
 // ── authorizeRoles ────────────────────────────────────────
 // Dùng: authorizeRoles('ADMIN', 'VET_DOCTOR')
 // Trả về một preHandler function
-export function authorizeRoles(...roles) {
+export function authorizeRoles(...roleCodes) {
   return async function (request, reply) {
-    const { role } = request.user  // payload từ JWT
-    if (!roles.includes(role)) {
+    const { role } = request.user // payload từ JWT chứa role_code
+    if (!roleCodes.includes(role)) {
       reply.status(403).send({ success: false, message: 'Bạn không có quyền thực hiện thao tác này' })
     }
   }
 }
 
-// ── Gộp 2 middleware để dùng tiện hơn ────────────────────
-// preHandler: [protect('ADMIN', 'VET_DOCTOR')]
-export function protect(...roles) {
-  return [verifyToken, authorizeRoles(...roles)]
+// ── protect ───────────────────────────────────────────────
+export function protect(...roleCodes) {
+  return [verifyToken, authorizeRoles(...roleCodes)]
 }

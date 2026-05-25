@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -12,20 +12,24 @@ import {
   InputNumber,
   Row,
   Col,
+  message,
 } from "antd";
 import dayjs from "dayjs";
 import weekOfYear from "dayjs/plugin/weekOfYear";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { usePigFarmStore } from "../../store/pigFarmStore";
-import { PigCategory, LifecycleStatus } from "../../domain/pigFarm";
+import axios from "axios";
+import { useAuthStore } from "@/store/authStore";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 dayjs.extend(weekOfYear);
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function PigFattening() {
-  const pigs = usePigFarmStore((s) => s.pigs);
-  const saleBatches = usePigFarmStore((s) => s.saleBatches);
-  const addSaleBatch = usePigFarmStore((s) => s.addSaleBatch);
-  const updatePig = usePigFarmStore((s) => s.updatePig);
+  const { token, user } = useAuthStore();
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const [pigs, setPigs] = useState([]);
+  const [saleBatches, setSaleBatches] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // ===== LABEL =====
   const filterLabel = {
@@ -47,32 +51,56 @@ export default function PigFattening() {
   const [form] = Form.useForm();
   const [bulkForm] = Form.useForm();
 
+  // ===== QUYỀN HẠN =====
+  const canEdit = user?.role === "ADMIN" || user?.role === "FARM_WORKER";
+
+  // ===== FETCH DATA =====
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resPigs, resSales] = await Promise.all([
+        axios.get(`${API}/pigs`, { headers }),
+        axios.get(`${API}/sale-batches`, { headers }).catch(() => ({ data: { data: [] } })),
+      ]);
+      setPigs(resPigs.data?.data || []);
+      setSaleBatches(resSales.data?.data || []);
+    } catch (err) {
+      message.error("Không thể tải dữ liệu xuất bán lợn");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   // ===== DATA =====
   const fatteningActive = useMemo(() => {
     return pigs.filter(
       (p) =>
-        p.lifecycleStatus === LifecycleStatus.ACTIVE &&
-        p.category === PigCategory.FATTENING
+        p.lifecycleStatus === "ACTIVE" &&
+        p.category === "FATTENING"
     );
   }, [pigs]);
 
   const sold = useMemo(() => {
     return pigs.filter(
       (p) =>
-        p.lifecycleStatus === LifecycleStatus.SOLD &&
-        p.category === PigCategory.FATTENING
+        p.lifecycleStatus === "SOLD" &&
+        p.category === "FATTENING"
     );
   }, [pigs]);
 
   // ===== STATS =====
   const stats = useMemo(() => {
     const revenue = saleBatches.reduce(
-      (s, b) => s + b.lines.reduce((x, l) => x + l.totalAmount, 0),
+      (s, b) => s + (b.lines?.reduce((x, l) => x + (Number(l.total_amount) || 0), 0) || 0),
       0
     );
 
     const totalKg = saleBatches.reduce(
-      (s, b) => s + b.lines.reduce((x, l) => x + (l.weight || 0), 0),
+      (s, b) => s + (b.lines?.reduce((x, l) => x + (Number(l.weight) || 0), 0) || 0),
       0
     );
 
@@ -84,14 +112,14 @@ export default function PigFattening() {
     return saleBatches
       .filter((b) => {
         if (!searchEar) return true;
-        return b.lines.some((l) => l.earTag?.includes(searchEar));
+        return b.lines?.some((l) => l.ear_tag?.includes(searchEar));
       })
       .map((b) => ({
         key: b.id,
-        soldAt: b.soldAt,
-        count: b.lines.length,
-        totalKg: b.lines.reduce((s, l) => s + (l.weight || 0), 0),
-        total: b.lines.reduce((s, l) => s + l.totalAmount, 0),
+        sold_at: b.sold_at,
+        count: b.lines?.length || 0,
+        totalKg: b.lines?.reduce((s, l) => s + (Number(l.weight) || 0), 0) || 0,
+        total: b.lines?.reduce((s, l) => s + (Number(l.total_amount) || 0), 0) || 0,
         raw: b,
       }));
   }, [saleBatches, searchEar]);
@@ -101,7 +129,7 @@ export default function PigFattening() {
     const map = {};
 
     sellRows.forEach((d) => {
-      const date = dayjs(d.soldAt);
+      const date = dayjs(d.sold_at);
       let key = "";
 
       if (filterType === "day") key = date.format("DD/MM/YYYY");
@@ -127,57 +155,57 @@ export default function PigFattening() {
   }, [sellRows, filterType]);
 
   // ===== SELL SINGLE =====
-  const handleSell = (values) => {
-    const totalAmount = values.price * values.weight;
+  const handleSell = async (values) => {
+    try {
+      const payload = {
+        sold_at: values.date.format("YYYY-MM-DD"),
+        staff_name: values.staff,
+        lines: [
+          {
+            ear_tag: values.earTag,
+            weight: values.weight,
+            price: values.price,
+            total_amount: values.price * values.weight,
+            reason: values.reason,
+            note: values.note,
+          },
+        ],
+      };
 
-    addSaleBatch({
-      id: Date.now(),
-      soldAt: values.date.toISOString(),
-      staff: values.staff,
-      lines: [
-        {
-          earTag: values.earTag,
-          weight: values.weight,
-          price: values.price,
-          totalAmount,
-          reason: values.reason,
-          note: values.note,
-        },
-      ],
-    });
-
-    updatePig(values.earTag, {
-      lifecycleStatus: LifecycleStatus.SOLD,
-    });
-
-    setOpenSingle(false);
-    form.resetFields();
+      await axios.post(`${API}/sale-batches`, payload, { headers });
+      message.success("Ghi nhận xuất bán thành công");
+      setOpenSingle(false);
+      form.resetFields();
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || "Lỗi khi xuất bán");
+    }
   };
 
   // ===== SELL BULK =====
-  const handleBulkSell = (values) => {
-    const lines = values.items.map((i) => ({
-      earTag: i.earTag,
-      weight: i.weight,
-      price: values.price,
-      totalAmount: i.weight * values.price,
-    }));
+  const handleBulkSell = async (values) => {
+    try {
+      const lines = values.items.map((i) => ({
+        ear_tag: i.earTag,
+        weight: i.weight,
+        price: values.price,
+        total_amount: i.weight * values.price,
+      }));
 
-    addSaleBatch({
-      id: Date.now(),
-      soldAt: values.date.toISOString(),
-      staff: values.staff,
-      lines,
-    });
+      const payload = {
+        sold_at: values.date.format("YYYY-MM-DD"),
+        staff_name: values.staff,
+        lines,
+      };
 
-    lines.forEach((l) => {
-      updatePig(l.earTag, {
-        lifecycleStatus: LifecycleStatus.SOLD,
-      });
-    });
-
-    setOpenBulk(false);
-    bulkForm.resetFields();
+      await axios.post(`${API}/sale-batches`, payload, { headers });
+      message.success("Xuất bán hàng loạt thành công");
+      setOpenBulk(false);
+      bulkForm.resetFields();
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || "Lỗi khi xuất bán");
+    }
   };
 
   return (
@@ -236,7 +264,7 @@ export default function PigFattening() {
         </Row>
 
         {/* ===== FILTER CARD ===== */}
-        <Row gutter={[20, 20]} style={{ marginTop: 24 }}>
+        <Row gutter={[20, 20]} className="mt-24">
           <Col span={24}>
             <Card>
               <div>
@@ -245,13 +273,13 @@ export default function PigFattening() {
                     placeholder="Tìm số tai"
                     value={searchEar}
                     onChange={(e) => setSearchEar(e.target.value)}
-                    style={{ width: 220 }}
+                    className="w-220"
                   />
 
                   <Select
                     value={filterType}
                     onChange={setFilterType}
-                    style={{ width: 140 }}
+                    className="w-140"
                     options={[
                       { value: "day", label: "Ngày" },
                       { value: "week", label: "Tuần" },
@@ -259,11 +287,15 @@ export default function PigFattening() {
                     ]}
                   />
 
-                  <Button type="primary" onClick={() => setOpenSingle(true)}>
-                    Bán lợn
-                  </Button>
+                  {canEdit && (
+                    <>
+                      <Button type="primary" onClick={() => setOpenSingle(true)}>
+                        Bán lợn
+                      </Button>
 
-                  <Button onClick={() => setOpenBulk(true)}>Bán hàng loạt</Button>
+                      <Button onClick={() => setOpenBulk(true)}>Bán hàng loạt</Button>
+                    </>
+                  )}
                 </Space>
               </div>
             </Card>
@@ -271,7 +303,7 @@ export default function PigFattening() {
         </Row>
 
         {/* ===== TABLE ===== */}
-        <Row gutter={[20, 20]} style={{ marginTop: 24 }}>
+        <Row gutter={[20, 20]} className="mt-24">
           <Col span={24}>
             <Card className="activity-card">
               <div className="activity-card__header">
@@ -281,6 +313,7 @@ export default function PigFattening() {
               <div className="activity-card__list">
                 <Table
                   dataSource={grouped}
+                  loading={loading}
                   rowKey="key"
                   columns={[
                     { title: "STT", render: (_, __, i) => i + 1 },
@@ -321,8 +354,9 @@ export default function PigFattening() {
           onCancel={() => setOpenSingle(false)}
           onOk={() => form.submit()}
           title="Bán lợn"
+          footer={canEdit ? undefined : null}
         >
-          <Form form={form} onFinish={handleSell} layout="vertical">
+          <Form form={form} onFinish={handleSell} layout="vertical" disabled={!canEdit}>
             <Form.Item name="earTag" label="Số tai" rules={[{ required: true }]}>
               <Select
                 options={fatteningActive.map((p) => ({
@@ -333,15 +367,15 @@ export default function PigFattening() {
             </Form.Item>
 
             <Form.Item name="date" label="Ngày" rules={[{ required: true }]}>
-              <DatePicker style={{ width: "100%" }} />
+              <DatePicker className="w-100" />
             </Form.Item>
 
             <Form.Item name="weight" label="Kg" rules={[{ required: true }]}>
-              <InputNumber style={{ width: "100%" }} />
+              <InputNumber className="w-100" />
             </Form.Item>
 
             <Form.Item name="price" label="Giá" rules={[{ required: true }]}>
-              <InputNumber style={{ width: "100%" }} />
+              <InputNumber className="w-100" />
             </Form.Item>
 
             <Form.Item name="staff" label="Người thực hiện">
@@ -365,11 +399,12 @@ export default function PigFattening() {
           onOk={() => bulkForm.submit()}
           width={900}
           title="Bán hàng loạt"
+          footer={canEdit ? undefined : null}
         >
-          <Form form={bulkForm} onFinish={handleBulkSell} layout="vertical">
+          <Form form={bulkForm} onFinish={handleBulkSell} layout="vertical" disabled={!canEdit}>
             <Space wrap>
               <Form.Item name="date" label="Ngày" rules={[{ required: true }]}>
-                <DatePicker />
+                <DatePicker format="DD/MM/YYYY" />
               </Form.Item>
 
               <Form.Item name="price" label="Giá/kg" rules={[{ required: true }]}>
@@ -423,7 +458,7 @@ export default function PigFattening() {
                             name={[field.name, "weight"]}
                             rules={[{ required: true }]}
                           >
-                            <InputNumber style={{ width: "100%" }} />
+                            <InputNumber className="w-100" />
                           </Form.Item>
                         ),
                       },
@@ -442,7 +477,7 @@ export default function PigFattening() {
                     ]}
                   />
 
-                  <div style={{ marginTop: 16, textAlign: "right" }}>
+                  <div className="mt-16 text-right">
                     <b>
                       Tổng kg:{" "}
                       {(bulkForm.getFieldValue("items") || []).reduce(
@@ -476,8 +511,8 @@ export default function PigFattening() {
         >
           {selectedBatch && (
             <>
-              <p>Ngày: {dayjs(selectedBatch.soldAt).format("DD/MM/YYYY")}</p>
-              <p>Người bán: {selectedBatch.staff}</p>
+              <p>Ngày: {dayjs(selectedBatch.sold_at).format("DD/MM/YYYY")}</p>
+              <p>Người bán: {selectedBatch.staff_name}</p>
 
               <Table
                 dataSource={selectedBatch.lines}
@@ -485,10 +520,10 @@ export default function PigFattening() {
                 rowKey={(r, i) => i}
                 columns={[
                   { title: "STT", render: (_, __, i) => i + 1 },
-                  { title: "Số tai", dataIndex: "earTag" },
+                  { title: "Số tai", dataIndex: "ear_tag" },
                   { title: "Kg", dataIndex: "weight" },
                   { title: "Giá", dataIndex: "price" },
-                  { title: "Thành tiền", dataIndex: "totalAmount" },
+                  { title: "Thành tiền", dataIndex: "total_amount" },
                   { title: "Nguyên nhân", dataIndex: "reason" },
                   { title: "Ghi chú", dataIndex: "note" },
                 ]}
