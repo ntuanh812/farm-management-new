@@ -36,7 +36,7 @@ export default function PigstyHistory() {
       ] = await Promise.all([
         axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/employees`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
       ]);
 

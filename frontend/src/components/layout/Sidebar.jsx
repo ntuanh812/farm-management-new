@@ -16,6 +16,8 @@ const ADMIN_MENU = [
     children: [
       { key: '/pigmanage',                label: 'Danh sách lợn',   icon: <ProfileOutlined /> },
       { key: '/pigmanage/barns',          label: 'Chuồng trại',     icon: <HomeOutlined /> },
+      { key: '/pigmanage/pigsty-history', label: 'Chuyển chuồng',   icon: <SwapRightOutlined /> },
+      { key: '/pigmanage/pig-dead',       label: 'Lợn chết',        icon: <CloseCircleOutlined /> },
       { key: '/pigmanage/pig-fattening',  label: 'Vỗ béo / Xuất',   icon: <IdcardOutlined /> },
     ],
   },
@@ -41,7 +43,7 @@ const ADMIN_MENU = [
     ],
   },
   { key: '/staff/management', label: '👥 Quản lý nhân sự', icon: <TeamOutlined /> },
-  { key: '/reports',          label: '📊 Báo cáo',         icon: <FileImageOutlined /> },
+  { key: '/reports/pig-report', label: '📊 Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
 ]
 
 // ── Menu FARM_WORKER ──────────────────────────────────────
@@ -52,24 +54,46 @@ const EMPLOYEE_MENU = [
     children: [
       { key: '/employee/pig/manage',   label: 'Danh sách lợn',   icon: <ProfileOutlined /> },
       { key: '/employee/pig/barns',    label: 'Chuồng trại',     icon: <HomeOutlined /> },
-      { key: '/employee/pig/fattening',label: 'Vỗ béo',          icon: <IdcardOutlined /> },
+      { key: '/employee/pig/history',  label: 'Chuyển chuồng',   icon: <SwapRightOutlined /> },
+      { key: '/employee/pig/dead',     label: 'Lợn chết',        icon: <CloseCircleOutlined /> },
+      { key: '/employee/pig/fattening',label: 'Lợn thịt',          icon: <IdcardOutlined /> },
     ],
   },
-  { key: '/employee/reports/basic', label: ' Báo cáo cơ bản', icon: <FileImageOutlined /> },
+  {
+    key: 'reproduction', label: '🐣 Sinh sản',
+    children: [
+      { key: '/employee/reproduction/breeding',  label: 'Phối giống', icon: <HeartOutlined /> },
+      { key: '/employee/reproduction/farrowing', label: 'Đẻ con',     icon: <UsergroupAddOutlined /> },
+    ],
+  },
+  {
+    key: 'materials', label: '🍽️ Vật tư',
+    children: [
+      { key: '/employee/materials/bran', label: 'Thức ăn (Cám)', icon: <ShoppingCartOutlined /> },
+    ],
+  },
+  { key: '/employee/health/vaccine', label: '💊 Tiêm phòng', icon: <ClockCircleOutlined /> },
+  { key: '/employee/reports/pig-report', label: '📊 Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
 ]
 
 // ── Menu VET_DOCTOR ───────────────────────────────────────
 const VET_MENU = [
   { key: '/vet/dashboard', label: '🏠 Tổng quan' },
   {
+    key: 'pigmanage', label: '🐷 Quản lý lợn',
+    children: [
+      { key: '/vet/pig/manage', label: 'Danh sách lợn', icon: <ProfileOutlined /> },
+    ],
+  },
+  {
     key: 'health', label: '🩺 Thú y & Sức khỏe',
     children: [
       { key: '/vet/health/vaccine',       label: 'Tiêm phòng',      icon: <ClockCircleOutlined /> },
       { key: '/vet/health/vet-diagnosis', label: 'Chuẩn đoán bệnh', icon: <BugOutlined /> },
-      { key: '/vet/health/records',       label: 'Hồ sơ sức khỏe',  icon: <ProfileOutlined /> },
+      { key: '/vet/materials/medicine',   label: 'Quản lý Thuốc',   icon: <MedicineBoxOutlined /> },
     ],
   },
-  { key: '/vet/reports/disease', label: '📊 Báo cáo bệnh', icon: <FileImageOutlined /> },
+  { key: '/vet/reports/review', label: '📊 Phản hồi báo cáo', icon: <FileImageOutlined /> },
 ]
 
 // Chọn menu theo role

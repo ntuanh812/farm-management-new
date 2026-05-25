@@ -34,7 +34,7 @@ export default function PigBreeding() {
       const [resBreed, resPigs, resStaff] = await Promise.all([
         axios.get(`${API}/breedings`, { headers }),
         axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/employees`, { headers }).catch(() => ({ data: { data: [] } }))
+        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setBreedings(resBreed.data?.data || []);
       setPigs(resPigs.data?.data || []);

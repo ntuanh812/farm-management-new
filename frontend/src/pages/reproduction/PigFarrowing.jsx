@@ -28,7 +28,7 @@ export default function PigFarrowing() {
       const [resFarrow, resPigs, resStaff] = await Promise.all([
         axios.get(`${API}/farrowings`, { headers }),
         axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/employees`, { headers }).catch(() => ({ data: { data: [] } }))
+        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setFarrowings(resFarrow.data?.data || []);
       setPigs(resPigs.data?.data || []);

@@ -34,9 +34,9 @@ export default function PigDead() {
     setLoading(true);
     try {
       const [resDeaths, resPigs, resStaff] = await Promise.all([
-        axios.get(`${API}/deaths`, { headers }),
-        axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/employees`, { headers }).catch(() => ({ data: { data: [] } }))
+        axios.get(`${API}/deaths`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setDeaths(resDeaths.data?.data || []);
       setPigs(resPigs.data?.data || []);
@@ -88,37 +88,33 @@ export default function PigDead() {
   const columns = [
     {
       title: 'Ngày ghi nhận',
-      dataIndex: 'death_date',
       key: 'death_date',
-      render: (date) => dayjs(date).format('DD/MM/YYYY')
+      render: (_, r) => dayjs(r.death_date || r.deathDate).format('DD/MM/YYYY')
     },
     {
       title: 'Mã Lợn',
-      dataIndex: 'pig_code',
       key: 'pig_code',
-      render: (text) => <strong>{text}</strong>
+      render: (_, r) => <strong>{r.pig_code || r.pigCode || r.earTag || r.pig_id || '—'}</strong>
     },
     {
       title: 'Chuồng (Lúc chết)',
-      dataIndex: 'barn_name',
-      key: 'barn_name'
+      key: 'barn_name',
+      render: (_, r) => <span>{r.barn_name || r.barnName || '—'}</span>
     },
     {
       title: 'Nguyên nhân chết',
-      dataIndex: 'reason',
       key: 'reason',
-      render: (text) => <span className="text-danger fw-500">{text}</span>
+      render: (_, r) => <span className="text-danger fw-500">{r.reason || '—'}</span>
     },
     {
       title: 'Phương pháp xử lý xác',
-      dataIndex: 'disposal_method',
       key: 'disposal_method',
-      render: (text) => <Tag color="orange">{text}</Tag>
+      render: (_, r) => <Tag color="orange">{r.disposal_method || r.disposalMethod || '—'}</Tag>
     },
     {
       title: 'Người ghi nhận',
-      dataIndex: 'recorded_by',
-      key: 'recorded_by'
+      key: 'recorded_by',
+      render: (_, r) => <span>{r.recorded_by || r.recordedBy || r.staff_name || '—'}</span>
     },
     {
       title: 'Ghi chú',

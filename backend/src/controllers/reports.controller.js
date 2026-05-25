@@ -7,8 +7,8 @@ export const reportsController = {
       const [pigs] = await pool.query("SELECT COUNT(*) AS total FROM pigs WHERE lifecycle_status = 'ACTIVE'");
       const [barns] = await pool.query("SELECT COUNT(*) AS total FROM barns");
       const [sick] = await pool.query("SELECT COUNT(DISTINCT pig_id) AS total FROM vet_diagnosis WHERE status = 'dang_dieu_tri'");
-      const [dead] = await pool.query("SELECT COUNT(*) AS total FROM deaths");
-      const [pregnant] = await pool.query("SELECT COUNT(DISTINCT sow_id) AS total FROM breedings WHERE status = 'SUCCESS' AND expected_farrow_date >= CURDATE()");
+      const [dead] = await pool.query("SELECT COUNT(*) AS total FROM pig_deaths");
+      const [pregnant] = await pool.query("SELECT COUNT(DISTINCT sow_id) AS total FROM pig_breedings WHERE status = 'SUCCESS' AND expected_farrow_date >= CURDATE()");
       const [ready] = await pool.query("SELECT COUNT(*) AS total FROM pigs WHERE lifecycle_status = 'ACTIVE' AND category = 'FATTENING' AND current_weight >= 100");
 
       // 2. Biểu đồ tài chính (Doanh thu)

@@ -87,8 +87,8 @@ CREATE TABLE barns (
     code VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
     capacity INT UNSIGNED NOT NULL DEFAULT 0,
-    barn_type ENUM('nai', 'duc', 'con', 'thit', 'cach_ly') NOT NULL DEFAULT 'thit',
-    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    barn_type VARCHAR(50) NOT NULL DEFAULT 'FATTENING',
+    status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
     note TEXT,
     deleted_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -317,6 +317,57 @@ CREATE TABLE sale_batch_lines (
 );
 
 -- ============================================================
+-- 13. THÚ Y VÀ BÁO CÁO BỆNH
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS vet_diagnosis (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  pig_id VARCHAR(50) NOT NULL COMMENT 'Mã lợn/Số tai nhập thủ công',
+  barn_id INT UNSIGNED NOT NULL,
+  diagnosis_date DATE NOT NULL,
+  next_check_date DATE,
+  symptoms TEXT,
+  suspected_disease VARCHAR(255),
+  final_disease VARCHAR(255),
+  temperature DECIMAL(4,1),
+  severity_level VARCHAR(50) DEFAULT 'nhe',
+  status VARCHAR(50) DEFAULT 'dang_dieu_tri',
+  treatment_plan TEXT,
+  vet_name VARCHAR(100),
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS vet_diagnosis_medicines (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  diagnosis_id INT UNSIGNED NOT NULL,
+  medicine_id INT UNSIGNED NOT NULL,
+  dosage VARCHAR(50),
+  unit VARCHAR(20),
+  duration_days INT DEFAULT 1,
+  FOREIGN KEY (diagnosis_id) REFERENCES vet_diagnosis(id) ON DELETE CASCADE,
+  FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pig_reports (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  pig_id VARCHAR(50) NOT NULL COMMENT 'Mã lợn',
+  barn_id INT UNSIGNED NOT NULL COMMENT 'Chuồng',
+  reporter_id INT UNSIGNED NOT NULL COMMENT 'Nhân viên báo cáo',
+  description TEXT NOT NULL COMMENT 'Mô tả triệu chứng',
+  images JSON COMMENT 'Danh sách đường dẫn ảnh',
+  status VARCHAR(50) DEFAULT 'cho_xu_ly',
+  vet_note TEXT COMMENT 'Ghi chú phản hồi của bác sĩ',
+  vet_doctor_id INT UNSIGNED COMMENT 'Bác sĩ xử lý',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
+  FOREIGN KEY (reporter_id) REFERENCES employees(id) ON DELETE CASCADE,
+  FOREIGN KEY (vet_doctor_id) REFERENCES employees(id) ON DELETE SET NULL
+);
+
+-- ============================================================
 -- INITIAL SEED DATA FOR RBAC
 -- ============================================================
 
@@ -324,3 +375,13 @@ INSERT INTO roles (id, code, name, description) VALUES
 (1, 'ADMIN', 'Quản trị viên', 'Có toàn quyền hệ thống'),
 (2, 'FARM_WORKER', 'Nhân viên', 'Quản lý lợn, chuồng trại được phân công'),
 (3, 'VET_DOCTOR', 'Bác sĩ thú y', 'Quản lý sức khỏe, tiêm phòng, chuẩn đoán');
+
+-- ============================================================
+-- TÀI KHOẢN ADMIN MẶC ĐỊNH (Mật khẩu: 123456)
+-- ============================================================
+
+INSERT INTO employees (id, full_name, phone, email, role_id) VALUES
+(1, 'Admin System', '0987654321', 'admin@farmpro.com', 1);
+
+INSERT INTO accounts (id, employee_id, username, password_hash, is_active) VALUES
+(1, 1, 'admin', '123456', 1);
