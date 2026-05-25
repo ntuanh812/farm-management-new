@@ -85,14 +85,6 @@ export default function PigFattening() {
     );
   }, [pigs]);
 
-  const sold = useMemo(() => {
-    return pigs.filter(
-      (p) =>
-        p.lifecycleStatus === "SOLD" &&
-        p.category === "FATTENING"
-    );
-  }, [pigs]);
-
   // ===== STATS =====
   const stats = useMemo(() => {
     const revenue = saleBatches.reduce(
@@ -105,7 +97,11 @@ export default function PigFattening() {
       0
     );
 
-    return { revenue, totalKg };
+    const soldCount = saleBatches.reduce(
+      (s, b) => s + (b.lines?.length || 0), 0
+    );
+
+    return { revenue, totalKg, soldCount };
   }, [saleBatches]);
 
   // ===== FILTER =====
@@ -143,13 +139,16 @@ export default function PigFattening() {
           count: 0,
           totalKg: 0,
           total: 0,
-          raw: d.raw,
+          lines: [],
         };
       }
 
       map[key].count += d.count;
       map[key].totalKg += d.totalKg;
       map[key].total += d.total;
+      if (d.raw.lines) {
+        map[key].lines.push(...d.raw.lines.map(l => ({ ...l, sold_at: d.raw.sold_at, staff_name: d.raw.staff_name })));
+      }
     });
 
     return Object.values(map);
@@ -185,6 +184,15 @@ export default function PigFattening() {
 
   // ===== SELL BULK =====
   const handleBulkSell = async (values) => {
+    if (!values.items || values.items.length === 0) {
+      return message.warning("Vui lòng chọn ít nhất 1 con lợn");
+    }
+
+    const hasEmptyWeight = values.items.some((i) => !i.weight);
+    if (hasEmptyWeight) {
+      return message.warning("Vui lòng nhập đầy đủ số Kg cho các lợn đã chọn");
+    }
+
     try {
       const lines = values.items.map((i) => ({
         ear_tag: i.earTag,
@@ -235,7 +243,7 @@ export default function PigFattening() {
                 <div className="stat-card__icon"><ExportOutlined /></div>
               </div>
               <div className="stat-card__value">
-                {sold.length}
+                {stats.soldCount}
                 <span className="stat-card__label"> con</span>
               </div>
             </Card>
@@ -338,7 +346,7 @@ export default function PigFattening() {
                       render: (_, r) => (
                         <Button
                           onClick={() => {
-                            setSelectedBatch(r.raw);
+                            setSelectedBatch(r);
                             setOpenDetail(true);
                           }}
                         >
@@ -381,6 +389,18 @@ export default function PigFattening() {
 
             <Form.Item name="price" label="Giá" rules={[{ required: true }]}>
               <InputNumber className="w-100" />
+            </Form.Item>
+
+            <Form.Item shouldUpdate noStyle>
+              {() => {
+                const w = form.getFieldValue("weight") || 0;
+                const p = form.getFieldValue("price") || 0;
+                return (
+                  <div className="mb-16 text-right text-primary">
+                    <b>Thành tiền: {(w * p).toLocaleString()} đ</b>
+                  </div>
+                );
+              }}
             </Form.Item>
 
             <Form.Item name="staff" label="Người thực hiện">
@@ -429,11 +449,15 @@ export default function PigFattening() {
                   label: p.earTag,
                 }))}
                 onChange={(values) => {
+                  const currentItems = bulkForm.getFieldValue("items") || [];
                   bulkForm.setFieldsValue({
-                    items: values.map((v) => ({
-                      earTag: v,
-                      weight: null,
-                    })),
+                    items: values.map((v) => {
+                      const existing = currentItems.find((i) => i && i.earTag === v);
+                      return {
+                        earTag: v,
+                        weight: existing ? existing.weight : null,
+                      };
+                    }),
                   });
                 }}
               />
@@ -469,38 +493,37 @@ export default function PigFattening() {
                       },
                       {
                         title: "Thành tiền",
-                        render: (_, field) => {
-                          const w =
-                            bulkForm.getFieldValue(["items", field.name, "weight"]) ||
-                            0;
-
-                          const p = bulkForm.getFieldValue("price") || 0;
-
-                          return (w * p).toLocaleString();
-                        },
+                        render: (_, field) => (
+                          <Form.Item shouldUpdate noStyle>
+                            {() => {
+                              const w =
+                                bulkForm.getFieldValue(["items", field.name, "weight"]) ||
+                                0;
+                              const p = bulkForm.getFieldValue("price") || 0;
+                              return (w * p).toLocaleString();
+                            }}
+                          </Form.Item>
+                        ),
                       },
                     ]}
                   />
 
-                  <div className="mt-16 text-right">
-                    <b>
-                      Tổng kg:{" "}
-                      {(bulkForm.getFieldValue("items") || []).reduce(
-                        (s, i) => s + (i?.weight || 0),
-                        0
-                      )}
-                    </b>
-                    <br />
-                    <b>
-                      Tổng tiền:{" "}
-                      {(bulkForm.getFieldValue("items") || []).reduce(
-                        (s, i) =>
-                          s +
-                          (i?.weight || 0) * (bulkForm.getFieldValue("price") || 0),
-                        0
-                      ).toLocaleString()}
-                    </b>
-                  </div>
+                  <Form.Item shouldUpdate noStyle>
+                    {() => {
+                      const currentItems = bulkForm.getFieldValue("items") || [];
+                      const currentPrice = bulkForm.getFieldValue("price") || 0;
+                      const totalKg = currentItems.reduce((s, i) => s + (i?.weight || 0), 0);
+                      const totalMoney = totalKg * currentPrice;
+
+                      return (
+                        <div className="mt-16 text-right">
+                          <b>Tổng kg: {totalKg}</b>
+                          <br />
+                          <b>Tổng tiền: {totalMoney.toLocaleString()}</b>
+                        </div>
+                      );
+                    }}
+                  </Form.Item>
                 </>
               )}
             </Form.List>
@@ -512,28 +535,24 @@ export default function PigFattening() {
           open={openDetail}
           onCancel={() => setOpenDetail(false)}
           footer={null}
-          title="Phiếu xuất bán"
+        title={`Chi tiết xuất bán (${selectedBatch?.key || ""})`}
+        width={850}
         >
           {selectedBatch && (
-            <>
-              <p>Ngày: {dayjs(selectedBatch.sold_at).format("DD/MM/YYYY")}</p>
-              <p>Người bán: {selectedBatch.staff_name}</p>
-
-              <Table
-                dataSource={selectedBatch.lines}
-                pagination={false}
-                rowKey={(r, i) => i}
-                columns={[
-                  { title: "STT", render: (_, __, i) => i + 1 },
-                  { title: "Số tai", dataIndex: "ear_tag" },
-                  { title: "Kg", dataIndex: "weight" },
-                  { title: "Giá", dataIndex: "price" },
-                  { title: "Thành tiền", dataIndex: "total_amount" },
-                  { title: "Nguyên nhân", dataIndex: "reason" },
-                  { title: "Ghi chú", dataIndex: "note" },
-                ]}
-              />
-            </>
+          <Table
+            dataSource={selectedBatch.lines}
+            pagination={{ pageSize: 10 }}
+            rowKey={(r, i) => r.id || i}
+            columns={[
+              { title: "STT", render: (_, __, i) => i + 1 },
+              { title: "Ngày bán", dataIndex: "sold_at", render: (d) => dayjs(d).format("DD/MM/YYYY") },
+              { title: "Số tai", dataIndex: "ear_tag" },
+              { title: "Kg", dataIndex: "weight" },
+              { title: "Giá", dataIndex: "price", render: (v) => v?.toLocaleString() },
+              { title: "Thành tiền", dataIndex: "total_amount", render: (v) => v?.toLocaleString() },
+              { title: "Người thực hiện", dataIndex: "staff_name" },
+            ]}
+          />
           )}
         </Modal>
       </div>

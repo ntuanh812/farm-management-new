@@ -385,6 +385,15 @@ export default async function pigsRoute(app) {
 
         const { id } = request.params;
 
+        const [pigInfo] = await pool.query('SELECT lifecycle_status FROM pigs WHERE id = ?', [id]);
+        if (pigInfo.length > 0 && (pigInfo[0].lifecycle_status === 'SOLD' || pigInfo[0].lifecycle_status === 'DEAD')) {
+          return reply.status(400).send({
+            success: false,
+            message:
+              "Không thể xóa lợn đã xuất bán hoặc đã chết để bảo vệ toàn vẹn dữ liệu thống kê.",
+          });
+        }
+
         await pool.query(
           `
           DELETE FROM pigs

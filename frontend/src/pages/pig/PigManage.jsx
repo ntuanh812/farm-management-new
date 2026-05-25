@@ -239,7 +239,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--daily-tasks">
             <div className="stat-card__header">
-              <span className="stat-card__title">Lợn thịt (Vỗ béo)</span>
+              <span className="stat-card__title">Lợn thịt</span>
               <div className="stat-card__icon"><ShoppingCartOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -251,7 +251,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--staff">
             <div className="stat-card__header">
-              <span className="stat-card__title">Lợn sinh sản (Nái/Đực)</span>
+              <span className="stat-card__title">Lợn sinh sản</span>
               <div className="stat-card__icon"><HeartOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -263,7 +263,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--barn">
             <div className="stat-card__header">
-              <span className="stat-card__title">Lợn con (Theo mẹ/Cai sữa)</span>
+              <span className="stat-card__title">Lợn con</span>
               <div className="stat-card__icon"><DashboardOutlined /></div>
             </div>
             <div className="stat-card__value">

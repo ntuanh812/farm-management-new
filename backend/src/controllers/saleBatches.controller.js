@@ -7,30 +7,45 @@ export const saleBatchesController = {
       const [rows] = await pool.query(`
         SELECT 
           sb.id, sb.sold_at, sb.staff_name, sb.created_at,
-          JSON_ARRAYAGG(
-            IF(sbl.id IS NOT NULL, 
-              JSON_OBJECT(
-                'id', sbl.id,
-                'ear_tag', sbl.ear_tag,
-                'weight', sbl.weight,
-                'price', sbl.price,
-                'total_amount', sbl.total_amount,
-                'reason', sbl.reason,
-                'note', sbl.note
-              ), 
-              NULL
-            )
-          ) AS lines
+          sbl.id AS line_id,
+          sbl.ear_tag,
+          sbl.weight,
+          sbl.price,
+          sbl.total_amount,
+          sbl.reason,
+          sbl.note
         FROM sale_batches sb
         LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
-        GROUP BY sb.id
         ORDER BY sb.sold_at DESC, sb.created_at DESC
       `);
 
-      const data = rows.map(row => ({
-        ...row,
-        lines: row.lines ? JSON.parse(row.lines).filter(l => l !== null) : []
-      }));
+      const batchMap = {};
+      const data = [];
+
+      rows.forEach(row => {
+        if (!batchMap[row.id]) {
+          batchMap[row.id] = {
+            id: row.id,
+            sold_at: row.sold_at,
+            staff_name: row.staff_name,
+            created_at: row.created_at,
+            lines: []
+          };
+          data.push(batchMap[row.id]);
+        }
+
+        if (row.line_id) {
+          batchMap[row.id].lines.push({
+            id: row.line_id,
+            ear_tag: row.ear_tag,
+            weight: row.weight,
+            price: row.price,
+            total_amount: row.total_amount,
+            reason: row.reason,
+            note: row.note
+          });
+        }
+      });
 
       return reply.send({ success: true, data });
     } catch (error) {
