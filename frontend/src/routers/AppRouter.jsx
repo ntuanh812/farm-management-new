@@ -41,6 +41,7 @@ import StaffManagement from '@/pages/staff/StaffManagement'
 // Reports
 import PigReport from '@/pages/reports/PigReport'
 import VetReview from '@/pages/reports/VetReview'
+import FarmReport from '@/pages/reports/FarmReport'
 
 // ── PrivateRoute: kiểm tra đăng nhập + quyền role ────────
 // roles = [] => chỉ cần đăng nhập, không cần role cụ thể
@@ -90,6 +91,7 @@ export const AppRouter = () => {
         <Route path="/health/vet-diagnosis/:id" element={<VetDiagnosisDetail />} />
         <Route path="/staff/management"       element={<StaffManagement />} />
         <Route path="/reports/pig-report"     element={<PigReport />} />
+        <Route path="/reports/farm-report"    element={<FarmReport />} />
       </Route>
 
       {/* ── FARM_WORKER routes ──────────────────────────── */}
@@ -109,6 +111,7 @@ export const AppRouter = () => {
         <Route path="/employee/materials/bran"        element={<BranUsage />} />
         <Route path="/employee/health/vaccine"        element={<PigVaccination />} />
         <Route path="/employee/reports/pig-report"    element={<PigReport />} />
+        <Route path="/employee/reports/farm-report"   element={<FarmReport />} />
       </Route>
 
       {/* ── VET_DOCTOR routes ───────────────────────────── */}
@@ -124,6 +127,7 @@ export const AppRouter = () => {
         <Route path="/vet/health/vet-diagnosis"      element={<VetDiagnosis />} />
         <Route path="/vet/reports/review"            element={<VetReview />} />
         <Route path="/vet/health/vet-diagnosis/:id" element={<VetDiagnosisDetail />} />
+        <Route path="/vet/reports/farm-report"       element={<FarmReport />} />
       </Route>
 
       {/* ── Trang không có quyền ─────────────────────────── */}

@@ -4,8 +4,8 @@ import {
   Select, DatePicker, Switch, message, Popconfirm, Card, Row, Col 
 } from 'antd';
 import { 
-  PlusOutlined, EditOutlined, LockOutlined, 
-  UnlockOutlined, KeyOutlined, EyeOutlined, UserAddOutlined
+  PlusOutlined, EditOutlined, LockOutlined,
+  UnlockOutlined, KeyOutlined, UserAddOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -33,6 +33,7 @@ export default function StaffManagement() {
   // Modal States
   const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
   const [isAccModalOpen, setIsAccModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
   // Forms
   const [empForm] = Form.useForm();
@@ -71,18 +72,24 @@ export default function StaffManagement() {
   }, []);
 
   // Handlers
-  const handleAddEmployee = async (values) => {
+  const handleSaveEmployee = async (values) => {
     try {
       // Format date
       if (values.dob) values.dob = values.dob.format('YYYY-MM-DD');
       
-      await axios.post(`${API}/staff/employees`, values, { headers });
-      message.success('Thêm nhân viên thành công!');
+      if (editingEmployee) {
+        await axios.put(`${API}/staff/employees/${editingEmployee.id}`, values, { headers });
+        message.success('Cập nhật nhân viên thành công!');
+      } else {
+        await axios.post(`${API}/staff/employees`, values, { headers });
+        message.success('Thêm nhân viên thành công!');
+      }
       setIsEmpModalOpen(false);
+      setEditingEmployee(null);
       empForm.resetFields();
       fetchData();
     } catch (error) {
-      message.error(error.response?.data?.message || 'Lỗi khi thêm nhân viên');
+      message.error(error.response?.data?.message || 'Lỗi khi lưu nhân viên');
     }
   };
 
@@ -119,6 +126,16 @@ export default function StaffManagement() {
     }
   };
 
+  const handleEdit = (record) => {
+    setEditingEmployee(record);
+    empForm.setFieldsValue({
+      ...record,
+      dob: record.dob ? dayjs(record.dob) : null,
+      barn_ids: record.barns ? record.barns.map(b => b.id) : [],
+    });
+    setIsEmpModalOpen(true);
+  };
+
   // Table Columns
   const columns = [
     {
@@ -131,14 +148,13 @@ export default function StaffManagement() {
       title: 'Họ tên',
       dataIndex: 'full_name',
       key: 'full_name',
-      render: (text, record) => (
-        <div>
-          <strong>{text}</strong>
-          {record.username && (
-            <div className="text-xs text-muted">@{record.username}</div>
-          )}
-        </div>
-      ),
+      render: (text) => <strong>{text}</strong>,
+    },
+    {
+      title: 'Username',
+      dataIndex: 'username',
+      key: 'username',
+      render: (text) => text ? <span style={{ fontWeight: 500, color: '#1890ff' }}>@{text}</span> : <span className="text-muted">Chưa có</span>,
     },
     {
       title: 'Liên hệ',
@@ -152,10 +168,10 @@ export default function StaffManagement() {
     },
     {
       title: 'Vai trò',
-      dataIndex: 'role',
-      key: 'role',
-      render: (role) => {
-        const config = ROLE_CONFIG[role] || { text: 'Không rõ', color: 'default' };
+      dataIndex: 'role_code',
+      key: 'role_code',
+      render: (role_code) => {
+        const config = ROLE_CONFIG[role_code] || { text: 'Không rõ', color: 'default' };
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -202,8 +218,7 @@ export default function StaffManagement() {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
-          <Button type="text" icon={<EyeOutlined />} title="Xem chi tiết" />
-          <Button type="text" icon={<EditOutlined />} className="text-primary" title="Sửa" />
+          <Button type="text" icon={<EditOutlined />} className="text-primary" title="Sửa" onClick={() => handleEdit(record)} />
           {record.account_id && (
             <Popconfirm 
               title="Reset mật khẩu về mặc định (123456)?"
@@ -227,7 +242,11 @@ export default function StaffManagement() {
             <Button 
               type="primary" 
               icon={<UserAddOutlined />} 
-              onClick={() => setIsEmpModalOpen(true)}
+              onClick={() => {
+                setEditingEmployee(null);
+                empForm.resetFields();
+                setIsEmpModalOpen(true);
+              }}
             >
               Thêm nhân viên
             </Button>
@@ -253,15 +272,15 @@ export default function StaffManagement() {
 
       {/* MODAL THÊM NHÂN VIÊN */}
       <Modal
-        title="Thêm nhân viên mới"
+        title={editingEmployee ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}
         open={isEmpModalOpen}
-        onCancel={() => { setIsEmpModalOpen(false); empForm.resetFields(); }}
+        onCancel={() => { setIsEmpModalOpen(false); setEditingEmployee(null); empForm.resetFields(); }}
         onOk={() => empForm.submit()}
         width={800}
         okText="Lưu thông tin"
         cancelText="Hủy"
       >
-        <Form form={empForm} layout="vertical" onFinish={handleAddEmployee}>
+        <Form form={empForm} layout="vertical" onFinish={handleSaveEmployee}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="full_name" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
@@ -269,11 +288,11 @@ export default function StaffManagement() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="role" label="Vai trò" rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}>
+              <Form.Item name="role_id" label="Vai trò" rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}>
                 <Select placeholder="Chọn vai trò">
-                  <Select.Option value="FARM_WORKER">Nhân viên chăn nuôi</Select.Option>
-                  <Select.Option value="VET_DOCTOR">Bác sỹ thú y</Select.Option>
-                  <Select.Option value="ADMIN">Quản trị viên (Admin)</Select.Option>
+                  <Select.Option value={2}>Nhân viên chăn nuôi</Select.Option>
+                  <Select.Option value={3}>Bác sỹ thú y</Select.Option>
+                  <Select.Option value={1}>Quản trị viên (Admin)</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -296,9 +315,9 @@ export default function StaffManagement() {
             <Col span={12}>
               <Form.Item name="gender" label="Giới tính">
                 <Select placeholder="Chọn giới tính">
-                  <Select.Option value="NAM">Nam</Select.Option>
-                  <Select.Option value="NU">Nữ</Select.Option>
-                  <Select.Option value="KHAC">Khác</Select.Option>
+                  <Select.Option value="male">Nam</Select.Option>
+                  <Select.Option value="female">Nữ</Select.Option>
+                  <Select.Option value="other">Khác</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -342,7 +361,7 @@ export default function StaffManagement() {
             <Select 
               showSearch
               placeholder="Chọn nhân viên chưa có tài khoản"
-              options={employeesNoAccount.map(e => ({ label: `${e.full_name} (${e.role})`, value: e.id }))}
+              options={employeesNoAccount.map(e => ({ label: `${e.full_name} (${e.role_name || 'Chưa phân quyền'})`, value: e.id }))}
               filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
             />
           </Form.Item>

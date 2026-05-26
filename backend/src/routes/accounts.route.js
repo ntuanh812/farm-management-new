@@ -9,9 +9,11 @@ export default async function accountsRoute(app) {
   app.get('/', onlyAdmin, async (request, reply) => {
     const [rows] = await pool.query(
       `SELECT a.id, a.username, a.is_active, a.last_login, a.created_at,
-              e.full_name, e.role, e.phone
+              e.full_name, e.phone,
+              r.code AS role_code, r.name AS role_name
        FROM accounts a
        JOIN employees e ON a.employee_id = e.id
+       LEFT JOIN roles r ON e.role_id = r.id
        ORDER BY a.created_at DESC`
     )
     return reply.send({ success: true, data: rows })

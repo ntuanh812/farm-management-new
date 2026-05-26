@@ -10,7 +10,7 @@ export const staffController = {
       // employees: role_id.
       const [rows] = await pool.query(`
         SELECT 
-          e.id, e.full_name, e.phone, e.email, e.role_id, e.created_at,
+          e.id, e.full_name, e.phone, e.email, e.gender, e.dob, e.address, e.role_id, e.created_at,
           r.name AS role_name, r.code as role_code,
           a.id AS account_id, a.username, a.is_active,
           b.id AS barn_id, b.name AS barn_name
@@ -27,6 +27,7 @@ export const staffController = {
         if (!staffMap[row.id]) {
           staffMap[row.id] = {
             id: row.id, full_name: row.full_name, phone: row.phone, email: row.email,
+            gender: row.gender, dob: row.dob, address: row.address,
             role_id: row.role_id, role_name: row.role_name, role_code: row.role_code,
             created_at: row.created_at, account_id: row.account_id,
             username: row.username, is_active: row.is_active, barns: []
@@ -120,6 +121,56 @@ export const staffController = {
       }
       
       return reply.code(500).send({ success: false, message: 'Lỗi khi tạo nhân viên' });
+    } finally {
+      conn.release();
+    }
+  },
+
+  // 3.5 Cập nhật nhân viên & Phân công chuồng
+  updateEmployee: async (request, reply) => {
+    const { id } = request.params;
+    const { full_name, phone, email, gender, dob, address, role_id, barn_ids } = request.body;
+
+    if (!full_name) {
+      return reply.code(400).send({ success: false, message: 'Vui lòng nhập tên nhân viên' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Cập nhật thông tin nhân viên
+      await conn.query(
+        `UPDATE employees 
+         SET full_name = ?, phone = ?, email = ?, gender = ?, dob = ?, address = ?, role_id = ?
+         WHERE id = ?`,
+        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, role_id || null, id]
+      );
+
+      // Cập nhật phân công chuồng
+      if (Array.isArray(barn_ids)) {
+        await conn.query('DELETE FROM employee_barns WHERE employee_id = ?', [id]);
+        if (barn_ids.length > 0) {
+          const uniqueBarnIds = [...new Set(barn_ids)];
+          const barnValues = uniqueBarnIds.map(barnId => [id, barnId]);
+          await conn.query(
+            'INSERT INTO employee_barns (employee_id, barn_id) VALUES ?',
+            [barnValues]
+          );
+        }
+      }
+
+      await conn.commit();
+      return reply.send({ success: true, message: 'Cập nhật nhân viên thành công' });
+    } catch (error) {
+      await conn.rollback();
+      if (request.log) request.log.error(error);
+      else console.error(error);
+      if (error.code === 'ER_DUP_ENTRY') {
+        if (error.message.includes('phone')) return reply.code(400).send({ success: false, message: 'Số điện thoại đã tồn tại' });
+        if (error.message.includes('email')) return reply.code(400).send({ success: false, message: 'Email đã tồn tại' });
+      }
+      return reply.code(500).send({ success: false, message: 'Lỗi khi cập nhật nhân viên' });
     } finally {
       conn.release();
     }

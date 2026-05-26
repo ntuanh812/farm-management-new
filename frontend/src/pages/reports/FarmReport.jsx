@@ -1,242 +1,191 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Space, Button, DatePicker, Select, message, Spin, Empty } from 'antd';
-import { 
-  PrinterOutlined, FileExcelOutlined, FilterOutlined,
-  RiseOutlined, FallOutlined, HeartOutlined, WarningOutlined
+import { Card, Col, Row, Statistic, Table, Typography, Space, Spin, message, Divider, Form, DatePicker, Button } from 'antd';
+import {
+  DollarOutlined,
+  FallOutlined,
+  HomeOutlined,
+  WarningOutlined,
+  RiseOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
-import { 
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
-} from 'recharts';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 
+const { Text } = Typography;
+const { RangePicker } = DatePicker;
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const COLORS = ['#2d5a27', '#f4a261', '#c44536', '#1890ff', '#8c8c8c'];
 
 export default function FarmReport() {
   const { token } = useAuthStore();
   const headers = { Authorization: `Bearer ${token}` };
 
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
-  const [reportData, setReportData] = useState({
-    stats: { total_pigs: 0, total_barns: 0, sick_pigs: 0, dead_pigs: 0, pregnant_pigs: 0, ready_to_sell: 0 },
-    charts: { revenue: [], disease: [], feed: [] }
+  const [data, setData] = useState({
+    activePigs: [],
+    deadPigs: 0,
+    soldPigs: 0,
+    revenue: 0,
+    barnStats: { total_barns: 0, total_capacity: 0 },
+    feedUsage: [],
+    pendingReports: 0
   });
 
-  useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const { data } = await axios.get(`${API}/reports-dashboard/overview`, { headers });
-        if (data.success) {
-          setReportData(data.data);
-        }
-      } catch (error) {
-        message.error('Không thể tải dữ liệu báo cáo');
-      } finally {
-        setLoading(false);
+  const fetchReportData = async (values = {}) => {
+    setLoading(true);
+    try {
+      let params = {};
+      if (values.dateRange && values.dateRange.length === 2) {
+        params.startDate = values.dateRange[0].format('YYYY-MM-DD');
+        params.endDate = values.dateRange[1].format('YYYY-MM-DD');
       }
-    };
-    fetchReports();
-  }, []);
 
-  const handlePrint = () => {
-    window.print();
+      const res = await axios.get(`${API}/reports/farm-overview`, { headers, params });
+      if (res.data.success) {
+        setData(res.data.data);
+      }
+    } catch (error) {
+      message.error('Không thể tải dữ liệu báo cáo');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchReportData();
+  }, []);
+
+  const totalActivePigs = data.activePigs.reduce((sum, item) => sum + item.count, 0);
+
+  const feedColumns = [
+    { title: 'Loại cám / Thức ăn', dataIndex: 'feed_type', key: 'feed_type' },
+    { 
+      title: 'Khối lượng đã dùng', 
+      dataIndex: 'total_kg', 
+      key: 'total_kg',
+      render: (val) => <Text strong>{Number(val).toLocaleString('vi-VN')} kg</Text>
+    }
+  ];
+
   return (
-    <div className="dashboard farm-report-page">
-      <PageHeader
-        title="Báo cáo Tình hình Trang trại"
-        subtitle="Tổng quan hoạt động chăn nuôi, sức khỏe, và chi phí"
-        actions={
-          <Space className="no-print">
-            <Button icon={<FileExcelOutlined />} className="btn-excel">
-              Xuất Excel
-            </Button>
-            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
-              In Báo cáo
-            </Button>
-          </Space>
-        }
+    <div className="farm-report-page">
+      <PageHeader 
+        title="Báo cáo thống kê tổng quan" 
+        subtitle="Theo dõi tình hình hoạt động, tài chính và rủi ro của trang trại"
       />
 
-      <div className="px-24 pb-40">
-        {/* BỘ LỌC THỜI GIAN */}
-        <Card className="filter-card no-print">
-          <Space wrap size="middle">
-            <span className="fw-500"><FilterOutlined /> Bộ lọc:</span>
-            <DatePicker.RangePicker format="DD/MM/YYYY" placeholder={['Từ ngày', 'Đến ngày']} />
-            <Select defaultValue="all" className="w-150" options={[
-              { label: 'Tất cả chuồng', value: 'all' },
-              { label: 'Khu nái sinh sản', value: 'nai' },
-              { label: 'Khu lợn thịt', value: 'thit' },
-            ]} />
-            <Button>Áp dụng</Button>
-          </Space>
-        </Card>
+      {/* Form Lọc bằng Antd */}
+      <Card bordered={false} style={{ marginBottom: 16 }}>
+        <Form form={form} layout="inline" onFinish={fetchReportData}>
+          <Form.Item name="dateRange" label="Thời gian lọc (Xuất bán, Lợn chết, Vật tư)">
+            <RangePicker format="DD/MM/YYYY" placeholder={['Từ ngày', 'Đến ngày']} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" icon={<SearchOutlined />} style={{ background: '#2d5a27' }}>
+              Thống kê
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
 
-        <Spin spinning={loading} tip="Đang tổng hợp dữ liệu...">
-          {/* STATS CARDS */}
-          <Row gutter={[24, 24]} className="mb-24">
-            <Col xs={12} sm={12} lg={8} xl={4}>
-              <Card className="stat-card stat-card--pigs">
-                <div className="stat-card__header">
-                  <span className="stat-card__title">Tổng đàn lợn</span>
-                </div>
-                <div className="stat-card__value">
-                  {reportData.stats.total_pigs} <span className="stat-card__label">con</span>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} lg={8} xl={4}>
-              <Card className="stat-card stat-card--barn">
-                <div className="stat-card__header">
-                  <span className="stat-card__title">Chuồng hoạt động</span>
-                </div>
-                <div className="stat-card__value">
-                  {reportData.stats.total_barns} <span className="stat-card__label">chuồng</span>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} lg={8} xl={4}>
-              <Card className="stat-card stat-card--daily-tasks">
-                <div className="stat-card__header">
-                  <span className="stat-card__title">Lợn đang bệnh</span>
-                </div>
-                <div className="stat-card__value text-warning">
-                  {reportData.stats.sick_pigs} <span className="stat-card__label">con</span>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} lg={8} xl={4}>
-              <Card className="stat-card border-left-danger">
-                <div className="stat-card__header">
-                  <span className="stat-card__title">Thiệt hại (Chết)</span>
-                </div>
-                <div className="stat-card__value text-danger">
-                  {reportData.stats.dead_pigs} <span className="stat-card__label">con</span>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} lg={8} xl={4}>
-              <Card className="stat-card stat-card--staff">
-                <div className="stat-card__header">
-                  <span className="stat-card__title">Nái mang thai</span>
-                </div>
-                <div className="stat-card__value text-pink">
-                  {reportData.stats.pregnant_pigs} <span className="stat-card__label">con</span>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={12} sm={12} lg={8} xl={4}>
-              <Card className="stat-card stat-card--pigs">
-                <div className="stat-card__header">
-                  <span className="stat-card__title">Chuẩn xuất bán</span>
-                </div>
-                <div className="stat-card__value text-primary">
-                  {reportData.stats.ready_to_sell} <span className="stat-card__label">con</span>
-                </div>
-              </Card>
-            </Col>
-          </Row>
+      <Spin spinning={loading} tip="Đang tổng hợp dữ liệu báo cáo...">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false}>
+              <Statistic
+                title="Tổng lợn đang nuôi"
+                value={totalActivePigs}
+                valueStyle={{ color: '#3f8600' }}
+                prefix={<RiseOutlined />}
+                suffix="con"
+              />
+              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
+                {data.activePigs.map(p => `${p.category}: ${p.count}`).join(' | ')}
+                {data.activePigs.length === 0 && 'Chưa có lợn trong chuồng'}
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false}>
+              <Statistic
+                title="Doanh thu xuất bán"
+                value={data.revenue}
+                valueStyle={{ color: '#cf1322' }}
+                prefix={<DollarOutlined />}
+                suffix="VNĐ"
+              />
+              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
+                Đã xuất bán {data.soldPigs} con lợn thịt
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false}>
+              <Statistic
+                title="Số lượng lợn chết"
+                value={data.deadPigs}
+                valueStyle={{ color: '#d04444' }}
+                prefix={<FallOutlined />}
+                suffix="con"
+              />
+              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
+                Cần theo dõi chặt chẽ rủi ro dịch bệnh
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card bordered={false}>
+              <Statistic
+                title="Cảnh báo sức khỏe"
+                value={data.pendingReports}
+                valueStyle={{ color: '#faad14' }}
+                prefix={<WarningOutlined />}
+                suffix="báo cáo"
+              />
+              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
+                Báo cáo bệnh chờ bác sĩ xử lý
+              </div>
+            </Card>
+          </Col>
+        </Row>
 
-          {/* BIỂU ĐỒ */}
-          <Row gutter={[24, 24]}>
-            {/* Biểu đồ Doanh thu (BarChart) */}
-            <Col xs={24} lg={16}>
-              <Card title="Thống kê Doanh thu xuất bán (6 tháng qua)" bordered={false} className="chart-card">
-                {reportData.charts.revenue.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={reportData.charts.revenue} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                      <YAxis tickFormatter={(val) => `${val / 1000000}M`} axisLine={false} tickLine={false} />
-                      <Tooltip formatter={(value) => `${Number(value).toLocaleString()} VNĐ`} />
-                      <Legend />
-                      <Bar dataKey="revenue" name="Doanh thu" fill="#2d5a27" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <Empty description="Chưa có dữ liệu giao dịch" className="mt-100" />
-                )}
-              </Card>
-            </Col>
+        <Divider />
 
-            {/* Biểu đồ Bệnh phổ biến (PieChart) */}
-            <Col xs={24} lg={8}>
-              <Card title="Tỷ lệ dịch bệnh phổ biến" bordered={false} className="chart-card">
-                <ResponsiveContainer width="100%" height={350}>
-                  <PieChart>
-                    <Pie
-                      data={reportData.charts.disease}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={70}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {reportData.charts.disease.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value} ca bệnh`} />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Card>
-            </Col>
-
-            {/* Biểu đồ Tiêu thụ Cám (LineChart) */}
-            <Col xs={24} lg={12}>
-              <Card title="Tiêu thụ Thức ăn theo loại" bordered={false} className="chart-card">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={reportData.charts.feed} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(value) => `${value} kg`} />
-                    <Bar dataKey="value" name="Khối lượng (Kg)" fill="#f4a261" radius={[0, 4, 4, 0]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-            </Col>
-
-            {/* Tóm tắt Báo cáo sinh sản */}
-            <Col xs={24} lg={12}>
-              <Card title="Cảnh báo & Ghi chú quản trị" bordered={false} className="chart-card">
-                <ul className="line-height-2 text-md text-dark">
-                  <li>
-                    <WarningOutlined className="text-warning" /> Có <strong>{reportData.stats.sick_pigs}</strong> lợn đang được theo dõi điều trị. Đề nghị vệ sinh khu cách ly.
-                  </li>
-                  <li>
-                    <RiseOutlined className="text-primary" /> Hiện có <strong>{reportData.stats.ready_to_sell}</strong> lợn thịt đạt trọng lượng xuất chuồng. Lên lịch báo thương lái.
-                  </li>
-                  <li>
-                    <HeartOutlined className="text-pink" /> Theo dõi <strong>{reportData.stats.pregnant_pigs}</strong> nái đang mang thai, lưu ý lịch dự sinh trong 2 tuần tới.
-                  </li>
-                </ul>
-                
-                <div className="mt-30 text-center">
-                  <img src="https://cdn-icons-png.flaticon.com/512/1004/1004312.png" alt="pig icon" width={80} className="opacity-20" />
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={12}>
+            <Card title="Tình trạng chuồng trại" bordered={false} style={{ height: '100%' }}>
+              <Space direction="vertical" style={{ width: '100%' }} size="large">
+                <Statistic 
+                  title="Số lượng chuồng đang hoạt động" 
+                  value={data.barnStats?.total_barns || 0} 
+                  prefix={<HomeOutlined />} 
+                />
+                <div>
+                  <Text type="secondary">Công suất sử dụng toàn trang trại:</Text>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 4 }}>
+                    <Text strong style={{ fontSize: 24, color: totalActivePigs > (data.barnStats?.total_capacity || 0) ? 'red' : 'inherit' }}>
+                      {totalActivePigs}
+                    </Text> 
+                    <Text type="secondary">/ {data.barnStats?.total_capacity || 0} con</Text>
+                  </div>
                 </div>
-              </Card>
-            </Col>
-          </Row>
-        </Spin>
-      </div>
-
-      {/* CSS For Print */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          .no-print, .sidebar, .topbar { display: none !important; }
-          .farm-report-page { padding: 0 !important; }
-          .ant-card { box-shadow: none !important; border: 1px solid #ddd !important; }
-        }
-      `}} />
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card title="Tiêu thụ vật tư (Thức ăn/Cám)" bordered={false} bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
+              <Table 
+                dataSource={data.feedUsage} 
+                columns={feedColumns} 
+                pagination={false}
+                rowKey="feed_type"
+                locale={{ emptyText: 'Không có dữ liệu tiêu thụ vật tư trong khoảng thời gian này' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </Spin>
     </div>
   );
 }

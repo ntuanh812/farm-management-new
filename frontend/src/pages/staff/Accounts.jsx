@@ -75,8 +75,8 @@ export default function Accounts() {
     { title: 'Username',   dataIndex: 'username',   key: 'username' },
     { title: 'Họ tên NV',  dataIndex: 'full_name',  key: 'full_name' },
     {
-      title: 'Vai trò', dataIndex: 'role', key: 'role', width: 160,
-      render: v => <Tag color={ROLE_COLOR[v]}>{ROLE_LABEL[v]}</Tag>,
+      title: 'Vai trò', dataIndex: 'role_code', key: 'role_code', width: 160,
+      render: v => <Tag color={ROLE_COLOR[v] || 'default'}>{ROLE_LABEL[v] || 'Chưa phân quyền'}</Tag>,
     },
     {
       title: 'Trạng thái', dataIndex: 'is_active', key: 'is_active', width: 120,
@@ -143,7 +143,7 @@ export default function Accounts() {
               optionFilterProp="label"
               options={employees.map(e => ({
                 value: e.id,
-                label: `${e.full_name} (${ROLE_LABEL[e.role]})`,
+            label: `${e.full_name} (${ROLE_LABEL[e.role_code] || e.role_name || 'Chưa phân quyền'})`,
               }))}
             />
           </Form.Item>

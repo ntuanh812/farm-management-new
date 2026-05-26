@@ -77,8 +77,8 @@ export default function Employees() {
     { title: 'Điện thoại', dataIndex: 'phone',    key: 'phone', width: 120 },
     { title: 'Email',     dataIndex: 'email',     key: 'email' },
     {
-      title: 'Vai trò', dataIndex: 'role', key: 'role', width: 160,
-      render: v => <Tag color={ROLE_COLOR[v]}>{ROLE_LABEL[v]}</Tag>,
+      title: 'Vai trò', dataIndex: 'role_code', key: 'role_code', width: 160,
+      render: v => <Tag color={ROLE_COLOR[v] || 'default'}>{ROLE_LABEL[v] || 'Chưa phân quyền'}</Tag>,
     },
     {
       title: 'Trạng thái', dataIndex: 'status', key: 'status', width: 110,
@@ -185,11 +185,11 @@ export default function Employees() {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="role" label="Vai trò" rules={[{ required: true }]}>
+          <Form.Item name="role_id" label="Vai trò" rules={[{ required: true }]}>
                 <Select options={[
-                  { value: 'ADMIN',       label: 'Quản trị' },
-                  { value: 'FARM_WORKER', label: 'Nhân viên' },
-                  { value: 'VET_DOCTOR',  label: 'Bác sĩ thú y' },
+              { value: 1, label: 'Quản trị viên' },
+              { value: 2, label: 'Nhân viên chăn nuôi' },
+              { value: 3, label: 'Bác sĩ thú y' },
                 ]} />
               </Form.Item>
             </Col>

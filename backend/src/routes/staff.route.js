@@ -9,6 +9,7 @@ export default async function staffRoutes(app, options) {
   // Thêm mới
   app.post('/employees', { preHandler: protect('ADMIN') }, staffController.createEmployee);
   app.post('/accounts', { preHandler: protect('ADMIN') }, staffController.createAccount);
+  app.put('/employees/:id', { preHandler: protect('ADMIN') }, staffController.updateEmployee);
 
   // Cập nhật tài khoản
   app.patch('/accounts/:id/toggle', { preHandler: protect('ADMIN') }, staffController.toggleAccountStatus);

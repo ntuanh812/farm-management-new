@@ -4,6 +4,7 @@ import {
   MedicineBoxOutlined, SwapRightOutlined, CloseCircleOutlined,
   IdcardOutlined, ClockCircleOutlined, ShoppingCartOutlined,
   HomeOutlined, TeamOutlined, UserOutlined, BugOutlined, FileImageOutlined,
+  BarChartOutlined
 } from '@ant-design/icons'
 import { Menu, Button } from 'antd'
 import { useAuthStore } from '@/store/authStore'
@@ -40,10 +41,11 @@ const ADMIN_MENU = [
     children: [
       { key: '/health/vaccine',       label: 'Tiêm phòng',      icon: <ClockCircleOutlined /> },
       { key: '/health/vet-diagnosis', label: 'Chuẩn đoán bệnh', icon: <BugOutlined /> },
+      { key: '/reports/pig-report',   label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
     ],
   },
   { key: '/staff/management', label: '👥 Quản lý nhân sự', icon: <TeamOutlined /> },
-  { key: '/reports/pig-report', label: '📊 Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
+  { key: '/reports/farm-report', label: '📊 Báo cáo thống kê', icon: <BarChartOutlined /> },
 ]
 
 // ── Menu FARM_WORKER ──────────────────────────────────────
@@ -72,8 +74,14 @@ const EMPLOYEE_MENU = [
       { key: '/employee/materials/bran', label: 'Thức ăn (Cám)', icon: <ShoppingCartOutlined /> },
     ],
   },
-  { key: '/employee/health/vaccine', label: '💊 Tiêm phòng', icon: <ClockCircleOutlined /> },
-  { key: '/employee/reports/pig-report', label: '📊 Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
+  {
+    key: 'health', label: '💊 Thú y & Sức khỏe',
+    children: [
+      { key: '/employee/health/vaccine', label: 'Tiêm phòng', icon: <ClockCircleOutlined /> },
+      { key: '/employee/reports/pig-report', label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
+    ],
+  },
+  { key: '/employee/reports/farm-report', label: '📊 Báo cáo thống kê', icon: <BarChartOutlined /> },
 ]
 
 // ── Menu VET_DOCTOR ───────────────────────────────────────
@@ -91,9 +99,10 @@ const VET_MENU = [
       { key: '/vet/health/vaccine',       label: 'Tiêm phòng',      icon: <ClockCircleOutlined /> },
       { key: '/vet/health/vet-diagnosis', label: 'Chuẩn đoán bệnh', icon: <BugOutlined /> },
       { key: '/vet/materials/medicine',   label: 'Quản lý Thuốc',   icon: <MedicineBoxOutlined /> },
+      { key: '/vet/reports/review',       label: 'Phản hồi báo cáo', icon: <FileImageOutlined /> },
     ],
   },
-  { key: '/vet/reports/review', label: '📊 Phản hồi báo cáo', icon: <FileImageOutlined /> },
+  { key: '/vet/reports/farm-report', label: '📊 Báo cáo thống kê', icon: <BarChartOutlined /> },
 ]
 
 // Chọn menu theo role
