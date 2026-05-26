@@ -35,6 +35,14 @@ export const breedingsController = {
       return reply.code(500).send({ success: false, message: 'Lỗi khi ghi nhận' });
     }
   },
+  updateStatus: async (request, reply) => {
+    try {
+      await pool.query('UPDATE pig_breedings SET status = ? WHERE id = ?', [request.body.status, request.params.id]);
+      return reply.send({ success: true, message: 'Cập nhật trạng thái thành công' });
+    } catch (error) {
+      return reply.code(500).send({ success: false, message: 'Lỗi khi cập nhật' });
+    }
+  },
   delete: async (request, reply) => {
     try {
       await pool.query('DELETE FROM pig_breedings WHERE id = ?', [request.params.id]);

@@ -37,11 +37,12 @@ export default async function reportsRoute(app) {
         ${getDateCondition('death_date')}
       `);
 
-      // 3. Doanh thu xuất bán
+      // 3. Doanh thu xuất bán (Lãi = Giá bán - Giá nhập)
       const [soldData] = await pool.query(`
-        SELECT COUNT(*) as count, SUM(l.total_amount) as revenue 
+        SELECT COUNT(*) as count, SUM(l.total_amount - COALESCE(p.purchase_price, 0)) as revenue 
         FROM sale_batch_lines l
         JOIN sale_batches b ON l.sale_batch_id = b.id
+        LEFT JOIN pigs p ON l.ear_tag = p.pig_code
         ${getDateCondition('b.sold_at')}
       `);
 
@@ -76,11 +77,12 @@ export default async function reportsRoute(app) {
         ORDER BY count DESC LIMIT 5
       `);
 
-      // 8. Doanh thu 6 tháng gần nhất
+      // 8. Doanh thu 6 tháng gần nhất (Lãi)
       const [revenueTrend] = await pool.query(`
-        SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount), 0) AS revenue
+        SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
         FROM sale_batches sb
         JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
+        LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
         GROUP BY month 
         ORDER BY MAX(sb.sold_at) DESC LIMIT 6
       `);

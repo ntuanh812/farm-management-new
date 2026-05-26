@@ -14,7 +14,6 @@ export default function PigFarrowing() {
 
   const [farrowings, setFarrowings] = useState([]);
   const [pigs, setPigs] = useState([]);
-  const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -25,14 +24,12 @@ export default function PigFarrowing() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [resFarrow, resPigs, resStaff] = await Promise.all([
+      const [resFarrow, resPigs] = await Promise.all([
         axios.get(`${API}/farrowings`, { headers }),
         axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setFarrowings(resFarrow.data?.data || []);
       setPigs(resPigs.data?.data || []);
-      setStaffList(resStaff.data?.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu đẻ con');
     } finally {
@@ -61,7 +58,8 @@ export default function PigFarrowing() {
       const values = await form.validateFields();
       const payload = {
         ...values,
-        farrow_date: values.farrow_date.format('YYYY-MM-DD'),
+        farrow_date: dayjs().format('YYYY-MM-DD'),
+        staff_name: user?.full_name || user?.username || 'Hệ thống',
       };
 
       await axios.post(`${API}/farrowings`, payload, { headers });
@@ -192,21 +190,15 @@ export default function PigFarrowing() {
             </Select>
           </Form.Item>
 
-          <Form.Item name="farrow_date" label="Ngày đẻ" rules={[{ required: true, message: 'Chọn ngày đẻ' }]}>
-            <DatePicker className="w-100" format="DD/MM/YYYY" />
-          </Form.Item>
+          <div style={{ background: '#f6ffed', padding: '12px 16px', borderRadius: 8, border: '1px solid #b7eb8f', marginBottom: 16 }}>
+            <div style={{ color: '#389e0d', fontWeight: 500 }}>📅 Ngày ghi nhận đẻ: Hôm nay ({dayjs().format('DD/MM/YYYY')})</div>
+          </div>
 
           <Row gutter={16}>
             <Col span={8}><Form.Item name="alive_piglets" label="Số con sống" rules={[{ required: true }]}><InputNumber min={0} className="w-100" /></Form.Item></Col>
             <Col span={8}><Form.Item name="dead_piglets" label="Số chết/tật" initialValue={0}><InputNumber min={0} className="w-100" /></Form.Item></Col>
             <Col span={8}><Form.Item name="total_weight" label="Tổng Kg (ổ)"><InputNumber min={0} step={0.1} className="w-100" /></Form.Item></Col>
           </Row>
-
-          <Form.Item name="staff_name" label="Người phụ trách / Đỡ đẻ">
-            <Select showSearch placeholder="Chọn nhân viên">
-              {staffList.map((x) => <Select.Option key={x.id} value={x.full_name}>{x.full_name}</Select.Option>)}
-            </Select>
-          </Form.Item>
 
           <Form.Item name="note" label="Ghi chú">
             <Input.TextArea rows={2} placeholder="Sức khỏe nái mẹ, vấn đề phát sinh..." />

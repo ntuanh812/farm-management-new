@@ -40,7 +40,6 @@ const ADMIN_MENU = [
     key: 'health', label: '💊 Thú y & Sức khỏe',
     children: [
       { key: '/health/vaccine',       label: 'Tiêm phòng',      icon: <ClockCircleOutlined /> },
-      { key: '/health/vet-diagnosis', label: 'Chuẩn đoán bệnh', icon: <BugOutlined /> },
       { key: '/reports/pig-report',   label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
     ],
   },

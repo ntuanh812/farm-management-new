@@ -87,8 +87,6 @@ export const AppRouter = () => {
         <Route path="/materials/bran"         element={<BranUsage />} />
         <Route path="/materials/medicine"     element={<MedicineUsage />} />
         <Route path="/health/vaccine"         element={<PigVaccination />} />
-        <Route path="/health/vet-diagnosis"   element={<VetDiagnosis />} />
-        <Route path="/health/vet-diagnosis/:id" element={<VetDiagnosisDetail />} />
         <Route path="/staff/management"       element={<StaffManagement />} />
         <Route path="/reports/pig-report"     element={<PigReport />} />
         <Route path="/reports/farm-report"    element={<FarmReport />} />

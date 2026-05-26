@@ -31,6 +31,7 @@ export default async function pigsRoute(app) {
             p.entry_date AS arrivedAt,
             p.entry_weight,
             p.current_weight AS weightKg,
+            p.purchase_price AS purchasePrice,
             p.note,
             p.created_at,
             p.updated_at,
@@ -94,6 +95,7 @@ export default async function pigsRoute(app) {
           entry_date,
           entry_weight,
           current_weight,
+          purchase_price,
           note,
         } = request.body;
 
@@ -209,9 +211,10 @@ export default async function pigsRoute(app) {
             entry_date,
             entry_weight,
             current_weight,
+            purchase_price,
             note
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             pig_code,
@@ -224,6 +227,7 @@ export default async function pigsRoute(app) {
             entry_date,
             entry_weight || null,
             current_weight || null,
+            purchase_price || null,
             note || null,
           ]
         );
@@ -265,13 +269,13 @@ export default async function pigsRoute(app) {
           name,
           barn_id,
           category,
-          lifecycle_status,
           breed,
           gender,
           dob,
           entry_date,
           entry_weight,
           current_weight,
+          purchase_price,
           note,
         } = request.body;
 
@@ -295,13 +299,13 @@ export default async function pigsRoute(app) {
             name = ?,
             barn_id = ?,
             category = ?,
-            lifecycle_status = ?,
             breed = ?,
             gender = ?,
             dob = ?,
             entry_date = ?,
             entry_weight = ?,
             current_weight = ?,
+            purchase_price = ?,
             note = ?
           WHERE id = ?
           `,
@@ -310,38 +314,17 @@ export default async function pigsRoute(app) {
             name,
             barn_id,
             category,
-            lifecycle_status,
             breed,
             gender,
             dob,
             entry_date,
             entry_weight,
             current_weight,
+            purchase_price,
             note,
             id,
           ]
         );
-
-        // 2. ĐỒNG BỘ: Nếu trạng thái đổi thành DEAD, tự động tạo bản ghi bên Lợn chết
-        if (oldStatus !== 'DEAD' && lifecycle_status === 'DEAD') {
-          await pool.query(
-            `INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, recorded_by, note)
-             VALUES (?, CURDATE(), ?, ?, ?, ?)`,
-            [id, 'Chưa xác định', 'Khác', 'Hệ thống', 'Tự động tạo khi chuyển trạng thái ở Danh sách lợn']
-          );
-        }
-
-        // 3. ĐỒNG BỘ: Nếu trạng thái đổi thành SOLD, tự động tạo bản ghi bên Xuất bán
-        if (oldStatus !== 'SOLD' && lifecycle_status === 'SOLD') {
-          const [batchRes] = await pool.query(
-            'INSERT INTO sale_batches (sold_at, staff_name) VALUES (CURDATE(), ?)',
-            ['Hệ thống']
-          );
-          await pool.query(
-            'INSERT INTO sale_batch_lines (sale_batch_id, ear_tag, weight, price, total_amount, reason, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [batchRes.insertId, pig_code, current_weight || 0, 0, 0, 'Xuất bán tự động', 'Tự động tạo khi chuyển trạng thái ở Danh sách lợn']
-          );
-        }
 
         return reply.send({
           success: true,

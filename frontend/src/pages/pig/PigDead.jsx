@@ -21,7 +21,6 @@ export default function PigDead() {
 
   const [deaths, setDeaths] = useState([]);
   const [pigs, setPigs] = useState([]);
-  const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -33,14 +32,12 @@ export default function PigDead() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [resDeaths, resPigs, resStaff] = await Promise.all([
+      const [resDeaths, resPigs] = await Promise.all([
         axios.get(`${API}/deaths`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setDeaths(resDeaths.data?.data || []);
       setPigs(resPigs.data?.data || []);
-      setStaffList(resStaff.data?.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu ghi nhận lợn chết');
     } finally {
@@ -73,6 +70,7 @@ export default function PigDead() {
       const payload = {
         ...values,
         death_date: values.death_date.format('YYYY-MM-DD'),
+        recorded_by: user?.full_name || user?.username || 'Hệ thống',
       };
 
       await axios.post(`${API}/deaths`, payload, { headers });
@@ -204,8 +202,17 @@ export default function PigDead() {
             />
           </Form.Item>
 
-          <Form.Item name="death_date" label="Ngày chết" rules={[{ required: true, message: 'Chọn ngày' }]}>
-            <DatePicker className="w-100" format="DD/MM/YYYY" />
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.pig_id !== curr.pig_id}>
+            {({ getFieldValue }) => {
+              const pid = getFieldValue('pig_id');
+              const pig = activePigs.find(p => p.id === pid);
+              const minDate = pig?.arrivedAt;
+              return (
+                <Form.Item name="death_date" label="Ngày chết" rules={[{ required: true, message: 'Chọn ngày' }]}>
+                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && minDate && current < dayjs(minDate).startOf('day')} />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
 
           <Form.Item name="reason" label="Nguyên nhân (Chẩn đoán)" rules={[{ required: true, message: 'Nhập nguyên nhân' }]}>
@@ -214,12 +221,6 @@ export default function PigDead() {
 
           <Form.Item name="disposal_method" label="Phương pháp xử lý xác" rules={[{ required: true, message: 'Chọn phương pháp' }]}>
             <Select options={DISPOSAL_METHODS.map(t => ({ label: t, value: t }))} placeholder="Chọn phương pháp xử lý..." />
-          </Form.Item>
-
-          <Form.Item name="recorded_by" label="Người phụ trách xử lý">
-            <Select showSearch placeholder="Chọn nhân viên">
-              {staffList.map((x) => <Select.Option key={x.id} value={x.full_name}>{x.full_name}</Select.Option>)}
-            </Select>
           </Form.Item>
 
           <Form.Item name="note" label="Ghi chú thêm">

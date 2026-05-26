@@ -11,11 +11,11 @@ import { PageHeader } from '@/components/layout/PageHeader';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const BARN_TYPES = {
-  'SOW': 'Chuồng Nái',
-  'BOAR': 'Chuồng Đực',
-  'PIGLET': 'Chuồng Lợn Con',
-  'FATTENING': 'Chuồng Vỗ Béo',
-  'QUARANTINE': 'Chuồng Cách Ly'
+  'SOW': 'Chuồng lợn nái',
+  'BOAR': 'Chuồng lợn đực',
+  'PIGLET': 'Chuồng lợn con',
+  'FATTENING': 'Chuồng lợn thịt',
+  'QUARANTINE': 'Chuồng cách ly'
 };
 
 const STATUS_CONFIG = {
@@ -33,6 +33,11 @@ export default function PigBarns() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
+
+  // Filter states
+  const [searchText, setSearchText] = useState('');
+  const [filterType, setFilterType] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(null);
 
   // Phân quyền: Admin và Nhân viên có quyền thao tác
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
@@ -63,6 +68,18 @@ export default function PigBarns() {
     const totalCapacity = barns.reduce((sum, b) => sum + (b.capacity || 0), 0);
     return { total: barns.length, active, full, totalPigs, totalCapacity };
   }, [barns]);
+
+  // Lọc dữ liệu hiển thị trên bảng
+  const filteredBarns = useMemo(() => {
+    return barns.filter(b => {
+      const matchSearch = !searchText || 
+        (b.code || '').toLowerCase().includes(searchText.toLowerCase()) || 
+        (b.name || '').toLowerCase().includes(searchText.toLowerCase());
+      const matchType = !filterType || b.barn_type === filterType;
+      const matchStatus = !filterStatus || b.status === filterStatus;
+      return matchSearch && matchType && matchStatus;
+    });
+  }, [barns, searchText, filterType, filterStatus]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -260,9 +277,32 @@ export default function PigBarns() {
       </Row>
 
       <Card className="table-card">
+        <Space wrap style={{ marginBottom: 16 }}>
+          <Input.Search
+            placeholder="Tìm mã hoặc tên chuồng..."
+            allowClear
+            onSearch={setSearchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 220 }}
+          />
+          <Select
+            placeholder="Loại chuồng"
+            allowClear
+            options={Object.entries(BARN_TYPES).map(([val, label]) => ({ label, value: val }))}
+            onChange={setFilterType}
+            style={{ width: 180 }}
+          />
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            options={Object.entries(STATUS_CONFIG).map(([val, cfg]) => ({ label: cfg.text, value: val }))}
+            onChange={setFilterStatus}
+            style={{ width: 160 }}
+          />
+        </Space>
         <Table
           columns={columns}
-          dataSource={barns}
+          dataSource={filteredBarns}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}

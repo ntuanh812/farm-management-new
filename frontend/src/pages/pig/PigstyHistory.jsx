@@ -12,13 +12,19 @@ import { PageHeader } from "@/components/layout/PageHeader";
 const { Option } = Select;
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
+const CATEGORY_MAP = {
+  'SOW': 'Lợn nái',
+  'BOAR': 'Lợn đực',
+  'PIGLET': 'Lợn con',
+  'FATTENING': 'Lợn thịt'
+};
+
 export default function PigstyHistory() {
   const { token, user } = useAuthStore();
   const headers = { Authorization: `Bearer ${token}` };
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
-  const [staffList, setStaffList] = useState([]);
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,18 +37,14 @@ export default function PigstyHistory() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [
-        pigRes, barnRes, staffRes, movementRes
-      ] = await Promise.all([
+      const [pigRes, barnRes, movementRes] = await Promise.all([
         axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
       ]);
 
       setPigs(pigRes.data?.data || []);
       setBarns(barnRes.data?.data || []);
-      setStaffList(staffRes.data?.data || []);
       setMovements(movementRes.data?.data || []);
     } catch (err) {
       message.error("Không tải được dữ liệu");
@@ -101,7 +103,7 @@ export default function PigstyHistory() {
       title: "Loại lợn",
       dataIndex: "status",
       key: "status",
-      render: (s) => <Tag color="blue">{s}</Tag>,
+      render: (s) => <Tag color="blue">{CATEGORY_MAP[s] || s}</Tag>,
     },
     {
       title: "Từ chuồng",
@@ -141,7 +143,7 @@ export default function PigstyHistory() {
       title: "Loại lợn",
       dataIndex: "category",
       key: "category",
-      render: (s) => <Tag color="blue">{s || "—"}</Tag>,
+      render: (s) => <Tag color="blue">{CATEGORY_MAP[s] || s || "—"}</Tag>,
     },
     {
       title: "Chuồng hiện tại",
@@ -168,8 +170,8 @@ export default function PigstyHistory() {
       const payload = {
         pigIds: selectedRowKeys,
         toBarnId: values.toBarnId,
-        movedAt: values.date.format("YYYY-MM-DD"),
-        staffId: values.person,
+        movedAt: dayjs().format("YYYY-MM-DD"),
+        staffId: user?.employee_id || user?.id,
         note: values.note,
       };
 
@@ -259,8 +261,8 @@ export default function PigstyHistory() {
             className="w-220"
           >
             <Option value="all">Tất cả lợn</Option>
-            <Option value="SOW">Nái</Option>
-            <Option value="BOAR">Đực giống</Option>
+            <Option value="SOW">Lợn nái</Option>
+            <Option value="BOAR">Lợn đực</Option>
             <Option value="PIGLET">Lợn con</Option>
             <Option value="FATTENING">Lợn thịt</Option>
           </Select>
@@ -281,14 +283,6 @@ export default function PigstyHistory() {
 
         <Form form={form} layout="vertical" className="mt-24" disabled={!canEdit}>
           <Form.Item
-            name="date"
-            label="Ngày chuyển"
-            rules={[{ required: true, message: "Chọn ngày chuyển" }]}
-          >
-            <DatePicker className="w-100" format="DD/MM/YYYY" />
-          </Form.Item>
-
-          <Form.Item
             name="toBarnId"
             label="Chuyển sang chuồng"
             rules={[{ required: true, message: "Chọn chuồng" }]}
@@ -297,20 +291,6 @@ export default function PigstyHistory() {
               {barns.map((b) => (
                 <Option key={b.id} value={b.id}>
                   {b.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="person"
-            label="Người thực hiện"
-            rules={[{ required: true, message: "Chọn nhân viên" }]}
-          >
-            <Select showSearch placeholder="Chọn nhân viên">
-              {staffList.map((x) => (
-                <Option key={x.id} value={x.id}>
-                  {x.full_name}
                 </Option>
               ))}
             </Select>

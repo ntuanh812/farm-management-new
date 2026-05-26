@@ -21,6 +21,7 @@ export default function PigReport() {
 
   const [list, setList]       = useState([])
   const [barns, setBarns]     = useState([])
+  const [pigs, setPigs]       = useState([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen]       = useState(false)
   const [fileList, setFileList] = useState([])   // ảnh đã chọn
@@ -37,17 +38,20 @@ export default function PigReport() {
     finally { setLoading(false) }
   }
 
-  const fetchBarns = async () => {
+  const fetchDropdowns = async () => {
     try {
-      const { data } = await axios.get(`${API}/barns`, { headers })
-      setBarns(data.data || [])
-    } catch { /* barns lỗi thì bỏ qua */ }
+      const [barnsRes, pigsRes] = await Promise.all([
+        axios.get(`${API}/barns`, { headers }),
+        axios.get(`${API}/pigs`, { headers })
+      ])
+      setBarns(barnsRes.data?.data || [])
+      setPigs(pigsRes.data?.data || [])
+    } catch { /* lỗi thì bỏ qua */ }
   }
 
-  useEffect(() => { fetchList(); fetchBarns() }, [])
+  useEffect(() => { fetchList(); fetchDropdowns() }, [])
 
   // ── Xử lý upload ảnh ────────────────────────────────────
-  // Dùng customRequest để upload lên server ngay khi chọn
   const handleUpload = async ({ file, onSuccess, onError }) => {
     const formData = new FormData()
     formData.append('files', file)
@@ -189,8 +193,12 @@ export default function PigReport() {
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item label="Mã lợn" name="pig_id"
-                rules={[{ required: true, message: 'Nhập mã lợn' }]}>
-                <Input placeholder="VD: PIG001" />
+                rules={[{ required: true, message: 'Chọn mã lợn' }]}>
+                <Select showSearch placeholder="Chọn lợn">
+                  {pigs.filter(p => p.lifecycleStatus === 'ACTIVE').map(p => (
+                    <Option key={p.id} value={p.earTag}>{p.earTag} - {p.barnName}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>

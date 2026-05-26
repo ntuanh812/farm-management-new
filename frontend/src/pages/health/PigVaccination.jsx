@@ -28,7 +28,6 @@ export default function PigVaccination() {
   // States
   const [vaccinations, setVaccinations] = useState([]);
   const [pigs, setPigs] = useState([]);
-  const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   
   const [open, setOpen] = useState(false);
@@ -41,15 +40,13 @@ export default function PigVaccination() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [resVac, resPigs, resStaff] = await Promise.all([
+      const [resVac, resPigs] = await Promise.all([
         axios.get(`${API}/vaccinations`, { headers }),
         axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
 
       if (resVac.data?.success) setVaccinations(resVac.data.data);
       if (resPigs.data?.success) setPigs(resPigs.data.data);
-      if (resStaff.data?.success) setStaffList(resStaff.data.data);
     } catch (error) {
       message.error("Không thể tải dữ liệu tiêm phòng");
     } finally {
@@ -80,8 +77,8 @@ export default function PigVaccination() {
     },
     {
       title: "Mã lợn",
-      dataIndex: "pig_id",
-      key: "pig_id",
+      dataIndex: "ear_tag",
+      key: "ear_tag",
       render: (text) => <strong>{text}</strong>,
     },
     { title: "Vaccine", dataIndex: "vaccine_name", key: "vaccine_name" },
@@ -107,6 +104,7 @@ export default function PigVaccination() {
         const payload = {
           ...values,
           vaccinated_at: values.vaccinated_at.format("YYYY-MM-DD"),
+          performed_by: user?.employee_id || user?.id,
         };
         
         await axios.post(`${API}/vaccinations`, payload, { headers });
@@ -166,7 +164,7 @@ export default function PigVaccination() {
             <Select showSearch optionFilterProp="children">
               {pigs.map((p) => (
                 <Option key={p.id} value={p.id}>
-                  {p.ear_tag || p.id}
+                  {p.earTag || p.id}
                 </Option>
               ))}
             </Select>
@@ -189,20 +187,6 @@ export default function PigVaccination() {
               className="w-100"
               format="DD/MM/YYYY"
             />
-          </Form.Item>
-
-          <Form.Item
-            name="performed_by"
-            label="Người thực hiện"
-            rules={[{ required: true }]}
-          >
-            <Select>
-              {staffList.map((s) => (
-                <Option key={s.id} value={s.id}>
-                  {s.full_name} ({s.role})
-                </Option>
-              ))}
-            </Select>
           </Form.Item>
 
           <Form.Item name="note" label="Ghi chú">

@@ -40,6 +40,12 @@ export default function PigManage() {
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
 
+  // Filter states
+  const [searchText, setSearchText] = useState('');
+  const [filterBarn, setFilterBarn] = useState(null);
+  const [filterCategory, setFilterCategory] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(null);
+
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
 
@@ -75,6 +81,17 @@ export default function PigManage() {
     };
   }, [pigs]);
 
+  // Lọc dữ liệu hiển thị trên bảng
+  const filteredPigs = useMemo(() => {
+    return pigs.filter(p => {
+      const matchSearch = !searchText || (p.earTag || '').toLowerCase().includes(searchText.toLowerCase());
+      const matchBarn = !filterBarn || p.barnId === filterBarn;
+      const matchCategory = !filterCategory || p.category === filterCategory;
+      const matchStatus = !filterStatus || p.lifecycleStatus === filterStatus;
+      return matchSearch && matchBarn && matchCategory && matchStatus;
+    });
+  }, [pigs, searchText, filterBarn, filterCategory, filterStatus]);
+
   const handleOpenAdd = () => {
     setEditingId(null);
     form.resetFields();
@@ -96,6 +113,7 @@ export default function PigManage() {
       entry_date: record.arrivedAt ? dayjs(record.arrivedAt) : null,
       entry_weight: record.entry_weight,
       current_weight: record.weightKg,
+      purchase_price: record.purchasePrice,
       note: record.note
     });
     setOpen(true);
@@ -163,10 +181,23 @@ export default function PigManage() {
       render: (g) => GENDER_MAP[g] || g,
     },
     {
-      title: 'Tuổi (ngày)',
+      title: 'Ngày nhập',
+      dataIndex: 'arrivedAt',
+      key: 'arrivedAt',
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
+    },
+    {
+      title: 'Tuổi',
       dataIndex: 'ageDays',
       key: 'ageDays',
-      render: (days) => (days !== null ? `${days} ngày` : '-'),
+      render: (days) => days != null ? `${days} ngày` : '-',
+    },
+    {
+      title: 'Lưu chuồng',
+      key: 'daysInFarm',
+      render: (_, record) => record.arrivedAt 
+        ? `${dayjs().diff(dayjs(record.arrivedAt), 'day')} ngày` 
+        : '-',
     },
     {
       title: 'Trọng lượng',
@@ -275,9 +306,39 @@ export default function PigManage() {
       </Row>
 
       <Card className="table-card">
+        <Space wrap style={{ marginBottom: 16 }}>
+          <Input.Search
+            placeholder="Tìm theo số tai..."
+            allowClear
+            onSearch={setSearchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 220 }}
+          />
+          <Select
+            placeholder="Lọc theo chuồng"
+            allowClear
+            options={barns.map(b => ({ label: b.name, value: b.id }))}
+            onChange={setFilterBarn}
+            style={{ width: 180 }}
+          />
+          <Select
+            placeholder="Loại lợn"
+            allowClear
+            options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))}
+            onChange={setFilterCategory}
+            style={{ width: 160 }}
+          />
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            options={Object.entries(STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))}
+            onChange={setFilterStatus}
+            style={{ width: 160 }}
+          />
+        </Space>
         <Table
           columns={columns}
-          dataSource={pigs}
+          dataSource={filteredPigs}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
@@ -325,8 +386,8 @@ export default function PigManage() {
             <Col span={8}><Form.Item name="entry_date" label="Ngày nhập đàn" rules={[{ required: true }]}><DatePicker className="w-100" format="DD/MM/YYYY" /></Form.Item></Col>
             {editingId && (
               <Col span={8}>
-                <Form.Item name="lifecycle_status" label="Trạng thái sống" rules={[{ required: true }]}>
-                  <Select options={Object.entries(STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))} />
+                <Form.Item name="lifecycle_status" label="Trạng thái" tooltip="Trạng thái được tự động cập nhật qua các chức năng Xuất bán hoặc Lợn chết">
+                  <Select disabled options={Object.entries(STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))} />
                 </Form.Item>
               </Col>
             )}
@@ -335,6 +396,15 @@ export default function PigManage() {
           <Row gutter={16}>
             <Col span={8}><Form.Item name="entry_weight" label="Trọng lượng lúc nhập (kg)"><InputNumber min={0} className="w-100" /></Form.Item></Col>
             <Col span={8}><Form.Item name="current_weight" label="Trọng lượng hiện tại (kg)"><InputNumber min={0} className="w-100" /></Form.Item></Col>
+            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.category !== curr.category}>
+              {({ getFieldValue }) => getFieldValue('category') === 'FATTENING' ? (
+                <Col span={8}>
+                  <Form.Item name="purchase_price" label="Giá nhập (VNĐ)">
+                    <InputNumber min={0} className="w-100" step={1000} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} />
+                  </Form.Item>
+                </Col>
+              ) : null}
+            </Form.Item>
           </Row>
 
           <Form.Item name="note" label="Ghi chú">

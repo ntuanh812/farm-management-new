@@ -141,6 +141,7 @@ CREATE TABLE pigs (
     entry_date DATE NOT NULL,
     entry_weight DECIMAL(6,2),
     current_weight DECIMAL(6,2),
+    purchase_price DECIMAL(15,2) DEFAULT 0,
     note TEXT,
     deleted_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

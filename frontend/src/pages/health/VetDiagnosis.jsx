@@ -34,6 +34,7 @@ export default function VetDiagnosis() {
   const [diagnoses, setDiagnoses] = useState([]);
   const [barns, setBarns] = useState([]);
   const [medicinesList, setMedicinesList] = useState([]);
+  const [pigs, setPigs] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Filters
@@ -65,13 +66,15 @@ export default function VetDiagnosis() {
       }
 
       // Fetch phụ trợ (Barns & Medicines)
-      const [resBarns, resMeds] = await Promise.all([
+      const [resBarns, resMeds, resPigs] = await Promise.all([
         axios.get(`${API}/barns`, { headers }),
-        axios.get(`${API}/medicines`, { headers }).catch(() => ({ data: { data: [] } })) // Giả định /medicines
+        axios.get(`${API}/medicines`, { headers }).catch(() => ({ data: { data: [] } })), // Giả định /medicines
+        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       
       if (resBarns.data?.success) setBarns(resBarns.data.data);
       if (resMeds.data?.success) setMedicinesList(resMeds.data.data);
+      if (resPigs.data?.success) setPigs(resPigs.data.data);
       
     } catch (error) {
       message.error('Không thể tải dữ liệu Thú y');
@@ -292,8 +295,14 @@ export default function VetDiagnosis() {
         <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={!canEdit}>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="pig_id" label="Mã lợn bệnh" rules={[{ required: true, message: 'Nhập mã lợn' }]}>
-                <Input placeholder="VD: PIG001" />
+              <Form.Item name="pig_id" label="Mã lợn bệnh" rules={[{ required: true, message: 'Chọn mã lợn' }]}>
+                <Select showSearch placeholder="Chọn lợn bệnh">
+                  {pigs.filter(p => p.lifecycleStatus === 'ACTIVE').map(p => (
+                    <Select.Option key={p.id} value={p.earTag}>
+                      {p.earTag} - {p.barnName || 'Không rõ chuồng'}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -302,8 +311,17 @@ export default function VetDiagnosis() {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="diagnosis_date" label="Ngày khám" rules={[{ required: true, message: 'Chọn ngày khám' }]}>
-                <DatePicker className="w-100" format="DD/MM/YYYY" />
+              <Form.Item noStyle shouldUpdate={(prev, curr) => prev.pig_id !== curr.pig_id}>
+                {({ getFieldValue }) => {
+                  const pTag = getFieldValue('pig_id');
+                  const pig = pigs.find(p => p.earTag === pTag);
+                  const minDate = pig?.arrivedAt;
+                  return (
+                    <Form.Item name="diagnosis_date" label="Ngày khám" rules={[{ required: true, message: 'Chọn ngày khám' }]}>
+                      <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && minDate && current < dayjs(minDate).startOf('day')} />
+                    </Form.Item>
+                  );
+                }}
               </Form.Item>
             </Col>
           </Row>

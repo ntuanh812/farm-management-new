@@ -45,6 +45,7 @@ export default function PigFattening() {
 
   const [openSingle, setOpenSingle] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
+  const [bulkSelectedKeys, setBulkSelectedKeys] = useState([]);
   const [openDetail, setOpenDetail] = useState(false);
 
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -88,7 +89,11 @@ export default function PigFattening() {
   // ===== STATS =====
   const stats = useMemo(() => {
     const revenue = saleBatches.reduce(
-      (s, b) => s + (b.lines?.reduce((x, l) => x + (Number(l.total_amount) || 0), 0) || 0),
+      (s, b) => s + (b.lines?.reduce((x, l) => {
+        const pig = pigs.find(p => p.earTag === l.ear_tag);
+        const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
+        return x + (Number(l.total_amount) || 0) - purchasePrice;
+      }, 0) || 0),
       0
     );
 
@@ -116,10 +121,14 @@ export default function PigFattening() {
         sold_at: b.sold_at,
         count: b.lines?.length || 0,
         totalKg: b.lines?.reduce((s, l) => s + (Number(l.weight) || 0), 0) || 0,
-        total: b.lines?.reduce((s, l) => s + (Number(l.total_amount) || 0), 0) || 0,
+        total: b.lines?.reduce((s, l) => {
+          const pig = pigs.find(p => p.earTag === l.ear_tag);
+          const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
+          return s + (Number(l.total_amount) || 0) - purchasePrice;
+        }, 0) || 0,
         raw: b,
       }));
-  }, [saleBatches, searchEar]);
+  }, [saleBatches, searchEar, pigs]);
 
   // ===== GROUP =====
   const grouped = useMemo(() => {
@@ -158,15 +167,14 @@ export default function PigFattening() {
   const handleSell = async (values) => {
     try {
       const payload = {
-        sold_at: values.date.format("YYYY-MM-DD"),
-        staff_name: values.staff,
+        sold_at: dayjs().format("YYYY-MM-DD"),
+        staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines: [
           {
             ear_tag: values.earTag,
             weight: values.weight,
             price: values.price,
             total_amount: values.price * values.weight,
-            reason: values.reason,
             note: values.note,
           },
         ],
@@ -188,28 +196,29 @@ export default function PigFattening() {
       return message.warning("Vui lòng chọn ít nhất 1 con lợn");
     }
 
-    const hasEmptyWeight = values.items.some((i) => !i.weight);
-    if (hasEmptyWeight) {
-      return message.warning("Vui lòng nhập đầy đủ số Kg cho các lợn đã chọn");
+    const hasEmptyData = values.items.some((i) => !i.weight || i.price === undefined || i.price === null);
+    if (hasEmptyData) {
+      return message.warning("Vui lòng nhập đầy đủ số Kg và Giá cho các lợn đã chọn");
     }
 
     try {
       const lines = values.items.map((i) => ({
         ear_tag: i.earTag,
         weight: i.weight,
-        price: values.price,
-        total_amount: i.weight * values.price,
+        price: i.price,
+        total_amount: i.weight * i.price,
       }));
 
       const payload = {
-        sold_at: values.date.format("YYYY-MM-DD"),
-        staff_name: values.staff,
+        sold_at: dayjs().format("YYYY-MM-DD"),
+        staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines,
       };
 
       await axios.post(`${API}/sale-batches`, payload, { headers });
       message.success("Xuất bán hàng loạt thành công");
       setOpenBulk(false);
+      setBulkSelectedKeys([]);
       bulkForm.resetFields();
       fetchData();
     } catch (error) {
@@ -226,7 +235,7 @@ export default function PigFattening() {
           <Col xs={24} sm={12} lg={6}>
             <Card className="stat-card stat-card--pigs">
               <div className="stat-card__header">
-                <span className="stat-card__title">Đang nuôi</span>
+                <span className="stat-card__title">Lợn thịt đang có</span>
                 <div className="stat-card__icon"><TeamOutlined /></div>
               </div>
               <div className="stat-card__value">
@@ -306,7 +315,11 @@ export default function PigFattening() {
                         Bán lợn
                       </Button>
 
-                      <Button onClick={() => setOpenBulk(true)}>Bán hàng loạt</Button>
+                      <Button onClick={() => {
+                        setOpenBulk(true);
+                        setBulkSelectedKeys([]);
+                        bulkForm.resetFields();
+                      }}>Bán hàng loạt</Button>
                     </>
                   )}
                 </Space>
@@ -364,27 +377,32 @@ export default function PigFattening() {
         {/* ===== MODAL SINGLE ===== */}
         <Modal
           open={openSingle}
-          onCancel={() => setOpenSingle(false)}
+          onCancel={() => {
+            setOpenSingle(false);
+            form.resetFields();
+          }}
           onOk={() => form.submit()}
           title="Bán lợn"
           footer={canEdit ? undefined : null}
         >
           <Form form={form} onFinish={handleSell} layout="vertical" disabled={!canEdit}>
-            <Form.Item name="earTag" label="Số tai" rules={[{ required: true }]}>
+            <Form.Item name="earTag" label="Chọn lợn" rules={[{ required: true }]}>
               <Select
                 options={fatteningActive.map((p) => ({
                   value: p.earTag,
                   label: p.earTag,
                 }))}
+                onChange={(val) => {
+                  const pig = fatteningActive.find(p => p.earTag === val);
+                  if (pig && pig.weightKg) {
+                    form.setFieldsValue({ weight: pig.weightKg });
+                  }
+                }}
               />
             </Form.Item>
 
-            <Form.Item name="date" label="Ngày" rules={[{ required: true }]}>
-              <DatePicker className="w-100" />
-            </Form.Item>
-
             <Form.Item name="weight" label="Kg" rules={[{ required: true }]}>
-              <InputNumber className="w-100" />
+              <InputNumber className="w-100" disabled style={{ color: '#000' }} />
             </Form.Item>
 
             <Form.Item name="price" label="Giá" rules={[{ required: true }]}>
@@ -403,14 +421,6 @@ export default function PigFattening() {
               }}
             </Form.Item>
 
-            <Form.Item name="staff" label="Người thực hiện">
-              <Input />
-            </Form.Item>
-
-            <Form.Item name="reason" label="Nguyên nhân">
-              <Input />
-            </Form.Item>
-
             <Form.Item name="note" label="Ghi chú">
               <Input />
             </Form.Item>
@@ -420,106 +430,106 @@ export default function PigFattening() {
         {/* ===== MODAL BULK ===== */}
         <Modal
           open={openBulk}
-          onCancel={() => setOpenBulk(false)}
+          onCancel={() => {
+            setOpenBulk(false);
+            setBulkSelectedKeys([]);
+            bulkForm.resetFields();
+          }}
           onOk={() => bulkForm.submit()}
           width={900}
           title="Bán hàng loạt"
           footer={canEdit ? undefined : null}
         >
           <Form form={bulkForm} onFinish={handleBulkSell} layout="vertical" disabled={!canEdit}>
-            <Space wrap>
-              <Form.Item name="date" label="Ngày" rules={[{ required: true }]}>
-                <DatePicker format="DD/MM/YYYY" />
-              </Form.Item>
-
-              <Form.Item name="price" label="Giá/kg" rules={[{ required: true }]}>
-                <InputNumber />
-              </Form.Item>
-
-              <Form.Item name="staff" label="Người thực hiện">
-                <Input />
-              </Form.Item>
-            </Space>
-
-            <Form.Item label="Chọn lợn">
-              <Select
-                mode="multiple"
-                options={fatteningActive.map((p) => ({
-                  value: p.earTag,
-                  label: p.earTag,
-                }))}
-                onChange={(values) => {
-                  const currentItems = bulkForm.getFieldValue("items") || [];
-                  bulkForm.setFieldsValue({
-                    items: values.map((v) => {
-                      const existing = currentItems.find((i) => i && i.earTag === v);
-                      return {
-                        earTag: v,
-                        weight: existing ? existing.weight : null,
-                      };
-                    }),
-                  });
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8, fontWeight: 500 }}>Chọn lợn xuất bán:</div>
+              <Table
+                rowKey="earTag"
+                rowSelection={{
+                  selectedRowKeys: bulkSelectedKeys,
+                  onChange: (keys) => {
+                    setBulkSelectedKeys(keys);
+                    const currentItems = bulkForm.getFieldValue("items") || [];
+                    bulkForm.setFieldsValue({
+                      items: keys.map((v) => {
+                        const existing = currentItems.find((i) => i && i.earTag === v);
+                        const pigData = fatteningActive.find((p) => p.earTag === v);
+                        return {
+                          earTag: v,
+                          weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.weightKg || null),
+                          price: existing && existing.price !== undefined ? existing.price : null,
+                        };
+                      }),
+                    });
+                  }
                 }}
+                dataSource={fatteningActive}
+                columns={[
+                  { title: "STT", width: 60, render: (_, __, i) => i + 1 },
+                  { title: "Số tai", dataIndex: "earTag", render: text => <strong>{text}</strong> },
+                  { title: "Chuồng", dataIndex: "barnName" },
+                  { title: "Trọng lượng", dataIndex: "weightKg", render: w => w ? `${w} kg` : '-' },
+                ]}
+                pagination={{ pageSize: 5 }}
+                size="small"
               />
-            </Form.Item>
+            </div>
 
             <Form.List name="items">
               {(fields) => (
                 <>
-                  <Table
-                    dataSource={fields}
-                    pagination={false}
-                    rowKey="key"
-                    columns={[
-                      { title: "STT", render: (_, __, i) => i + 1 },
-                      {
-                        title: "Số tai",
-                        render: (_, field) => (
+                  <div className="bulk-items-container">
+                    {fields.length > 0 && (
+                      <Row gutter={16} style={{ paddingBottom: 8, marginBottom: 8, borderBottom: '1px solid #f0f0f0', fontWeight: 500 }}>
+                        <Col span={2}>STT</Col>
+                        <Col span={5}>Số tai</Col>
+                        <Col span={4}>Cân nặng (Kg)</Col>
+                        <Col span={6}>Giá/kg (VNĐ)</Col>
+                        <Col span={7}>Thành tiền</Col>
+                      </Row>
+                    )}
+                    {fields.map((field, index) => (
+                      <Row gutter={16} key={field.key} align="middle" style={{ marginBottom: 12 }}>
+                        <Col span={2}>{index + 1}</Col>
+                        <Col span={5}>
                           <Form.Item name={[field.name, "earTag"]} noStyle>
-                            <Input disabled />
+                            <Input disabled style={{ color: '#000', fontWeight: 500 }} />
                           </Form.Item>
-                        ),
-                      },
-                      {
-                        title: "Kg",
-                        render: (_, field) => (
-                          <Form.Item
-                            name={[field.name, "weight"]}
-                            rules={[{ required: true }]}
-                          >
-                            <InputNumber className="w-100" />
+                        </Col>
+                        <Col span={4}>
+                          <Form.Item name={[field.name, "weight"]} noStyle rules={[{ required: true, message: 'Nhập Kg' }]}>
+                            <InputNumber className="w-100" min={1} disabled style={{ color: '#000' }} />
                           </Form.Item>
-                        ),
-                      },
-                      {
-                        title: "Thành tiền",
-                        render: (_, field) => (
+                        </Col>
+                        <Col span={6}>
+                          <Form.Item name={[field.name, "price"]} noStyle rules={[{ required: true, message: 'Nhập Giá' }]}>
+                            <InputNumber className="w-100" min={0} step={1000} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={value => value.replace(/\$\s?|(,*)/g, '')} placeholder="VD: 55,000" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={7}>
                           <Form.Item shouldUpdate noStyle>
                             {() => {
-                              const w =
-                                bulkForm.getFieldValue(["items", field.name, "weight"]) ||
-                                0;
-                              const p = bulkForm.getFieldValue("price") || 0;
-                              return (w * p).toLocaleString();
+                              const w = bulkForm.getFieldValue(["items", field.name, "weight"]) || 0;
+                              const p = bulkForm.getFieldValue(["items", field.name, "price"]) || 0;
+                              return <span style={{ color: '#1890ff', fontWeight: 500 }}>{(w * p).toLocaleString()} đ</span>;
                             }}
                           </Form.Item>
-                        ),
-                      },
-                    ]}
-                  />
+                        </Col>
+                      </Row>
+                    ))}
+                  </div>
 
                   <Form.Item shouldUpdate noStyle>
                     {() => {
                       const currentItems = bulkForm.getFieldValue("items") || [];
-                      const currentPrice = bulkForm.getFieldValue("price") || 0;
-                      const totalKg = currentItems.reduce((s, i) => s + (i?.weight || 0), 0);
-                      const totalMoney = totalKg * currentPrice;
+                      const totalKg = currentItems.reduce((s, i) => s + Number(i?.weight || 0), 0);
+                      const totalMoney = currentItems.reduce((s, i) => s + (Number(i?.weight || 0) * Number(i?.price || 0)), 0);
 
                       return (
                         <div className="mt-16 text-right">
                           <b>Tổng kg: {totalKg}</b>
                           <br />
-                          <b>Tổng tiền: {totalMoney.toLocaleString()}</b>
+                          <b>Tổng tiền: {totalMoney.toLocaleString()} đ</b>
                         </div>
                       );
                     }}
@@ -549,7 +559,12 @@ export default function PigFattening() {
               { title: "Số tai", dataIndex: "ear_tag" },
               { title: "Kg", dataIndex: "weight" },
               { title: "Giá", dataIndex: "price", render: (v) => v?.toLocaleString() },
-              { title: "Thành tiền", dataIndex: "total_amount", render: (v) => v?.toLocaleString() },
+              { title: "Doanh thu (Lãi)", key: "profit", render: (_, r) => {
+                const pig = pigs.find(p => p.earTag === r.ear_tag);
+                const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
+                const profit = (Number(r.total_amount) || 0) - purchasePrice;
+                return profit.toLocaleString();
+              } },
               { title: "Người thực hiện", dataIndex: "staff_name" },
             ]}
           />

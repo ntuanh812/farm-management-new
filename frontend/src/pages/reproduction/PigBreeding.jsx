@@ -9,9 +9,10 @@ import { PageHeader } from '@/components/layout/PageHeader';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const STATUS_CONFIG = {
-  'PENDING': { text: 'Chờ khám thai', color: 'orange' },
+  'PENDING': { text: 'Chờ kết quả (18-24 ngày)', color: 'orange' },
   'SUCCESS': { text: 'Đậu thai', color: 'green' },
   'FAILED': { text: 'Trượt (Phối lại)', color: 'red' },
+  'FARROWED': { text: 'Đã đẻ', color: 'purple' },
 };
 
 export default function PigBreeding() {
@@ -20,7 +21,6 @@ export default function PigBreeding() {
 
   const [breedings, setBreedings] = useState([]);
   const [pigs, setPigs] = useState([]);
-  const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -31,14 +31,12 @@ export default function PigBreeding() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [resBreed, resPigs, resStaff] = await Promise.all([
+      const [resBreed, resPigs] = await Promise.all([
         axios.get(`${API}/breedings`, { headers }),
         axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/staff`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setBreedings(resBreed.data?.data || []);
       setPigs(resPigs.data?.data || []);
-      setStaffList(resStaff.data?.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu phối giống');
     } finally {
@@ -63,13 +61,25 @@ export default function PigBreeding() {
     }
   };
 
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await axios.patch(`${API}/breedings/${id}/status`, { status: newStatus }, { headers });
+      message.success('Cập nhật trạng thái thành công');
+      fetchData();
+    } catch (error) {
+      message.error('Không thể cập nhật trạng thái');
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       const payload = {
         ...values,
-        breeding_date: values.breeding_date.format('YYYY-MM-DD'),
-        expected_farrow_date: values.expected_farrow_date ? values.expected_farrow_date.format('YYYY-MM-DD') : null,
+        breeding_date: dayjs().format('YYYY-MM-DD'),
+        expected_farrow_date: dayjs().add(114, 'day').format('YYYY-MM-DD'),
+        status: 'PENDING',
+        staff_name: user?.full_name || user?.username || 'Hệ thống',
       };
 
       await axios.post(`${API}/breedings`, payload, { headers });
@@ -79,15 +89,6 @@ export default function PigBreeding() {
       fetchData();
     } catch (error) {
       message.error(error.response?.data?.message || 'Có lỗi xảy ra');
-    }
-  };
-
-  const handleBreedingDateChange = (date) => {
-    if (date) {
-      // Lợn thường chửa 114 ngày (3 tháng, 3 tuần, 3 ngày)
-      form.setFieldsValue({ expected_farrow_date: date.add(114, 'day') });
-    } else {
-      form.setFieldsValue({ expected_farrow_date: null });
     }
   };
 
@@ -120,9 +121,38 @@ export default function PigBreeding() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
-        const cfg = STATUS_CONFIG[status] || { text: status, color: 'default' };
-        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      render: (status, record) => {
+        const daysSinceBreeding = dayjs().diff(dayjs(record.breeding_date), 'day');
+        const isEditable = canEdit && daysSinceBreeding >= 18 && status !== 'FARROWED';
+
+        if (!isEditable) {
+          const cfg = STATUS_CONFIG[status] || { text: status, color: 'default' };
+          const tooltip = canEdit && daysSinceBreeding < 18 
+            ? `Cần chờ thêm ${18 - daysSinceBreeding} ngày nữa mới được cập nhật kết quả` 
+            : '';
+          return <Tag color={cfg.color} title={tooltip}>{cfg.text}</Tag>;
+        }
+
+        const options = Object.entries(STATUS_CONFIG)
+          .filter(([val]) => {
+            if (val === 'FARROWED') return false; // Không tự chọn "Đã đẻ" thủ công từ dropdown
+            if (status !== 'PENDING' && val === 'PENDING') return false; // Đã có kết quả thì không quay lại PENDING
+            return true;
+          })
+          .map(([val, cfg]) => ({ 
+            value: val, 
+            label: <span style={{ color: cfg.color === 'orange' ? '#faad14' : cfg.color === 'green' ? '#52c41a' : cfg.color === 'purple' ? '#722ed1' : '#ff4d4f', fontWeight: 500 }}>{cfg.text}</span> 
+          }));
+
+        return (
+          <Select 
+            value={status} 
+            onChange={(val) => handleUpdateStatus(record.id, val)}
+            bordered={false}
+            style={{ minWidth: 200 }}
+            options={options}
+          />
+        );
       }
     },
     {
@@ -169,7 +199,7 @@ export default function PigBreeding() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--barn">
             <div className="stat-card__header">
-              <span className="stat-card__title">Chờ khám thai</span>
+              <span className="stat-card__title">Chờ kết quả</span>
               <div className="stat-card__icon"><ClockCircleOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -181,7 +211,7 @@ export default function PigBreeding() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--staff">
             <div className="stat-card__header">
-              <span className="stat-card__title">Đậu thai</span>
+              <span className="stat-card__title">Đang mang thai</span>
               <div className="stat-card__icon"><CheckCircleOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -240,27 +270,10 @@ export default function PigBreeding() {
             </Form.Item>
           </Space>
 
-          <Form.Item name="breeding_date" label="Ngày phối giống" rules={[{ required: true, message: 'Chọn ngày phối' }]}>
-            <DatePicker className="w-100" format="DD/MM/YYYY" onChange={handleBreedingDateChange} />
-          </Form.Item>
-
-          <Form.Item name="expected_farrow_date" label="Ngày dự kiến sinh (Tự động +114 ngày)">
-            <DatePicker className="w-100" format="DD/MM/YYYY" disabled />
-          </Form.Item>
-
-          <Form.Item name="status" label="Trạng thái" initialValue="PENDING" rules={[{ required: true }]}>
-            <Select>
-              <Select.Option value="PENDING">Chờ khám thai (Chưa rõ kết quả)</Select.Option>
-              <Select.Option value="SUCCESS">Đậu thai (Thành công)</Select.Option>
-              <Select.Option value="FAILED">Trượt (Phối thất bại)</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="staff_name" label="Người thực hiện phối">
-            <Select showSearch placeholder="Chọn nhân viên">
-              {staffList.map((x) => <Select.Option key={x.id} value={x.full_name}>{x.full_name}</Select.Option>)}
-            </Select>
-          </Form.Item>
+          <div style={{ background: '#f0f5ff', padding: '12px 16px', borderRadius: 8, border: '1px solid #adc6ff', marginBottom: 16 }}>
+            <div style={{ color: '#096dd9', fontWeight: 500, marginBottom: 4 }}>📅 Ngày phối: Hôm nay ({dayjs().format('DD/MM/YYYY')})</div>
+            <div style={{ color: '#d46b08', fontWeight: 500 }}>⏳ Dự kiến sinh: {dayjs().add(114, 'day').format('DD/MM/YYYY')} (Tự động +114 ngày)</div>
+          </div>
 
           <Form.Item name="note" label="Ghi chú thêm">
             <Input.TextArea rows={2} placeholder="Ghi chú về tinh, biểu hiện..." />
