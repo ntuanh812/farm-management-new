@@ -12,8 +12,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const CATEGORY_MAP = {
-  'SOW': 'Nái',
-  'BOAR': 'Đực',
+  'SOW': 'Lợn nái',
+  'BOAR': 'Lợn đực',
   'PIGLET': 'Lợn con',
   'FATTENING': 'Lợn thịt'
 };
@@ -227,7 +227,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--pigs">
             <div className="stat-card__header">
-              <span className="stat-card__title">Tổng đàn hiện tại</span>
+              <span className="stat-card__title">{user?.role === 'FARM_WORKER' ? 'Tổng đàn đang quản lý' : 'Tổng đàn hiện tại'}</span>
               <div className="stat-card__icon"><TeamOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -239,7 +239,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--daily-tasks">
             <div className="stat-card__header">
-              <span className="stat-card__title">Lợn thịt</span>
+              <span className="stat-card__title">{user?.role === 'FARM_WORKER' ? 'Lợn thịt đang quản lý' : 'Lợn thịt'}</span>
               <div className="stat-card__icon"><ShoppingCartOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -251,7 +251,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--staff">
             <div className="stat-card__header">
-              <span className="stat-card__title">Lợn sinh sản</span>
+              <span className="stat-card__title">{user?.role === 'FARM_WORKER' ? 'Lợn sinh sản đang quản lý' : 'Lợn sinh sản'}</span>
               <div className="stat-card__icon"><HeartOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -263,7 +263,7 @@ export default function PigManage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--barn">
             <div className="stat-card__header">
-              <span className="stat-card__title">Lợn con</span>
+              <span className="stat-card__title">{user?.role === 'FARM_WORKER' ? 'Lợn con đang quản lý' : 'Lợn con'}</span>
               <div className="stat-card__icon"><DashboardOutlined /></div>
             </div>
             <div className="stat-card__value">

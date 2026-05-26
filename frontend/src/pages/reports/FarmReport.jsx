@@ -8,6 +8,11 @@ import {
   RiseOutlined,
   SearchOutlined
 } from '@ant-design/icons';
+import { 
+  PieChart, Pie, Cell, 
+  BarChart, Bar, LineChart, Line, 
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -16,9 +21,18 @@ const { Text } = Typography;
 const { RangePicker } = DatePicker;
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+const CATEGORY_MAP = {
+  'SOW': 'Lợn nái',
+  'BOAR': 'Lợn đực',
+  'PIGLET': 'Lợn con',
+  'FATTENING': 'Lợn thịt'
+};
+
 export default function FarmReport() {
   const { token } = useAuthStore();
   const headers = { Authorization: `Bearer ${token}` };
+  
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
@@ -29,7 +43,9 @@ export default function FarmReport() {
     revenue: 0,
     barnStats: { total_barns: 0, total_capacity: 0 },
     feedUsage: [],
-    pendingReports: 0
+    pendingReports: 0,
+    diseaseData: [],
+    revenueTrend: []
   });
 
   const fetchReportData = async (values = {}) => {
@@ -41,7 +57,7 @@ export default function FarmReport() {
         params.endDate = values.dateRange[1].format('YYYY-MM-DD');
       }
 
-      const res = await axios.get(`${API}/reports/farm-overview`, { headers, params });
+      const res = await axios.get(`${API}/reports-dashboard/farm-overview`, { headers, params });
       if (res.data.success) {
         setData(res.data.data);
       }
@@ -56,7 +72,13 @@ export default function FarmReport() {
     fetchReportData();
   }, []);
 
-  const totalActivePigs = data.activePigs.reduce((sum, item) => sum + item.count, 0);
+  // Map dữ liệu loại lợn sang tiếng Việt
+  const activePigsMapped = data.activePigs.map(p => ({
+    ...p,
+    categoryName: CATEGORY_MAP[p.category] || p.category
+  }));
+
+  const totalActivePigs = activePigsMapped.reduce((sum, item) => sum + item.count, 0);
 
   const feedColumns = [
     { title: 'Loại cám / Thức ăn', dataIndex: 'feed_type', key: 'feed_type' },
@@ -101,8 +123,8 @@ export default function FarmReport() {
                 suffix="con"
               />
               <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
-                {data.activePigs.map(p => `${p.category}: ${p.count}`).join(' | ')}
-                {data.activePigs.length === 0 && 'Chưa có lợn trong chuồng'}
+                {activePigsMapped.map(p => `${p.categoryName}: ${p.count}`).join(' | ')}
+                {activePigsMapped.length === 0 && 'Chưa có lợn trong chuồng'}
               </div>
             </Card>
           </Col>
@@ -145,6 +167,92 @@ export default function FarmReport() {
               />
               <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
                 Báo cáo bệnh chờ bác sĩ xử lý
+              </div>
+            </Card>
+          </Col>
+        </Row>
+
+        <Divider />
+
+        {/* CÁC BIỂU ĐỒ THỐNG KÊ */}
+        <Row gutter={[16, 16]}>
+          {/* 1. Biểu đồ Cơ cấu lợn */}
+          <Col xs={24} lg={12}>
+            <Card title="Cơ cấu đàn lợn" bordered={false}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={activePigsMapped}
+                      cx="50%" cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="categoryName"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {activePigsMapped.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(value) => [`${value} con`, 'Số lượng']} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
+          {/* 2. Biểu đồ Doanh thu (6 tháng) */}
+          <Col xs={24} lg={12}>
+            <Card title="Xu hướng doanh thu (6 tháng gần nhất)" bordered={false}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.revenueTrend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
+                    <RechartsTooltip formatter={(value) => [`${Number(value).toLocaleString('vi-VN')} VNĐ`, 'Doanh thu']} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" name="Doanh thu" stroke="#cf1322" strokeWidth={2} activeDot={{ r: 8 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
+          {/* 3. Biểu đồ Tiêu thụ vật tư (Cám) */}
+          <Col xs={24} lg={12}>
+            <Card title="Tiêu thụ thức ăn / cám" bordered={false}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.feedUsage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="feed_type" />
+                    <YAxis />
+                    <RechartsTooltip formatter={(value) => [`${value} kg`, 'Khối lượng']} />
+                    <Legend />
+                    <Bar dataKey="total_kg" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
+          {/* 4. Biểu đồ các bệnh thường gặp */}
+          <Col xs={24} lg={12}>
+            <Card title="Top 5 Bệnh lý phổ biến" bordered={false}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.diseaseData} layout="vertical" margin={{ top: 20, right: 30, left: 100, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={100} />
+                    <RechartsTooltip formatter={(value) => [`${value} ca`, 'Số lượng']} />
+                    <Legend />
+                    <Bar dataKey="count" name="Số ca mắc" fill="#faad14" barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </Card>
           </Col>

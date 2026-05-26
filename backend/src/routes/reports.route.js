@@ -3,7 +3,7 @@ import { protect } from '../middleware/auth.js';
 
 export default async function reportsRoute(app) {
   // GET /api/reports/farm-overview
-  app.get('/farm-overview', { preHandler: protect('ADMIN', 'FARM_WORKER', 'VET_DOCTOR') }, async (request, reply) => {
+  app.get('/farm-overview', { preHandler: protect('ADMIN') }, async (request, reply) => {
     try {
       const { startDate, endDate } = request.query;
       
@@ -67,6 +67,24 @@ export default async function reportsRoute(app) {
         WHERE status = 'cho_xu_ly' ${getAndDateCondition('created_at')}
       `);
 
+      // 7. Thống kê bệnh phổ biến (Top 5)
+      const [diseaseData] = await pool.query(`
+        SELECT suspected_disease as name, COUNT(*) as count 
+        FROM vet_diagnosis 
+        WHERE suspected_disease IS NOT NULL AND suspected_disease != ''
+        GROUP BY name 
+        ORDER BY count DESC LIMIT 5
+      `);
+
+      // 8. Doanh thu 6 tháng gần nhất
+      const [revenueTrend] = await pool.query(`
+        SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount), 0) AS revenue
+        FROM sale_batches sb
+        JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
+        GROUP BY month 
+        ORDER BY MAX(sb.sold_at) DESC LIMIT 6
+      `);
+
       return reply.send({
         success: true,
         data: {
@@ -76,7 +94,9 @@ export default async function reportsRoute(app) {
           revenue: soldData[0].revenue || 0,
           barnStats: barnStats[0],
           feedUsage,
-          pendingReports: pendingReports[0].count
+          pendingReports: pendingReports[0].count,
+          diseaseData,
+          revenueTrend: revenueTrend.reverse()
         }
       });
     } catch (error) {

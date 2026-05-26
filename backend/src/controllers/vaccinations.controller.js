@@ -4,16 +4,23 @@ export const vaccinationsController = {
   // Lấy danh sách lịch sử tiêm phòng
   getAll: async (request, reply) => {
     try {
-      const [rows] = await pool.query(`
+      let sql = `
         SELECT 
           v.id, v.pig_id, v.vaccine_name, v.vaccinated_at, v.note,
-          p.ear_tag, 
+          p.pig_code AS ear_tag, 
           e.full_name AS performed_by_name
         FROM vaccinations v
         LEFT JOIN pigs p ON v.pig_id = p.id
         LEFT JOIN employees e ON v.performed_by = e.id
-        ORDER BY v.vaccinated_at DESC
-      `);
+      `;
+      const params = [];
+      if (request.user.role === 'FARM_WORKER') {
+        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
+        params.push(request.user.employee_id);
+      }
+      sql += ' ORDER BY v.vaccinated_at DESC';
+
+      const [rows] = await pool.query(sql, params);
       return reply.send({ success: true, data: rows });
     } catch (error) {
       request.log.error(error);

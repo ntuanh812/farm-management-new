@@ -4,7 +4,7 @@ export const barnsController = {
   // Lấy danh sách chuồng trại kèm số lượng lợn hiện tại
   getAll: async (request, reply) => {
     try {
-      const [rows] = await pool.query(`
+      let sql = `
         SELECT 
           b.id, 
           b.code, 
@@ -15,8 +15,17 @@ export const barnsController = {
           b.note,
           (SELECT COUNT(*) FROM pigs p WHERE p.barn_id = b.id AND p.lifecycle_status = 'ACTIVE') AS current_quantity
         FROM barns b
-        ORDER BY b.created_at DESC
-      `);
+      `;
+      const params = [];
+      
+      if (request.user.role === 'FARM_WORKER') {
+        sql += ' JOIN employee_barns eb ON b.id = eb.barn_id WHERE eb.employee_id = ?';
+        params.push(request.user.employee_id);
+      }
+      
+      sql += ' ORDER BY b.created_at DESC';
+      
+      const [rows] = await pool.query(sql, params);
       return reply.send({ success: true, data: rows });
     } catch (error) {
       request.log.error(error);

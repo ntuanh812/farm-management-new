@@ -148,7 +148,7 @@ export default function PigDead() {
         <Col xs={24} sm={12} lg={12}>
           <Card className="stat-card stat-card--daily-tasks">
             <div className="stat-card__header">
-              <span className="stat-card__title">Tổng số lợn chết</span>
+              <span className="stat-card__title">{user?.role === 'FARM_WORKER' ? 'Lợn chết (chuồng quản lý)' : 'Tổng số lợn chết'}</span>
               <div className="stat-card__icon"><FallOutlined /></div>
             </div>
             <div className="stat-card__value">
@@ -160,7 +160,7 @@ export default function PigDead() {
         <Col xs={24} sm={12} lg={12}>
           <Card className="stat-card stat-card--pigs">
             <div className="stat-card__header">
-              <span className="stat-card__title">Tổng đàn hiện tại</span>
+              <span className="stat-card__title">{user?.role === 'FARM_WORKER' ? 'Tổng đàn đang quản lý' : 'Tổng đàn hiện tại'}</span>
               <div className="stat-card__icon"><TeamOutlined /></div>
             </div>
             <div className="stat-card__value">

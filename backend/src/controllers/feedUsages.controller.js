@@ -3,12 +3,19 @@ import pool from '../config/db.js';
 export const feedUsagesController = {
   getAll: async (request, reply) => {
     try {
-      const [rows] = await pool.query(`
+      let sql = `
         SELECT f.*, b.name AS barn_name 
         FROM feed_usages f
         LEFT JOIN barns b ON f.barn_id = b.id
-        ORDER BY f.used_at DESC, f.created_at DESC
-      `);
+      `;
+      const params = [];
+      if (request.user.role === 'FARM_WORKER') {
+        sql += ' WHERE f.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
+        params.push(request.user.employee_id);
+      }
+      sql += ' ORDER BY f.used_at DESC, f.created_at DESC';
+
+      const [rows] = await pool.query(sql, params);
       return reply.send({ success: true, data: rows });
     } catch (error) {
       request.log.error(error);

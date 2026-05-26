@@ -111,7 +111,6 @@ export const AppRouter = () => {
         <Route path="/employee/materials/bran"        element={<BranUsage />} />
         <Route path="/employee/health/vaccine"        element={<PigVaccination />} />
         <Route path="/employee/reports/pig-report"    element={<PigReport />} />
-        <Route path="/employee/reports/farm-report"   element={<FarmReport />} />
       </Route>
 
       {/* ── VET_DOCTOR routes ───────────────────────────── */}
@@ -127,7 +126,6 @@ export const AppRouter = () => {
         <Route path="/vet/health/vet-diagnosis"      element={<VetDiagnosis />} />
         <Route path="/vet/reports/review"            element={<VetReview />} />
         <Route path="/vet/health/vet-diagnosis/:id" element={<VetDiagnosisDetail />} />
-        <Route path="/vet/reports/farm-report"       element={<FarmReport />} />
       </Route>
 
       {/* ── Trang không có quyền ─────────────────────────── */}

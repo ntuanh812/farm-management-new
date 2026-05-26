@@ -16,49 +16,39 @@ export default async function movementsRoute(app) {
 
       try {
 
-        const [rows] = await pool.query(`
+        let sql = `
           SELECT
             m.id,
-
             m.pig_id AS pigId,
-
             p.pig_code AS earTag,
-
             p.category,
-
             p.lifecycle_status AS lifecycleStatus,
-
             m.from_barn_id AS fromBarnId,
-
             m.to_barn_id AS toBarnId,
-
             b1.name AS fromBarnName,
-
             b2.name AS toBarnName,
-
             m.move_date AS movedAt,
-
             m.staff_name AS staffName,
-
             m.note,
-
             m.created_at AS createdAt
-
           FROM pig_movements m
-
           LEFT JOIN pigs p
           ON p.id = m.pig_id
-
           LEFT JOIN barns b1
           ON b1.id = m.from_barn_id
-
           LEFT JOIN barns b2
           ON b2.id = m.to_barn_id
+        `;
+        const params = [];
 
-          ORDER BY
-            m.move_date DESC,
-            m.id DESC
-        `);
+        if (request.user.role === 'FARM_WORKER') {
+          sql += ' WHERE m.from_barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?) OR m.to_barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
+          params.push(request.user.employee_id, request.user.employee_id);
+        }
+
+        sql += ' ORDER BY m.move_date DESC, m.id DESC';
+
+        const [rows] = await pool.query(sql, params);
 
         return reply.send({
           success: true,

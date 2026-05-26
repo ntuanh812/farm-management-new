@@ -81,7 +81,6 @@ const EMPLOYEE_MENU = [
       { key: '/employee/reports/pig-report', label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
     ],
   },
-  { key: '/employee/reports/farm-report', label: '📊 Báo cáo thống kê', icon: <BarChartOutlined /> },
 ]
 
 // ── Menu VET_DOCTOR ───────────────────────────────────────
@@ -102,7 +101,6 @@ const VET_MENU = [
       { key: '/vet/reports/review',       label: 'Phản hồi báo cáo', icon: <FileImageOutlined /> },
     ],
   },
-  { key: '/vet/reports/farm-report', label: '📊 Báo cáo thống kê', icon: <BarChartOutlined /> },
 ]
 
 // Chọn menu theo role

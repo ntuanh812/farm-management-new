@@ -16,53 +16,43 @@ export default async function pigsRoute(app) {
 
       try {
 
-        const [rows] = await pool.query(`
+        let sql = `
           SELECT
             p.id,
-
             p.pig_code AS earTag,
-
             p.name,
-
             p.barn_id AS barnId,
-
             b.name AS barnName,
-
             p.category,
-
             p.lifecycle_status AS lifecycleStatus,
-
             p.breed,
-
             p.gender,
-
             p.dob,
-
             p.entry_date AS arrivedAt,
-
             p.entry_weight,
-
             p.current_weight AS weightKg,
-
             p.note,
-
             p.created_at,
-
             p.updated_at,
-
             TIMESTAMPDIFF(
               DAY,
               p.dob,
               CURDATE()
             ) AS ageDays
-
           FROM pigs p
-
           LEFT JOIN barns b
           ON b.id = p.barn_id
+        `;
+        const params = [];
 
-          ORDER BY p.created_at DESC
-        `);
+        if (request.user.role === 'FARM_WORKER') {
+          sql += ' WHERE p.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
+          params.push(request.user.employee_id);
+        }
+        
+        sql += ' ORDER BY p.created_at DESC';
+
+        const [rows] = await pool.query(sql, params);
 
         return reply.send({
           success: true,

@@ -20,6 +20,11 @@ export default async function vetDiagnosisRoute(app) {
     if (pig_id)    { sql += ' AND vd.pig_id LIKE ?';           params.push(`%${pig_id}%`) }
     if (from_date) { sql += ' AND vd.diagnosis_date >= ?';     params.push(from_date) }
     if (to_date)   { sql += ' AND vd.diagnosis_date <= ?';     params.push(to_date) }
+    
+    if (request.user.role === 'FARM_WORKER') {
+      sql += ' AND vd.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
+      params.push(request.user.employee_id);
+    }
 
     sql += ' ORDER BY vd.diagnosis_date DESC'
     const [rows] = await pool.query(sql, params)
