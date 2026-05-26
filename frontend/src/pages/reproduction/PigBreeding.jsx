@@ -123,11 +123,11 @@ export default function PigBreeding() {
       key: 'status',
       render: (status, record) => {
         const daysSinceBreeding = dayjs().diff(dayjs(record.breeding_date), 'day');
-        const isEditable = canEdit && daysSinceBreeding >= 18 && status !== 'FARROWED';
+        const isEditable = canEdit && daysSinceBreeding >= 18 && status === 'PENDING';
 
         if (!isEditable) {
           const cfg = STATUS_CONFIG[status] || { text: status, color: 'default' };
-          const tooltip = canEdit && daysSinceBreeding < 18 
+          const tooltip = (canEdit && status === 'PENDING' && daysSinceBreeding < 18)
             ? `Cần chờ thêm ${18 - daysSinceBreeding} ngày nữa mới được cập nhật kết quả` 
             : '';
           return <Tag color={cfg.color} title={tooltip}>{cfg.text}</Tag>;
@@ -247,7 +247,10 @@ export default function PigBreeding() {
       <Modal 
         title="Ghi nhận lượt phối giống" 
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => {
+          setOpen(false);
+          form.resetFields();
+        }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"

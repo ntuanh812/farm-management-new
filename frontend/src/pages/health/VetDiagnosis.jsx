@@ -285,7 +285,10 @@ export default function VetDiagnosis() {
       <Modal
         title={editingId ? 'Cập nhật phiếu chẩn đoán' : 'Lập phiếu chẩn đoán mới'}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => {
+          setIsModalOpen(false);
+          form.resetFields();
+        }}
         onOk={() => form.submit()}
         width={850}
         okText="Lưu hồ sơ"
@@ -318,7 +321,12 @@ export default function VetDiagnosis() {
                   const minDate = pig?.arrivedAt;
                   return (
                     <Form.Item name="diagnosis_date" label="Ngày khám" rules={[{ required: true, message: 'Chọn ngày khám' }]}>
-                      <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && minDate && current < dayjs(minDate).startOf('day')} />
+                      <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => {
+                        if (!current) return false;
+                        const isFuture = current > dayjs().endOf('day');
+                        const isBeforeMin = minDate && current < dayjs(minDate).startOf('day');
+                        return isFuture || isBeforeMin;
+                      }} />
                     </Form.Item>
                   );
                 }}

@@ -14,6 +14,7 @@ export default function PigFarrowing() {
 
   const [farrowings, setFarrowings] = useState([]);
   const [pigs, setPigs] = useState([]);
+  const [breedings, setBreedings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -24,12 +25,14 @@ export default function PigFarrowing() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [resFarrow, resPigs] = await Promise.all([
+      const [resFarrow, resPigs, resBreedings] = await Promise.all([
         axios.get(`${API}/farrowings`, { headers }),
         axios.get(`${API}/pigs`, { headers }),
+        axios.get(`${API}/breedings`, { headers }),
       ]);
       setFarrowings(resFarrow.data?.data || []);
       setPigs(resPigs.data?.data || []);
+      setBreedings(resBreedings.data?.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu đẻ con');
     } finally {
@@ -41,7 +44,17 @@ export default function PigFarrowing() {
     fetchData();
   }, []);
 
-  const activeSows = useMemo(() => pigs.filter(p => p.lifecycleStatus === 'ACTIVE' && p.category === 'SOW'), [pigs]);
+  // Lọc ra danh sách những lợn nái đang đậu thai (SUCCESS) và đã đến kỳ đẻ
+  const pregnantSows = useMemo(() => {
+    const pregnantSowIds = breedings.filter(b => {
+      if (b.status !== 'SUCCESS') return false;
+      if (!b.expected_farrow_date) return false;
+      // Chỉ hiện những con đã đến kỳ đẻ (Hôm nay >= Ngày dự sinh - 7 ngày)
+      const daysDiff = dayjs().startOf('day').diff(dayjs(b.expected_farrow_date).startOf('day'), 'day');
+      return daysDiff >= -7;
+    }).map(b => b.sow_id);
+    return pigs.filter(p => p.lifecycleStatus === 'ACTIVE' && p.category === 'SOW' && pregnantSowIds.includes(p.id));
+  }, [pigs, breedings]);
 
   const handleDelete = async (id) => {
     try {
@@ -58,12 +71,12 @@ export default function PigFarrowing() {
       const values = await form.validateFields();
       const payload = {
         ...values,
-        farrow_date: dayjs().format('YYYY-MM-DD'),
+        farrow_date: values.farrow_date.format('YYYY-MM-DD'),
         staff_name: user?.full_name || user?.username || 'Hệ thống',
       };
 
-      await axios.post(`${API}/farrowings`, payload, { headers });
-      message.success('Ghi nhận đẻ con thành công');
+      const { data } = await axios.post(`${API}/farrowings`, payload, { headers });
+      message.success(data.message || 'Ghi nhận đẻ con thành công');
       setOpen(false);
       form.resetFields();
       fetchData();
@@ -177,28 +190,81 @@ export default function PigFarrowing() {
       <Modal 
         title="Ghi nhận nái đẻ" 
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => {
+          setOpen(false);
+          form.resetFields();
+        }}
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"
         footer={canEdit ? undefined : null}
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
-          <Form.Item name="sow_id" label="Lợn nái mẹ" rules={[{ required: true, message: 'Chọn nái' }]}>
-            <Select showSearch placeholder="Chọn lợn nái">
-              {activeSows.map(p => <Select.Option key={p.id} value={p.id}>{p.earTag}</Select.Option>)}
+          <Form.Item name="sow_id" label="Lợn nái mẹ (Đã đến kỳ đẻ)" rules={[{ required: true, message: 'Chọn nái' }]}>
+            <Select showSearch placeholder="Chỉ hiện nái đến kỳ đẻ (>= Ngày dự sinh - 7 ngày)">
+              {pregnantSows.map(p => <Select.Option key={p.id} value={p.id}>{p.earTag}</Select.Option>)}
             </Select>
           </Form.Item>
 
-          <div style={{ background: '#f6ffed', padding: '12px 16px', borderRadius: 8, border: '1px solid #b7eb8f', marginBottom: 16 }}>
-            <div style={{ color: '#389e0d', fontWeight: 500 }}>📅 Ngày ghi nhận đẻ: Hôm nay ({dayjs().format('DD/MM/YYYY')})</div>
-          </div>
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.sow_id !== curr.sow_id}>
+            {({ getFieldValue }) => {
+              const sId = getFieldValue('sow_id');
+              // Tìm phiếu phối giống Đậu thai của con nái này để lấy ngày dự sinh
+              const breeding = breedings.find(b => b.sow_id === sId && b.status === 'SUCCESS');
+              const minDate = breeding?.expected_farrow_date;
+              return (
+                <>
+                  <Form.Item name="farrow_date" label="Ngày đẻ" rules={[{ required: true, message: 'Chọn ngày đẻ' }]} style={minDate ? { marginBottom: 4 } : {}}>
+                    <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => {
+                      if (!current) return false;
+                      const isFuture = current > dayjs().endOf('day');
+                      const isBeforeMin = minDate && current < dayjs(minDate).subtract(7, 'day').startOf('day');
+                      return isFuture || isBeforeMin;
+                    }} placeholder="Chọn ngày đẻ..." />
+                  </Form.Item>
+                </>
+              );
+            }}
+          </Form.Item>
 
           <Row gutter={16}>
             <Col span={8}><Form.Item name="alive_piglets" label="Số con sống" rules={[{ required: true }]}><InputNumber min={0} className="w-100" /></Form.Item></Col>
             <Col span={8}><Form.Item name="dead_piglets" label="Số chết/tật" initialValue={0}><InputNumber min={0} className="w-100" /></Form.Item></Col>
             <Col span={8}><Form.Item name="total_weight" label="Tổng Kg (ổ)"><InputNumber min={0} step={0.1} className="w-100" /></Form.Item></Col>
           </Row>
+
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.alive_piglets !== curr.alive_piglets}>
+            {({ getFieldValue }) => getFieldValue('alive_piglets') > 0 && (
+              <Form.Item
+                name="piglet_barn_id"
+                label="Chuyển lợn con sang chuồng"
+                rules={[{ required: true, message: 'Vui lòng chọn chuồng cho lợn con' }]}
+              >
+                <Select showSearch placeholder="Chọn chuồng cho đàn con...">
+                  {barns.map(b => <Select.Option key={b.id} value={b.id}>{b.name} ({b.code})</Select.Option>)}
+                </Select>
+              </Form.Item>
+            )}
+          </Form.Item>
+
+          <Form.Item shouldUpdate noStyle>
+            {() => {
+              const alive = form.getFieldValue('alive_piglets') || 0;
+              const dead = form.getFieldValue('dead_piglets') || 0;
+              const weight = form.getFieldValue('total_weight') || 0;
+              const totalPigs = alive + dead;
+              
+              if (totalPigs > 0 && weight > 0) {
+                const avg = (weight / totalPigs).toFixed(2);
+                return (
+                  <div style={{ marginBottom: 16, color: '#1890ff', fontWeight: 500 }}>
+                    💡 Trọng lượng sơ sinh trung bình: {avg} kg/con
+                  </div>
+                );
+              }
+              return null;
+            }}
+          </Form.Item>
 
           <Form.Item name="note" label="Ghi chú">
             <Input.TextArea rows={2} placeholder="Sức khỏe nái mẹ, vấn đề phát sinh..." />
