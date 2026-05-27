@@ -23,7 +23,7 @@ export const farrowingsController = {
     }
   },
   create: async (request, reply) => {
-    const { sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name, note } = request.body;
+    const { sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name, note, piglet_barn_id } = request.body;
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -36,10 +36,10 @@ export const farrowingsController = {
       const farrowingId = farrowingResult.insertId;
 
       if (alive_piglets > 0) {
-        // Lấy thông tin lợn mẹ để cập nhật lợn con vào cùng chuồng
+        // Lấy thông tin lợn mẹ
         const [sowData] = await connection.query('SELECT barn_id, pig_code FROM pigs WHERE id = ?', [sow_id]);
         if (sowData.length > 0) {
-          const barn_id = sowData[0].barn_id;
+          const barn_id = piglet_barn_id || sowData[0].barn_id;
           const sow_code = sowData[0].pig_code;
           const avg_weight = total_weight > 0 ? (total_weight / alive_piglets).toFixed(2) : 0;
           
