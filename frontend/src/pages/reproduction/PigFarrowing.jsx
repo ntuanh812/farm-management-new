@@ -61,12 +61,21 @@ export default function PigFarrowing() {
       }
     });
 
-    // 3. Lọc thời gian dự sinh <= 14 ngày (nới lỏng thời gian để không bị ẩn lợn)
+    // 3. Loại bỏ nái đã đẻ (kiểm tra xem có bản ghi đẻ nào diễn ra sau ngày phối này không)
     const validBreedings = Array.from(latestSuccess.values()).filter(b => {
+      const hasFarrowed = farrowings.some(f => 
+        f.sow_id === b.sow_id && 
+        dayjs(f.farrow_date).isAfter(dayjs(b.breeding_date))
+      );
+      
+      if (hasFarrowed) return false;
+
+      // 4. Lọc thời gian dự sinh <= 14 ngày (nới lỏng thời gian để không bị ẩn lợn)
       if (!b.expected_farrow_date) return false;
       const daysToFarrow = dayjs(b.expected_farrow_date).diff(dayjs().startOf('day'), 'day');
       return daysToFarrow <= 14;
     });
+
     return validBreedings.map(b => {
       const pig = pigs.find(p => p.id === b.sow_id);
       return {
@@ -75,7 +84,7 @@ export default function PigFarrowing() {
         expected_farrow_date: b.expected_farrow_date
       };
     }).filter(s => s.earTag || s.id);
-  }, [breedings, pigs]);
+  }, [breedings, pigs, farrowings]);
 
   const handleDelete = async (id) => {
     try {

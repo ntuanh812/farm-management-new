@@ -1,3 +1,7 @@
+// =========================================================
+// backend/src/app.js
+// =========================================================
+
 import "dotenv/config";
 
 import Fastify from "fastify";
@@ -55,6 +59,16 @@ const app = Fastify({
 });
 
 // =========================================================
+// UPLOAD PATH
+// =========================================================
+const UPLOAD_DIR = path.resolve(
+  __dirname,
+  "../uploads"
+);
+
+console.log("UPLOAD_DIR:", UPLOAD_DIR);
+
+// =========================================================
 // PLUGINS
 // =========================================================
 
@@ -78,12 +92,7 @@ await app.register(multipart, {
 
 // STATIC FILES
 await app.register(staticFiles, {
-  root: path.join(
-    __dirname,
-    "..",
-    "uploads"
-  ),
-
+  root: UPLOAD_DIR,
   prefix: "/uploads/",
 });
 
@@ -92,160 +101,105 @@ await app.register(staticFiles, {
 // =========================================================
 
 // AUTH
-app.register(
-  authRoute,
-  {
-    prefix: "/api/auth",
-  }
-);
+app.register(authRoute, {
+  prefix: "/api/auth",
+});
 
-app.register(
-  staffRoute,
-  {
-    prefix: "/api/staff",
-  }
-);
+// STAFF
+app.register(staffRoute, {
+  prefix: "/api/staff",
+});
 
 // VET
-app.register(
-  vetDiagnosisRoute,
-  {
-    prefix:
-      "/api/vet-diagnosis",
-  }
-);
+app.register(vetDiagnosisRoute, {
+  prefix: "/api/vet-diagnosis",
+});
 
 // REPORTS
-app.register(
-  pigReportsRoute,
-  {
-    prefix:
-      "/api/pig-reports",
-  }
-);
+app.register(pigReportsRoute, {
+  prefix: "/api/pig-reports",
+});
 
 // BARNS
-app.register(
-  barnsRoute,
-  {
-    prefix: "/api/barns",
-  }
-);
+app.register(barnsRoute, {
+  prefix: "/api/barns",
+});
 
 // PIGS
-app.register(
-  pigsRoute,
-  {
-    prefix: "/api/pigs",
-  }
-);
+app.register(pigsRoute, {
+  prefix: "/api/pigs",
+});
 
+// MOVEMENTS
 app.register(movementsRoute, {
   prefix: "/api/movements",
 });
 
 // SALE BATCHES
-app.register(
-  saleBatchesRoute,
-  {
-    prefix: "/api/sale-batches",
-  }
-);
+app.register(saleBatchesRoute, {
+  prefix: "/api/sale-batches",
+});
 
 // FEED USAGES
-app.register(
-  feedUsagesRoute,
-  {
-    prefix: "/api/feed-usages",
-  }
-);
+app.register(feedUsagesRoute, {
+  prefix: "/api/feed-usages",
+});
 
 // MEDICINE USAGES
-app.register(
-  medicineUsagesRoute,
-  {
-    prefix: "/api/medicine-usages",
-  }
-);
+app.register(medicineUsagesRoute, {
+  prefix: "/api/medicine-usages",
+});
 
 // DEATHS
-app.register(
-  deathsRoute,
-  {
-    prefix: "/api/deaths",
-  }
-);
+app.register(deathsRoute, {
+  prefix: "/api/deaths",
+});
 
 // BREEDINGS
-app.register(
-  breedingsRoute,
-  {
-    prefix: "/api/breedings",
-  }
-);
+app.register(breedingsRoute, {
+  prefix: "/api/breedings",
+});
 
 // FARROWINGS
-app.register(
-  farrowingsRoute,
-  {
-    prefix: "/api/farrowings",
-  }
-);
+app.register(farrowingsRoute, {
+  prefix: "/api/farrowings",
+});
 
 // REPORTS
-app.register(
-  reportsRoute,
-  {
-    prefix: "/api/reports",
-  }
-);
+app.register(reportsRoute, {
+  prefix: "/api/reports",
+});
 
 // VACCINATIONS
-app.register(
-  vaccinationsRoute,
-  {
-    prefix: "/api/vaccinations",
-  }
-);
+app.register(vaccinationsRoute, {
+  prefix: "/api/vaccinations",
+});
 
 // =========================================================
 // HEALTH CHECK
 // =========================================================
-app.get(
-  "/api/health",
-
-  async () => {
-
-    return {
-      status: "ok",
-      server: "FarmPro Pig",
-    };
-  }
-);
+app.get("/api/health", async () => {
+  return {
+    status: "ok",
+    server: "FarmPro Pig",
+  };
+});
 
 // =========================================================
 // 404
 // =========================================================
-app.setNotFoundHandler(
-  (request, reply) => {
-
-    return reply.status(404).send({
-      success: false,
-      message:
-        "API route not found",
-    });
-  }
-);
+app.setNotFoundHandler((request, reply) => {
+  return reply.status(404).send({
+    success: false,
+    message: "API route not found",
+  });
+});
 
 // =========================================================
 // ERROR HANDLER
 // =========================================================
 app.setErrorHandler(
-  (
-    error,
-    request,
-    reply
-  ) => {
+  (error, request, reply) => {
 
     console.error(error);
 

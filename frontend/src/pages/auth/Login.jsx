@@ -23,22 +23,16 @@ export const Login = () => {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #2d5a27 0%, #4a7c43 100%)',
-    }}>
-      <Card style={{ width: 380, borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+    <div className="auth-container">
+      <Card className="auth-card">
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>🐷</div>
-          <h2 style={{ margin: 0, color: '#2d5a27', fontSize: 22, fontWeight: 700 }}>FarmPro PIG</h2>
-          <p style={{ margin: '4px 0 0', color: '#888', fontSize: 13 }}>Hệ thống quản lý trại lợn</p>
+        <div className="auth-header">
+          <div className="auth-logo">🐷</div>
+          <h2 className="auth-title">FarmPro PIG</h2>
+          <p className="auth-subtitle">Hệ thống quản lý trại lợn</p>
         </div>
 
-        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+        {error && <Alert message={error} type="error" showIcon className="auth-alert" />}
 
         <Form form={form} layout="vertical" onFinish={handleSubmit} size="large">
           <Form.Item
@@ -62,16 +56,9 @@ export const Login = () => {
             htmlType="submit"
             loading={loading}
             block
-            style={{ background: '#2d5a27', borderColor: '#2d5a27', height: 44 }}
           >
             Đăng nhập
           </Button>
-
-          <div style={{ textAlign: 'center', marginTop: 12 }}>
-            <Link to="/forgot-password" style={{ color: '#4a7c43', fontSize: 13 }}>
-              Quên mật khẩu?
-            </Link>
-          </div>
         </Form>
       </Card>
     </div>

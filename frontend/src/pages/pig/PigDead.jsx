@@ -209,7 +209,7 @@ export default function PigDead() {
               const minDate = pig?.arrivedAt;
               return (
                 <Form.Item name="death_date" label="Ngày chết" rules={[{ required: true, message: 'Chọn ngày' }]}>
-                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && minDate && current < dayjs(minDate).startOf('day')} />
+                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && ((minDate && current < dayjs(minDate).startOf('day')) || current > dayjs().endOf('day'))} />
                 </Form.Item>
               );
             }}

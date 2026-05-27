@@ -135,7 +135,6 @@ export default function PigManage() {
       barn_id: record.barnId || record.barn_id,
       category: record.category,
       lifecycle_status: record.lifecycleStatus || record.lifecycle_status,
-      breed: record.breed,
       gender: record.gender,
       dob: record.dob ? dayjs(record.dob) : null,
       entry_date: (record.arrivedAt || record.entry_date) ? dayjs(record.arrivedAt || record.entry_date) : null,
@@ -345,36 +344,29 @@ export default function PigManage() {
       </Row>
 
       <Card className="table-card">
-        <Space wrap style={{ marginBottom: 16 }}>
-          <Input.Search
-            placeholder="Tìm theo số tai..."
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 220 }}
-          />
-          <Select
-            placeholder="Lọc theo chuồng"
-            allowClear
-            options={barns.map(b => ({ label: b.name, value: b.id }))}
-            onChange={setFilterBarn}
-            style={{ width: 180 }}
-          />
-          <Select
-            placeholder="Loại lợn"
-            allowClear
-            options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))}
-            onChange={setFilterCategory}
-            style={{ width: 160 }}
-          />
-          <Select
-            placeholder="Trạng thái"
-            allowClear
-            options={Object.entries(STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))}
-            onChange={setFilterStatus}
-            style={{ width: 160 }}
-          />
-        </Space>
+        <Form 
+          layout="inline" 
+          style={{ marginBottom: 16 }}
+          onValuesChange={(_, values) => {
+            setSearchText(values.search);
+            setFilterBarn(values.barn);
+            setFilterCategory(values.category);
+            setFilterStatus(values.status);
+          }}
+        >
+          <Form.Item name="search">
+            <Input.Search placeholder="Tìm theo số tai..." allowClear style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item name="barn">
+            <Select placeholder="Lọc theo chuồng" allowClear options={barns.map(b => ({ label: b.name, value: b.id }))} style={{ width: 180 }} />
+          </Form.Item>
+          <Form.Item name="category">
+            <Select placeholder="Loại lợn" allowClear options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))} style={{ width: 160 }} />
+          </Form.Item>
+          <Form.Item name="status">
+            <Select placeholder="Trạng thái" allowClear options={Object.entries(STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))} style={{ width: 160 }} />
+          </Form.Item>
+        </Form>
         <Table
           columns={columns}
           dataSource={filteredPigs}
@@ -397,7 +389,27 @@ export default function PigManage() {
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Row gutter={16}>
-            <Col span={8}><Form.Item name="pig_code" label="Mã lợn / Số tai" rules={[{ required: true, message: 'Nhập mã' }]}><Input placeholder="VD: P001" /></Form.Item></Col>
+            <Col span={8}>
+              <Form.Item 
+                name="pig_code" 
+                label="Mã lợn / Số tai" 
+                rules={[
+                  { required: true, message: 'Nhập mã' },
+                  () => ({
+                    validator(_, value) {
+                      if (!value) return Promise.resolve();
+                      const exists = pigs.find(p => (p.earTag || p.pig_code || p.pigCode) === value);
+                      if (exists && exists.id !== editingId) {
+                        return Promise.reject(new Error('Mã này đã tồn tại!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
+                <Input placeholder="VD: P001" />
+              </Form.Item>
+            </Col>
             <Col span={8}><Form.Item name="name" label="Tên gọi (nếu có)"><Input placeholder="VD: Nái Mẹ 1" /></Form.Item></Col>
             <Col span={8}>
               <Form.Item name="barn_id" label="Chuồng trại" rules={[{ required: true, message: 'Chọn chuồng' }]}>
@@ -407,13 +419,12 @@ export default function PigManage() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item name="category" label="Phân loại" rules={[{ required: true, message: 'Chọn loại' }]}>
                 <Select options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))} />
               </Form.Item>
             </Col>
-            <Col span={8}><Form.Item name="breed" label="Giống lợn"><Input placeholder="VD: Duroc, Landrace" /></Form.Item></Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item name="gender" label="Giới tính" rules={[{ required: true }]}>
                 <Select disabled={!!editingId} options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
               </Form.Item>
@@ -421,8 +432,8 @@ export default function PigManage() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}><Form.Item name="dob" label="Ngày sinh"><DatePicker className="w-100" format="DD/MM/YYYY" /></Form.Item></Col>
-            <Col span={8}><Form.Item name="entry_date" label="Ngày nhập đàn" rules={[{ required: true }]}><DatePicker className="w-100" format="DD/MM/YYYY" /></Form.Item></Col>
+            <Col span={8}><Form.Item name="dob" label="Ngày sinh"><DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && current > dayjs().endOf('day')} /></Form.Item></Col>
+            <Col span={8}><Form.Item name="entry_date" label="Ngày nhập đàn" rules={[{ required: true }]}><DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && current > dayjs().endOf('day')} /></Form.Item></Col>
             {editingId && (
               <Col span={8}>
                 <Form.Item name="lifecycle_status" label="Trạng thái" tooltip="Trạng thái được tự động cập nhật qua các chức năng Xuất bán hoặc Lợn chết">

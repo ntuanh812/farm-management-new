@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Table, Button, Space, Tag, Modal, Form, Input, 
-  Select, DatePicker, Switch, message, Popconfirm, Card, Row, Col 
+  Select, DatePicker, Switch, message, Popconfirm, Card, Row, Col, Upload, Avatar 
 } from 'antd';
 import { 
   PlusOutlined, EditOutlined, LockOutlined,
-  UnlockOutlined, KeyOutlined, UserAddOutlined
+  UnlockOutlined, KeyOutlined, UserAddOutlined, UploadOutlined, UserOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -27,17 +27,15 @@ export default function StaffManagement() {
   // States
   const [staffData, setStaffData] = useState([]);
   const [barns, setBarns] = useState([]);
-  const [staffNoAccount, setStaffNoAccount] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Modal States
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
-  const [isAccModalOpen, setIsAccModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
+  const [fileList, setFileList] = useState([]);
 
   // Forms
   const [staffForm] = Form.useForm();
-  const [accForm] = Form.useForm();
 
   // Fetch Data
   const fetchData = async () => {
@@ -54,12 +52,6 @@ export default function StaffManagement() {
       if (resBarns.data.success) {
         setBarns(resBarns.data.data);
       }
-
-      // Lấy danh sách nhân sự chưa có tài khoản (cho form thêm tài khoản)
-      const resStaffNoAcc = await axios.get(`${API}/staff/no-account`, { headers });
-      if (resStaffNoAcc.data.success) {
-        setStaffNoAccount(resStaffNoAcc.data.data);
-      }
     } catch (error) {
       message.error('Không thể tải dữ liệu nhân sự');
     } finally {
@@ -72,37 +64,71 @@ export default function StaffManagement() {
   }, []);
 
   // Handlers
+
   const handleSaveStaff = async (values) => {
     try {
       // Format date
       if (values.dob) values.dob = values.dob.format('YYYY-MM-DD');
       
+      // Lấy URL của Avatar nếu có
+      let avatarUrl = null;
+      if (fileList.length > 0) {
+        const file = fileList[0];
+        if (file.originFileObj && !file.url) {
+          // Tiến hành Upload ảnh lên server KHI BẤM LƯU
+          const formData = new FormData();
+          formData.append('file', file.originFileObj);
+          const uploadRes = await axios.post(`${API}/staff/upload`, formData, {
+            headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+          });
+          avatarUrl = uploadRes.data.data;
+        } else if (file.url) {
+          avatarUrl = file.url.replace('http://localhost:3000', '');
+        }
+      }
+      values.avatar = avatarUrl || null;
+
+      let staffId = editingStaff?.id;
+
       if (editingStaff) {
         await axios.put(`${API}/staff/${editingStaff.id}`, values, { headers });
         message.success('Cập nhật nhân sự thành công!');
       } else {
-        await axios.post(`${API}/staff`, values, { headers });
+        const res = await axios.post(`${API}/staff`, values, { headers });
+        staffId = res.data.data?.id;
         message.success('Thêm nhân sự thành công!');
       }
+
+      // Tự động tạo tài khoản khi thêm mới (hoặc khi nhân sự chưa có tài khoản)
+      if (!editingStaff?.account_id && staffId && values.username && values.password) {
+        await axios.post(`${API}/staff/accounts`, {
+          staff_id: staffId,
+          username: values.username,
+          password: values.password
+        }, { headers });
+        message.success('Tạo tài khoản đăng nhập thành công!');
+      }
+
       setIsStaffModalOpen(false);
       setEditingStaff(null);
       staffForm.resetFields();
+      setFileList([]);
       fetchData();
     } catch (error) {
       message.error(error.response?.data?.message || 'Lỗi khi lưu nhân sự');
     }
   };
 
-  const handleAddAccount = async (values) => {
-    try {
-      await axios.post(`${API}/staff/accounts`, values, { headers });
-      message.success('Tạo tài khoản thành công!');
-      setIsAccModalOpen(false);
-      accForm.resetFields();
-      fetchData();
-    } catch (error) {
-      message.error(error.response?.data?.message || 'Lỗi khi tạo tài khoản');
-    }
+  const handleCancelModal = async () => {
+    // Thu hồi URL tạm thời để tránh memory leak
+    fileList.forEach(file => {
+      if (file.thumbUrl) URL.revokeObjectURL(file.thumbUrl);
+    });
+
+    setIsStaffModalOpen(false);
+    setEditingStaff(null);
+    staffForm.resetFields();
+    setFileList([]);
   };
 
   const handleToggleAccount = async (accountId, currentStatus) => {
@@ -128,6 +154,7 @@ export default function StaffManagement() {
 
   const handleEdit = (record) => {
     setEditingStaff(record);
+    setFileList(record.avatar ? [{ uid: '-1', name: 'avatar.png', status: 'done', url: `http://localhost:3000${record.avatar}` }] : []);
     staffForm.setFieldsValue({
       ...record,
       dob: record.dob ? dayjs(record.dob) : null,
@@ -145,16 +172,20 @@ export default function StaffManagement() {
       render: (text, record, index) => index + 1,
     },
     {
-      title: 'Họ tên',
-      dataIndex: 'full_name',
-      key: 'full_name',
-      render: (text) => <strong>{text}</strong>,
+      title: 'Nhân sự',
+      key: 'staff_info',
+      render: (_, record) => (
+        <Space>
+          <Avatar src={record.avatar ? `http://localhost:3000${record.avatar}` : null} icon={!record.avatar && <UserOutlined />} />
+          <strong>{record.full_name}</strong>
+        </Space>
+      ),
     },
     {
       title: 'Username',
       dataIndex: 'username',
       key: 'username',
-      render: (text) => text ? <span style={{ fontWeight: 500, color: '#1890ff' }}>@{text}</span> : <span className="text-muted">Chưa có</span>,
+      render: (text) => text ? <span className="staff-management__username-highlight">@{text}</span> : <span className="text-muted">Chưa có</span>,
     },
     {
       title: 'Liên hệ',
@@ -178,15 +209,20 @@ export default function StaffManagement() {
     {
       title: 'Chuồng quản lý',
       key: 'assigned_barns',
-      render: (_, record) => (
-        <Space size={[0, 4]} wrap>
-          {record.barns && record.barns.length > 0 ? (
-            record.barns.map(barn => <Tag key={barn.id} color="blue">{barn.name}</Tag>)
-          ) : (
-            <span className="text-gray">Không phân công</span>
-          )}
-        </Space>
-      ),
+      render: (_, record) => {
+        if (record.role_code === 'ADMIN' || record.role_code === 'VET_DOCTOR') {
+          return <span className="text-muted staff-management__dash">-</span>;
+        }
+        return (
+          <Space size={[0, 4]} wrap>
+            {record.barns && record.barns.length > 0 ? (
+              record.barns.map(barn => <Tag key={barn.id} color="blue">{barn.name}</Tag>)
+            ) : (
+              <span className="text-gray">Không phân công</span>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: 'Trạng thái',
@@ -245,16 +281,11 @@ export default function StaffManagement() {
               onClick={() => {
                 setEditingStaff(null);
                 staffForm.resetFields();
+                setFileList([]);
                 setIsStaffModalOpen(true);
               }}
             >
               Thêm nhân sự
-            </Button>
-            <Button 
-              icon={<PlusOutlined />} 
-              onClick={() => setIsAccModalOpen(true)}
-            >
-              Thêm tài khoản
             </Button>
           </Space>
         }
@@ -274,13 +305,53 @@ export default function StaffManagement() {
       <Modal
         title={editingStaff ? "Cập nhật nhân sự" : "Thêm nhân sự mới"}
         open={isStaffModalOpen}
-        onCancel={() => { setIsStaffModalOpen(false); setEditingStaff(null); staffForm.resetFields(); }}
+        onCancel={handleCancelModal}
         onOk={() => staffForm.submit()}
         width={800}
         okText="Lưu thông tin"
         cancelText="Hủy"
       >
         <Form form={staffForm} layout="vertical" onFinish={handleSaveStaff}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24, padding: 20, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+          <Avatar 
+            size={80} 
+            src={fileList.length > 0 ? (fileList[0].url || fileList[0].thumbUrl) : null}
+            icon={fileList.length === 0 && <UserOutlined />}
+          />
+          <Space direction="vertical">
+            <Upload
+              beforeUpload={() => false} // Chặn tự động tải lên server
+              showUploadList={false}
+              maxCount={1}
+              onChange={({ file, fileList: newFileList }) => {
+                // Ép buộc hệ thống CHỈ giữ lại 1 file mới nhất vừa được chọn
+                const latestList = [...newFileList].slice(-1);
+
+                const updatedList = latestList.map(f => {
+                  if (f.originFileObj && !f.thumbUrl) {
+                    f.thumbUrl = URL.createObjectURL(f.originFileObj);
+                  }
+                  return f;
+                });
+                setFileList(updatedList);
+              }}
+              accept="image/*"
+            >
+              <Button icon={<UploadOutlined />}>Đổi ảnh đại diện</Button>
+            </Upload>
+            <Button 
+              danger 
+              icon={<DeleteOutlined />} 
+              disabled={fileList.length === 0}
+              onClick={() => {
+                setFileList([]); // Làm rỗng state để gửi null xuống DB
+              }}
+            >
+              Xóa ảnh
+            </Button>
+          </Space>
+        </div>
+
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="full_name" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
@@ -300,12 +371,44 @@ export default function StaffManagement() {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập SĐT' }]}>
+              <Form.Item 
+                name="phone" 
+                label="Số điện thoại" 
+                rules={[
+                  { required: true, message: 'Vui lòng nhập SĐT' },
+                  () => ({
+                    validator(_, value) {
+                      if (!value) return Promise.resolve();
+                      const exists = staffData.find(s => s.phone === value);
+                      if (exists && exists.id !== editingStaff?.id) {
+                        return Promise.reject(new Error('Số điện thoại này đã được sử dụng!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
                 <Input placeholder="Nhập số điện thoại..." />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Email không hợp lệ' }]}>
+              <Form.Item 
+                name="email" 
+                label="Email" 
+                rules={[
+                  { type: 'email', message: 'Email không hợp lệ' },
+                  () => ({
+                    validator(_, value) {
+                      if (!value) return Promise.resolve();
+                      const exists = staffData.find(s => s.email === value);
+                      if (exists && exists.id !== editingStaff?.id) {
+                        return Promise.reject(new Error('Email này đã được sử dụng!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
                 <Input placeholder="Nhập email..." />
               </Form.Item>
             </Col>
@@ -328,78 +431,81 @@ export default function StaffManagement() {
             </Col>
           </Row>
 
-          <Form.Item name="barn_ids" label="Phân công chuồng (Dành cho NV/Bác sỹ)">
-            <Select 
-              mode="multiple" 
-              placeholder="Chọn các chuồng được phép quản lý"
-              options={barns.map(b => ({ label: b.name, value: b.id }))}
-            />
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.role_id !== curr.role_id}>
+            {({ getFieldValue }) => {
+              const roleId = getFieldValue('role_id');
+              if (roleId === 1 || roleId === 3) return null; // Ẩn nếu là Admin hoặc Bác sĩ thú y
+              return (
+                <Form.Item name="barn_ids" label="Phân công chuồng (Dành cho Nhân viên chăn nuôi)">
+                  <Select 
+                    mode="multiple" 
+                    placeholder="Chọn các chuồng được phép quản lý"
+                    options={barns.map(b => ({ label: b.name, value: b.id }))}
+                  />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
 
           <Form.Item name="address" label="Địa chỉ">
             <Input.TextArea rows={2} placeholder="Nhập địa chỉ cư trú..." />
           </Form.Item>
-        </Form>
-      </Modal>
 
-      {/* MODAL THÊM TÀI KHOẢN MỚI */}
-      <Modal
-        title="Tạo tài khoản đăng nhập"
-        open={isAccModalOpen}
-        onCancel={() => { setIsAccModalOpen(false); accForm.resetFields(); }}
-        onOk={() => accForm.submit()}
-        width={600}
-        okText="Tạo tài khoản"
-        cancelText="Hủy"
-      >
-        <Form form={accForm} layout="vertical" onFinish={handleAddAccount}>
-          <Form.Item 
-            name="staff_id" 
-            label="Chọn nhân sự liên kết" 
-            rules={[{ required: true, message: 'Vui lòng chọn nhân sự' }]}
-          >
-            <Select 
-              showSearch
-              placeholder="Chọn nhân sự chưa có tài khoản"
-              options={staffNoAccount.map(e => ({ label: `${e.full_name} (${e.role_name || 'Chưa phân quyền'})`, value: e.id }))}
-              filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-            />
-          </Form.Item>
-
-          <Form.Item 
-            name="username" 
-            label="Tên đăng nhập (Username)" 
-            rules={[{ required: true, message: 'Vui lòng nhập username' }]}
-          >
-            <Input placeholder="Ví dụ: nhanvien_01" />
-          </Form.Item>
-
-          <Form.Item 
-            name="password" 
-            label="Mật khẩu" 
-            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
-          >
-            <Input.Password placeholder="Nhập mật khẩu..." />
-          </Form.Item>
-
-          <Form.Item 
-            name="confirm_password" 
-            label="Xác nhận mật khẩu" 
-            dependencies={['password']}
-            rules={[
-              { required: true, message: 'Vui lòng xác nhận mật khẩu' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('password') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="Nhập lại mật khẩu..." />
-          </Form.Item>
+          {!editingStaff?.account_id && (
+            <div className="staff-management__account-box">
+              <div className="staff-management__account-title">Thông tin tài khoản đăng nhập</div>
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item 
+                    name="username" 
+                    label="Tên đăng nhập (Username)" 
+                    rules={[
+                      { required: true, message: 'Vui lòng nhập username' },
+                      () => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+                          const exists = staffData.find(s => s.username === value);
+                          if (exists) {
+                            return Promise.reject(new Error('Tên đăng nhập này đã tồn tại!'));
+                          }
+                          return Promise.resolve();
+                        }
+                      })
+                    ]}
+                  >
+                    <Input placeholder="Ví dụ: nhanvien_01" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="password" label="Mật khẩu" rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}>
+                    <Input.Password placeholder="Nhập mật khẩu..." />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item 
+                    name="confirm_password" 
+                    label="Xác nhận mật khẩu" 
+                    dependencies={['password']}
+                    rules={[
+                      { required: true, message: 'Vui lòng xác nhận mật khẩu' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue('password') === value) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password placeholder="Nhập lại mật khẩu..." />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+          )}
         </Form>
       </Modal>
     </div>

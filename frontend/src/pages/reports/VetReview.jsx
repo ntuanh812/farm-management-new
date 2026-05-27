@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Table, Button, Modal, Form, Select, Input,
-  Tag, Space, Image, Badge, message, Row, Col,
+  Tag, Space, Image, Badge, message, Divider, Descriptions, Card
 } from 'antd'
-import { CheckOutlined, EyeOutlined } from '@ant-design/icons'
+import { AuditOutlined, EditOutlined } from '@ant-design/icons'
 import axios from 'axios'
+import dayjs from 'dayjs'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 
@@ -22,8 +23,7 @@ export default function VetReview() {
   const [list, setList]           = useState([])
   const [loading, setLoading]     = useState(false)
   const [selected, setSelected]   = useState(null)  // báo cáo đang xem
-  const [openDetail, setOpenDetail] = useState(false)
-  const [openRespond, setOpenRespond] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState(null)
   const [form] = Form.useForm()
 
@@ -40,17 +40,11 @@ export default function VetReview() {
 
   useEffect(() => { fetchList() }, [fetchList])
 
-  // ── Xem chi tiết ─────────────────────────────────────────
-  const handleView = (rec) => {
-    setSelected(rec)
-    setOpenDetail(true)
-  }
-
-  // ── Mở form phản hồi ─────────────────────────────────────
-  const handleRespond = (rec) => {
+  // ── Mở Modal xử lý ─────────────────────────────────────
+  const handleProcess = (rec) => {
     setSelected(rec)
     form.setFieldsValue({ status: rec.status, vet_note: rec.vet_note || '' })
-    setOpenRespond(true)
+    setIsModalOpen(true)
   }
 
   // ── Submit phản hồi ──────────────────────────────────────
@@ -59,7 +53,7 @@ export default function VetReview() {
       const values = await form.validateFields()
       await axios.patch(`${API}/pig-reports/${selected.id}/respond`, values, { headers })
       message.success('Đã cập nhật phản hồi')
-      setOpenRespond(false)
+      setIsModalOpen(false)
       fetchList()
     } catch { message.error('Lỗi cập nhật') }
   }
@@ -68,45 +62,88 @@ export default function VetReview() {
   const pendingCount = list.filter(r => r.status === 'cho_xu_ly').length
 
   const columns = [
-    { title: 'Mã lợn',    dataIndex: 'pig_id',       width: 100 },
-    { title: 'Chuồng',    dataIndex: 'barn_name',     width: 110 },
-    { title: 'Người báo', dataIndex: 'reporter_name', width: 140 },
+    { title: 'Thời gian', dataIndex: 'created_at', width: 130, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
-      title: 'Triệu chứng', dataIndex: 'description', ellipsis: true,
+      title: 'Lợn & Chuồng',
+      key: 'pig_info',
+      width: 120,
+      render: (_, rec) => (
+        <div>
+          <div className="reports-page__pig-id">{rec.pig_id}</div>
+          <div className="reports-page__barn-name">{rec.barn_name}</div>
+        </div>
+      )
+    },
+    { title: 'Người báo', dataIndex: 'reporter_name', width: 130 },
+    {
+      title: 'Triệu chứng',
+      dataIndex: 'description',
+      key: 'description',
+      render: (text) => (
+        <div title={text} className="reports-page__symptoms-text">
+          {text}
+        </div>
+      )
     },
     {
-      title: 'Ảnh', dataIndex: 'images', width: 100,
-      render: imgs => (
+      title: 'Ảnh',
+      key: 'images',
+      width: 140,
+      render: (_, rec) => rec.images?.length > 0 ? (
         <Image.PreviewGroup>
           <Space size={4}>
-            {(imgs || []).slice(0, 2).map((url, i) => (
-              <Image key={i} width={36} height={36}
-                src={`http://localhost:3000${url}`}
-                style={{ objectFit: 'cover', borderRadius: 4 }} />
+            {rec.images.slice(0, 3).map((url, i) => (
+              <Image key={i} width={32} height={32} src={`http://localhost:3000${url}`} className="reports-page__img-thumb" />
             ))}
-            {imgs?.length > 2 && <span style={{ color: '#888', fontSize: 12 }}>+{imgs.length - 2}</span>}
-            {(!imgs || imgs.length === 0) && <span style={{ color: '#ccc', fontSize: 12 }}>—</span>}
+            {rec.images.length > 3 && <span className="reports-page__img-more">+{rec.images.length - 3}</span>}
           </Space>
         </Image.PreviewGroup>
-      ),
+      ) : (
+        <span className="reports-page__empty-text">—</span>
+      )
     },
     {
-      title: 'Trạng thái', dataIndex: 'status', width: 130,
+      title: 'Trạng thái', dataIndex: 'status', width: 110,
       render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v]}</Tag>,
     },
     {
-      title: 'Thao tác', key: 'action', width: 140,
-      render: (_, rec) => (
-        <Space>
-          <Button size="small" icon={<EyeOutlined />} onClick={() => handleView(rec)}>
-            Xem
+      title: 'Nội dung phản hồi', 
+      dataIndex: 'vet_note', 
+      key: 'vet_note',
+      render: (text) => text ? (
+        <div title={text} className="reports-page__vet-note" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+          "{text}"
+        </div>
+      ) : <span className="reports-page__empty-text">—</span>
+    },
+    {
+      title: 'Thao tác', key: 'action', width: 120, align: 'center',
+      render: (_, rec) => {
+        const isDone = rec.status === 'da_xu_ly';
+        return (
+          <Button 
+            size="small" 
+            icon={isDone ? <EditOutlined /> : <AuditOutlined />}
+            onClick={() => handleProcess(rec)}
+            style={isDone ? {
+              background: '#f8f9fa',
+              borderColor: '#e2e8f0',
+              color: '#64748b',
+              borderRadius: 6,
+              boxShadow: 'none'
+            } : {
+              background: '#ecfdf5',
+              borderColor: '#bbf7d0',
+              color: '#059669',
+              borderRadius: 6,
+              fontWeight: 600,
+              boxShadow: 'none'
+            }}
+          >
+            {isDone ? 'Xem lại' : 'Xử lý ngay'}
           </Button>
-          <Button size="small" type="primary" icon={<CheckOutlined />}
-            style={{ background: '#2d5a27' }} onClick={() => handleRespond(rec)}>
-            Phản hồi
-          </Button>
-        </Space>
-      ),
+        );
+      },
     },
   ]
 
@@ -116,115 +153,85 @@ export default function VetReview() {
         title={
           <Space>
             Báo cáo lợn bệnh
-            {pendingCount > 0 && <Badge count={pendingCount} style={{ background: '#c44536' }} />}
+            {pendingCount > 0 && <Badge count={pendingCount} color="#c44536" />}
           </Space>
         }
         subtitle="Xem ảnh và phản hồi báo cáo từ nhân viên"
       />
 
-      <div className="reports-page__body">
-        {/* Toolbar filter */}
-        <div className="reports-page__toolbar">
-          <Select placeholder="Lọc trạng thái" style={{ width: 180 }}
-            allowClear onChange={setFilterStatus}>
-            <Option value="cho_xu_ly">Chờ xử lý</Option>
-            <Option value="dang_xu_ly">Đang xử lý</Option>
-            <Option value="da_xu_ly">Đã xử lý</Option>
-          </Select>
-        </div>
-
-        <Table columns={columns} dataSource={list} rowKey="id"
-          loading={loading} size="small" scroll={{ x: 900 }}
-          pagination={{ pageSize: 10 }}
-          rowClassName={rec => rec.status === 'cho_xu_ly' ? 'row-urgent' : ''}
-        />
-
-      {/* Modal xem chi tiết ảnh + thông tin */}
-      <Modal
-        title={`Chi tiết báo cáo — Lợn ${selected?.pig_id}`}
-        open={openDetail}
-        onCancel={() => setOpenDetail(false)}
-        footer={[
-          <Button key="close" onClick={() => setOpenDetail(false)}>Đóng</Button>,
-          <Button key="respond" type="primary" style={{ background: '#2d5a27' }}
-            onClick={() => { setOpenDetail(false); handleRespond(selected) }}>
-            Phản hồi ngay
-          </Button>,
-        ]}
-        width={700}
-      >
-        {selected && (
-          <div className="report-detail">
-            <div className="report-detail__meta">
-              <div><strong>Mã lợn:</strong> {selected.pig_id}</div>
-              <div><strong>Chuồng:</strong> {selected.barn_name}</div>
-              <div>
-                <strong>Trạng thái:</strong>{' '}
-                <Tag color={STATUS_COLOR[selected.status]}>{STATUS_LABEL[selected.status]}</Tag>
-              </div>
-              <div><strong>Người báo cáo:</strong> {selected.reporter_name}</div>
-            </div>
-
-            <div style={{ marginBottom: 12 }}><strong>Triệu chứng mô tả:</strong></div>
-            <div className="report-detail__description">{selected.description}</div>
-
-            {/* Ảnh */}
-            <div style={{ marginTop: 16 }}>
-              <strong>📷 Ảnh chụp ({selected.images?.length || 0} ảnh):</strong>
-              <div className="report-detail__images">
-                {selected.images?.length > 0 ? (
-                  <Image.PreviewGroup>
-                    {selected.images.map((url, i) => (
-                      <Image key={i} width={150} height={150}
-                        src={`http://localhost:3000${url}`}
-                        style={{ objectFit: 'cover' }}
-                      />
-                    ))}
-                  </Image.PreviewGroup>
-                ) : (
-                  <span style={{ color: '#ccc' }}>Không có ảnh</span>
-                )}
-              </div>
-            </div>
-
-            {/* Phản hồi cũ */}
-            {selected.vet_note && (
-              <div style={{ marginTop: 16 }}>
-                <strong>💬 Phản hồi của bác sĩ:</strong>
-                <div className="report-detail__vet-note">{selected.vet_note}</div>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {/* Modal phản hồi */}
-      <Modal
-        title="✏️ Phản hồi báo cáo"
-        open={openRespond}
-        onCancel={() => setOpenRespond(false)}
-        onOk={handleSubmit}
-        okText="Lưu phản hồi"
-        okButtonProps={{ style: { background: '#2d5a27' } }}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item label="Cập nhật trạng thái" name="status"
-            rules={[{ required: true }]}>
-            <Select>
+      <Card className="table-card">
+        <Form layout="inline" style={{ marginBottom: 16 }} onValuesChange={(_, vals) => setFilterStatus(vals.status)}>
+          <Form.Item name="status">
+            <Select placeholder="Lọc trạng thái" style={{ width: 180 }} allowClear>
               <Option value="cho_xu_ly">Chờ xử lý</Option>
               <Option value="dang_xu_ly">Đang xử lý</Option>
               <Option value="da_xu_ly">Đã xử lý</Option>
             </Select>
           </Form.Item>
-
-          <Form.Item label="Ghi chú / hướng dẫn xử lý" name="vet_note"
-            rules={[{ required: true, message: 'Nhập phản hồi cho nhân viên' }]}>
-            <TextArea rows={4}
-              placeholder="VD: Cách ly ngay, theo dõi thân nhiệt mỗi 4 tiếng. Tôi sẽ đến kiểm tra lúc 2h chiều..." />
-          </Form.Item>
         </Form>
+
+        <Table columns={columns} dataSource={list} rowKey="id"
+          loading={loading} scroll={{ x: 1050 }}
+          pagination={{ pageSize: 10 }}
+          rowClassName={rec => rec.status === 'cho_xu_ly' ? 'row-urgent' : ''}
+        />
+      </Card>
+
+      <Modal
+        title={selected?.status === 'da_xu_ly' ? `Chi tiết báo cáo bệnh — Lợn ${selected?.pig_id}` : `Xử lý báo cáo bệnh — Lợn ${selected?.pig_id}`}
+        open={isModalOpen}
+        onCancel={() => setIsModalOpen(false)}
+        onOk={handleSubmit}
+        okText="Lưu phản hồi"
+        cancelText="Hủy"
+        width={700}
+        footer={selected?.status === 'da_xu_ly' ? [
+          <Button key="close" onClick={() => setIsModalOpen(false)}>Đóng</Button>
+        ] : undefined}
+      >
+        {selected && (
+          <div className="reports-page__modal-body">
+            <Descriptions bordered size="small" column={2}>
+              <Descriptions.Item label="Mã lợn"><b>{selected.pig_id}</b></Descriptions.Item>
+              <Descriptions.Item label="Chuồng">{selected.barn_name}</Descriptions.Item>
+              <Descriptions.Item label="Người báo">{selected.reporter_name}</Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag color={STATUS_COLOR[selected.status]}>{STATUS_LABEL[selected.status]}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Triệu chứng" span={2}>
+                {selected.description}
+              </Descriptions.Item>
+              {selected.images?.length > 0 && (
+                <Descriptions.Item label="Ảnh chụp" span={2}>
+                  <Image.PreviewGroup>
+                    <Space size={8} wrap>
+                      {selected.images.map((url, i) => (
+                        <Image key={i} width={80} height={80} src={`http://localhost:3000${url}`} className="reports-page__img-large" />
+                      ))}
+                    </Space>
+                  </Image.PreviewGroup>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            <Divider className="reports-page__divider" />
+
+            <Form form={form} layout="vertical" disabled={selected.status === 'da_xu_ly'}>
+              <Form.Item label="Cập nhật trạng thái" name="status" rules={[{ required: true }]}>
+                <Select>
+                  <Option value="cho_xu_ly">Chờ xử lý</Option>
+                  <Option value="dang_xu_ly">Đang xử lý</Option>
+                  <Option value="da_xu_ly">Đã xử lý</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item label="Ghi chú / hướng dẫn xử lý" name="vet_note" rules={[{ required: true, message: 'Nhập phản hồi cho nhân viên' }]}>
+                <TextArea rows={4} placeholder="VD: Cách ly ngay, theo dõi thân nhiệt..." />
+              </Form.Item>
+            </Form>
+          </div>
+        )}
       </Modal>
-      </div> 
     </div>  
   )
 }

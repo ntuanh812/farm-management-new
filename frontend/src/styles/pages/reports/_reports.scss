@@ -1,0 +1,130 @@
+@use "../../base/variables" as *;
+@use "../../components/ui/cards" as *;
+
+.reports-page,
+.farm-report-page {
+  padding: 24px;
+  background: linear-gradient(180deg, $farm-cream 0%, #f0ebe0 100%);
+  min-height: calc(100vh - 140px);
+
+  // Styling cho bảng chung của report
+  .ant-table-thead > tr > th {
+    background-color: rgba(45, 90, 39, 0.05);
+    color: $farm-primary;
+    font-weight: 600;
+  }
+
+  // Highlight các dòng báo cáo khẩn cấp (Chờ xử lý)
+  .row-urgent {
+    background-color: rgba(244, 162, 97, 0.06);
+    &:hover > td {
+      background-color: rgba(244, 162, 97, 0.1) !important;
+    }
+  }
+
+  // Shared utility classes for reports
+  &__pig-id {
+    font-weight: 600;
+    color: #1890ff;
+  }
+
+  &__barn-name {
+    font-size: 12px;
+    color: #888;
+  }
+
+  &__symptoms-wrapper {
+    max-width: 300px;
+    &--vet {
+      max-width: 250px;
+    }
+  }
+
+  &__symptoms-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__img-thumb {
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  &__img-more {
+    color: #888;
+    font-size: 12px;
+  }
+
+  &__img-large {
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  &__vet-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2d5a27;
+  }
+
+  &__vet-note {
+    font-size: 13px;
+    font-style: italic;
+    color: #555;
+  }
+
+  &__empty-text {
+    color: #ccc;
+  }
+
+  &__modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__divider {
+    margin: 8px 0;
+  }
+
+  &__upload-text {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+
+  &__upload-hint {
+    color: #888;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+}
+
+// Cấu trúc hiển thị chi tiết báo cáo trong Modal
+.report-detail {
+  &__meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  &__description {
+    background: #fff;
+    padding: 14px;
+    border-left: 4px solid $farm-warning;
+    border-radius: 6px;
+    color: #3d4a3d;
+  }
+
+  &__vet-note {
+    background: #f6ffed;
+    padding: 14px;
+    border-left: 4px solid $farm-success;
+    border-radius: 6px;
+    color: #135200;
+  }
+}

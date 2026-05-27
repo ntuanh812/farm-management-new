@@ -1,5 +1,11 @@
 import pool from '../config/db.js';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 export const staffController = {
   // 1. Lấy danh sách nhân sự tổng hợp
@@ -10,7 +16,7 @@ export const staffController = {
       // staffs: role_id.
       const [rows] = await pool.query(`
         SELECT 
-          e.id, e.full_name, e.phone, e.email, e.gender, e.dob, e.address, e.role_id, e.created_at,
+          e.id, e.full_name, e.phone, e.email, e.gender, e.dob, e.address, e.avatar, e.role_id, e.created_at,
           r.name AS role_name, r.code as role_code,
           a.id AS account_id, a.username, a.is_active,
           b.id AS barn_id, b.name AS barn_name
@@ -27,7 +33,7 @@ export const staffController = {
         if (!staffMap[row.id]) {
           staffMap[row.id] = {
             id: row.id, full_name: row.full_name, phone: row.phone, email: row.email,
-            gender: row.gender, dob: row.dob, address: row.address,
+            gender: row.gender, dob: row.dob, address: row.address, avatar: row.avatar,
             role_id: row.role_id, role_name: row.role_name, role_code: row.role_code,
             created_at: row.created_at, account_id: row.account_id,
             username: row.username, is_active: row.is_active, barns: []
@@ -72,7 +78,7 @@ export const staffController = {
 
   // 3. Thêm nhân viên & Phân công chuồng (Dùng Transaction)
   createstaff: async (request, reply) => {
-    const { full_name, phone, email, gender, dob, address, role_id, barn_ids } = request.body;
+    const { full_name, phone, email, gender, dob, address, role_id, barn_ids, avatar } = request.body;
     
     // Basic validation
     if (!full_name) {
@@ -85,9 +91,9 @@ export const staffController = {
 
       // Insert nhân viên
       const [empResult] = await conn.query(
-        `INSERT INTO staffs (full_name, phone, email, gender, dob, address, role_id) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, role_id || null]
+        `INSERT INTO staffs (full_name, phone, email, gender, dob, address, avatar, role_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, avatar || null, role_id || null]
       );
       
       const staffId = empResult.insertId;
@@ -129,7 +135,7 @@ export const staffController = {
   // 3.5 Cập nhật nhân viên & Phân công chuồng
   updatestaff: async (request, reply) => {
     const { id } = request.params;
-    const { full_name, phone, email, gender, dob, address, role_id, barn_ids } = request.body;
+    const { full_name, phone, email, gender, dob, address, role_id, barn_ids, avatar } = request.body;
 
     if (!full_name) {
       return reply.code(400).send({ success: false, message: 'Vui lòng nhập tên nhân viên' });
@@ -139,12 +145,16 @@ export const staffController = {
     try {
       await conn.beginTransaction();
 
+      // Lấy thông tin avatar cũ
+      const [oldStaff] = await conn.query('SELECT avatar FROM staffs WHERE id = ?', [id]);
+      const oldAvatar = oldStaff[0]?.avatar;
+
       // Cập nhật thông tin nhân viên
       await conn.query(
         `UPDATE staffs 
-         SET full_name = ?, phone = ?, email = ?, gender = ?, dob = ?, address = ?, role_id = ?
+         SET full_name = ?, phone = ?, email = ?, gender = ?, dob = ?, address = ?, avatar = ?, role_id = ?
          WHERE id = ?`,
-        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, role_id || null, id]
+        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, avatar || null, role_id || null, id]
       );
 
       // Cập nhật phân công chuồng
@@ -161,6 +171,15 @@ export const staffController = {
       }
 
       await conn.commit();
+
+      // Xóa file ảnh cũ vật lý nếu có sự thay đổi ảnh (thay ảnh mới hoặc xóa ảnh về rỗng)
+      if (oldAvatar && oldAvatar !== avatar) {
+        const file = path.join(UPLOAD_DIR, path.basename(oldAvatar));
+        fs.unlink(file, (err) => {
+          if (err) console.error("Lỗi xóa file ảnh cũ:", err);
+        });
+      }
+
       return reply.send({ success: true, message: 'Cập nhật nhân viên thành công' });
     } catch (error) {
       await conn.rollback();

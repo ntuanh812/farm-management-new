@@ -41,7 +41,6 @@ export default function PigFattening() {
 
   // ===== STATE =====
   const [filterType, setFilterType] = useState("day");
-  const [searchEar, setSearchEar] = useState("");
 
   const [openSingle, setOpenSingle] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
@@ -112,10 +111,6 @@ export default function PigFattening() {
   // ===== FILTER =====
   const sellRows = useMemo(() => {
     return saleBatches
-      .filter((b) => {
-        if (!searchEar) return true;
-        return b.lines?.some((l) => l.ear_tag?.includes(searchEar));
-      })
       .map((b) => ({
         key: b.id,
         sold_at: b.sold_at,
@@ -128,7 +123,7 @@ export default function PigFattening() {
         }, 0) || 0,
         raw: b,
       }));
-  }, [saleBatches, searchEar, pigs]);
+  }, [saleBatches, pigs]);
 
   // ===== GROUP =====
   const grouped = useMemo(() => {
@@ -167,7 +162,7 @@ export default function PigFattening() {
   const handleSell = async (values) => {
     try {
       const payload = {
-        sold_at: dayjs().format("YYYY-MM-DD"),
+        sold_at: values.sold_at.format("YYYY-MM-DD"),
         staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines: [
           {
@@ -210,7 +205,7 @@ export default function PigFattening() {
       }));
 
       const payload = {
-        sold_at: dayjs().format("YYYY-MM-DD"),
+        sold_at: values.sold_at.format("YYYY-MM-DD"),
         staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines,
       };
@@ -291,13 +286,6 @@ export default function PigFattening() {
             <Card>
               <div>
                 <Space wrap>
-                  <Input
-                    placeholder="Tìm số tai"
-                    value={searchEar}
-                    onChange={(e) => setSearchEar(e.target.value)}
-                    className="w-220"
-                  />
-
                   <Select
                     value={filterType}
                     onChange={setFilterType}
@@ -311,14 +299,19 @@ export default function PigFattening() {
 
                   {canEdit && (
                     <>
-                      <Button type="primary" onClick={() => setOpenSingle(true)}>
+                      <Button type="primary" onClick={() => {
+                        form.resetFields();
+                        form.setFieldsValue({ sold_at: dayjs() });
+                        setOpenSingle(true);
+                      }}>
                         Bán lợn
                       </Button>
 
                       <Button onClick={() => {
+                        bulkForm.resetFields();
+                        bulkForm.setFieldsValue({ sold_at: dayjs() });
                         setOpenBulk(true);
                         setBulkSelectedKeys([]);
-                        bulkForm.resetFields();
                       }}>Bán hàng loạt</Button>
                     </>
                   )}
@@ -386,6 +379,10 @@ export default function PigFattening() {
           footer={canEdit ? undefined : null}
         >
           <Form form={form} onFinish={handleSell} layout="vertical" disabled={!canEdit}>
+            <Form.Item name="sold_at" label="Ngày xuất bán" rules={[{ required: true, message: 'Chọn ngày bán' }]}>
+              <DatePicker disabledDate={(current) => current && current > dayjs().endOf('day')} format="DD/MM/YYYY" className="w-100" />
+            </Form.Item>
+
             <Form.Item name="earTag" label="Chọn lợn" rules={[{ required: true }]}>
               <Select
                 options={fatteningActive.map((p) => ({
@@ -441,6 +438,10 @@ export default function PigFattening() {
           footer={canEdit ? undefined : null}
         >
           <Form form={bulkForm} onFinish={handleBulkSell} layout="vertical" disabled={!canEdit}>
+            <Form.Item name="sold_at" label="Ngày xuất bán" rules={[{ required: true, message: 'Chọn ngày bán' }]} style={{ width: '40%' }}>
+              <DatePicker disabledDate={(current) => current && current > dayjs().endOf('day')} format="DD/MM/YYYY" className="w-100" />
+            </Form.Item>
+
             <div style={{ marginBottom: 16 }}>
               <div style={{ marginBottom: 8, fontWeight: 500 }}>Chọn lợn xuất bán:</div>
               <Table

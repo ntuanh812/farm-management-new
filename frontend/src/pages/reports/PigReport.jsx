@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Table, Button, Modal, Form, Input, Select,
-  Upload, Tag, Space, Popconfirm, Image, message, Row, Col,
+  Upload, Tag, Space, Popconfirm, Image, message, Row, Col, Card
 } from 'antd'
 import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons'
 import axios from 'axios'
@@ -77,8 +77,9 @@ export default function PigReport() {
 
       // Lấy URL ảnh đã upload thành công
       const images = fileList
-        .filter(f => f.status === 'done' && f.originFileObj?.serverUrl)
-        .map(f => f.originFileObj.serverUrl)
+        .filter(f => f.status === 'done')
+        .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
+        .filter(Boolean)
 
       await axios.post(`${API}/pig-reports`, {
         ...values,
@@ -106,39 +107,59 @@ export default function PigReport() {
   // ── Columns ──────────────────────────────────────────────
   const columns = [
     { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
-    { title: 'Mã lợn',    dataIndex: 'pig_id',       width: 100 },
-    { title: 'Chuồng',    dataIndex: 'barn_name',     width: 110 },
-    { title: 'Người báo', dataIndex: 'reporter_name', width: 140 },
     {
-      title: 'Triệu chứng', dataIndex: 'description', ellipsis: true,
-      render: v => <span title={v}>{v}</span>,
+      title: 'Lợn & Chuồng',
+      key: 'pig_info',
+      width: 130,
+      render: (_, rec) => (
+        <div>
+          <div className="reports-page__pig-id">{rec.pig_id}</div>
+          <div className="reports-page__barn-name">{rec.barn_name}</div>
+        </div>
+      )
     },
     {
-      title: 'Ảnh', dataIndex: 'images', width: 120,
-      render: imgs => (
+      title: 'Triệu chứng',
+      dataIndex: 'description',
+      key: 'description',
+      render: (text) => (
+        <div title={text} className="reports-page__symptoms-text">
+          {text}
+        </div>
+      )
+    },
+    {
+      title: 'Ảnh chụp',
+      key: 'images',
+      width: 140,
+      render: (_, rec) => rec.images?.length > 0 ? (
         <Image.PreviewGroup>
           <Space size={4}>
-            {(imgs || []).slice(0, 3).map((url, i) => (
-              <Image key={i} width={36} height={36}
-                src={`http://localhost:3000${url}`}
-                style={{ objectFit: 'cover', borderRadius: 4 }} />
+            {rec.images.slice(0, 3).map((url, i) => (
+              <Image key={i} width={32} height={32} src={`http://localhost:3000${url}`} className="reports-page__img-thumb" />
             ))}
-            {imgs?.length > 3 && <span style={{ color: '#888' }}>+{imgs.length - 3}</span>}
-            {(!imgs || imgs.length === 0) && <span style={{ color: '#ccc' }}>Không có ảnh</span>}
+            {rec.images.length > 3 && <span className="reports-page__img-more">+{rec.images.length - 3}</span>}
           </Space>
         </Image.PreviewGroup>
-      ),
+      ) : (
+        <span className="reports-page__empty-text">Không có ảnh</span>
+      )
     },
     {
-      title: 'Trạng thái', dataIndex: 'status', width: 130,
+      title: 'Trạng thái', dataIndex: 'status', width: 110,
       render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v]}</Tag>,
     },
-    { title: 'Bác sĩ xử lý', dataIndex: 'vet_name', width: 150,
-      render: v => v || <span style={{ color: '#ccc' }}>Chưa có</span> },
-    { title: 'Phản hồi', dataIndex: 'vet_note', ellipsis: true,
-      render: v => v || <span style={{ color: '#ccc' }}>—</span> },
     {
-      title: 'Thao tác', key: 'action', width: 80,
+      title: 'Phản hồi từ Thú y', key: 'vet_feedback', width: 220,
+      render: (_, rec) => rec.vet_note ? (
+        <div>
+          <div className="reports-page__vet-name">BS. {rec.vet_name}</div>
+          <div className="reports-page__vet-note">"{rec.vet_note}"</div>
+        </div>
+      ) : <span className="reports-page__empty-text">Chưa có phản hồi</span>
+    },
+    {
+      title: 'Thao tác', key: 'action', width: 80, align: 'center',
       render: (_, rec) => (
         user?.role === 'ADMIN' && (
           <Popconfirm title="Xóa báo cáo này?" onConfirm={() => handleDelete(rec.id)}>
@@ -154,31 +175,23 @@ export default function PigReport() {
       <PageHeader
         title="Báo cáo lợn bệnh"
         subtitle="Gửi ảnh và mô tả triệu chứng cho bác sĩ thú y"
+        actions={['FARM_WORKER', 'ADMIN'].includes(user?.role) && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            Tạo báo cáo mới
+          </Button>
+        )}
       />
 
-      <div className="reports-page__body">
-        {/* Toolbar */}
-        <div className="reports-page__toolbar">
-          {['FARM_WORKER', 'ADMIN'].includes(user?.role) && (
-            <div className="reports-page__toolbar-right">
-              <Button type="primary" icon={<PlusOutlined />}
-                style={{ background: '#2d5a27' }} onClick={() => setOpen(true)}>
-                Tạo báo cáo mới
-              </Button>
-            </div>
-          )}
-        </div>
-
+      <Card className="table-card">
         <Table
           columns={columns}
           dataSource={list}
           rowKey="id"
           loading={loading}
-          size="small"
-          scroll={{ x: 1000 }}
+          scroll={{ x: 900 }}
           pagination={{ pageSize: 10 }}
         />
-      </div>
+      </Card>
 
       {/* Modal tạo báo cáo */}
       <Modal
@@ -188,7 +201,6 @@ export default function PigReport() {
         onOk={handleSubmit}
         okText="Gửi báo cáo"
         confirmLoading={uploading}
-        okButtonProps={{ style: { background: '#2d5a27' } }}
         width={600}
       >
         <Form form={form} layout="vertical">
@@ -244,11 +256,11 @@ export default function PigReport() {
               {fileList.length < 5 && (
                 <div>
                   <UploadOutlined />
-                  <div style={{ marginTop: 4, fontSize: 12 }}>Chọn ảnh</div>
+                  <div className="reports-page__upload-text">Chọn ảnh</div>
                 </div>
               )}
             </Upload>
-            <div style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
+            <div className="reports-page__upload-hint">
               Chụp ảnh rõ vùng bị bệnh, tối đa 5MB mỗi ảnh
             </div>
           </Form.Item>

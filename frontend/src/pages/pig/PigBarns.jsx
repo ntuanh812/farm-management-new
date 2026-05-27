@@ -277,29 +277,25 @@ export default function PigBarns() {
       </Row>
 
       <Card className="table-card">
-        <Space wrap style={{ marginBottom: 16 }}>
-          <Input.Search
-            placeholder="Tìm mã hoặc tên chuồng..."
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 220 }}
-          />
-          <Select
-            placeholder="Loại chuồng"
-            allowClear
-            options={Object.entries(BARN_TYPES).map(([val, label]) => ({ label, value: val }))}
-            onChange={setFilterType}
-            style={{ width: 180 }}
-          />
-          <Select
-            placeholder="Trạng thái"
-            allowClear
-            options={Object.entries(STATUS_CONFIG).map(([val, cfg]) => ({ label: cfg.text, value: val }))}
-            onChange={setFilterStatus}
-            style={{ width: 160 }}
-          />
-        </Space>
+        <Form 
+          layout="inline" 
+          style={{ marginBottom: 16 }}
+          onValuesChange={(_, values) => {
+            setSearchText(values.search);
+            setFilterType(values.type);
+            setFilterStatus(values.status);
+          }}
+        >
+          <Form.Item name="search">
+            <Input.Search placeholder="Tìm mã hoặc tên chuồng..." allowClear style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item name="type">
+            <Select placeholder="Loại chuồng" allowClear options={Object.entries(BARN_TYPES).map(([val, label]) => ({ label, value: val }))} style={{ width: 180 }} />
+          </Form.Item>
+          <Form.Item name="status">
+            <Select placeholder="Trạng thái" allowClear options={Object.entries(STATUS_CONFIG).map(([val, cfg]) => ({ label: cfg.text, value: val }))} style={{ width: 160 }} />
+          </Form.Item>
+        </Form>
         <Table
           columns={columns}
           dataSource={filteredBarns}
@@ -322,7 +318,23 @@ export default function PigBarns() {
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="code" label="Mã chuồng" rules={[{ required: true, message: 'Vui lòng nhập mã chuồng' }]}>
+              <Form.Item 
+                name="code" 
+                label="Mã chuồng" 
+                rules={[
+                  { required: true, message: 'Vui lòng nhập mã chuồng' },
+                  () => ({
+                    validator(_, value) {
+                      if (!value) return Promise.resolve();
+                      const exists = barns.find(b => b.code === value);
+                      if (exists && exists.id !== editingId) {
+                        return Promise.reject(new Error('Mã chuồng này đã tồn tại!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
                 <Input placeholder="VD: B01, NAI-01..." />
               </Form.Item>
             </Col>

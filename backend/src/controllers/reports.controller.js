@@ -3,56 +3,103 @@ import pool from '../config/db.js';
 export const reportsController = {
   getOverview: async (request, reply) => {
     try {
-      // 1. Thống kê thẻ (Cards)
-      const [pigs] = await pool.query("SELECT COUNT(*) AS total FROM pigs WHERE lifecycle_status = 'ACTIVE'");
-      const [barns] = await pool.query("SELECT COUNT(*) AS total FROM barns");
-      const [sick] = await pool.query("SELECT COUNT(DISTINCT pig_id) AS total FROM vet_diagnosis WHERE status = 'dang_dieu_tri'");
-      const [dead] = await pool.query("SELECT COUNT(*) AS total FROM pig_deaths");
-      const [pregnant] = await pool.query("SELECT COUNT(DISTINCT sow_id) AS total FROM pig_breedings WHERE status = 'SUCCESS' AND expected_farrow_date >= CURDATE()");
-      const [ready] = await pool.query("SELECT COUNT(*) AS total FROM pigs WHERE lifecycle_status = 'ACTIVE' AND category = 'FATTENING' AND current_weight >= 100");
+      const { startDate, endDate } = request.query;
 
-      // 2. Biểu đồ tài chính (Doanh thu)
-      const [revenueData] = await pool.query(`
-        SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount), 0) AS revenue
+      // 1. Lợn đang nuôi (Cơ cấu đàn) - Thường lấy số liệu hiện tại nên không bọc filter ngày
+      const [activePigs] = await pool.query(
+        "SELECT category, COUNT(*) as count FROM pigs WHERE lifecycle_status = 'ACTIVE' GROUP BY category"
+      );
+
+      // 2. Lợn chết
+      let deadQuery = "SELECT COUNT(*) as total FROM pig_deaths WHERE 1=1";
+      let deadParams = [];
+      if (startDate && endDate) {
+        deadQuery += " AND death_date >= ? AND death_date <= ?";
+        deadParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      }
+      const [dead] = await pool.query(deadQuery, deadParams);
+
+      // 3. Xuất bán & Doanh thu
+      let saleQuery = `
+        SELECT COUNT(sbl.id) as soldPigs, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) as revenue
+        FROM sale_batches sb
+        LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
+        LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
+        WHERE 1=1
+      `;
+      let saleParams = [];
+      if (startDate && endDate) {
+        saleQuery += " AND sb.sold_at >= ? AND sb.sold_at <= ?";
+        saleParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      }
+      const [sales] = await pool.query(saleQuery, saleParams);
+
+      // 4. Chuồng trại (hiện tại)
+      const [barnStats] = await pool.query(
+        "SELECT COUNT(*) as total_barns, COALESCE(SUM(capacity), 0) as total_capacity FROM barns WHERE status != 'MAINTENANCE'"
+      );
+
+      // 5. Tiêu thụ thức ăn
+      let feedQuery = "SELECT feed_type, COALESCE(SUM(quantity_kg), 0) as total_kg FROM feed_usages WHERE 1=1";
+      let feedParams = [];
+      if (startDate && endDate) {
+        feedQuery += " AND used_at >= ? AND used_at <= ?";
+        feedParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      }
+      feedQuery += " GROUP BY feed_type";
+      const [feedUsage] = await pool.query(feedQuery, feedParams);
+
+      // 6. Báo cáo bệnh chờ xử lý (hiện tại)
+      const [pendingReports] = await pool.query(
+        "SELECT COUNT(*) as total FROM pig_reports WHERE status = 'cho_xu_ly'"
+      );
+
+      // 7. Xu hướng doanh thu 6 tháng gần nhất (Không ảnh hưởng bởi filter trên trang)
+      const [revenueTrend] = await pool.query(`
+        SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
         FROM sale_batches sb
         JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
+        LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
         GROUP BY month 
-        ORDER BY sb.sold_at DESC LIMIT 6
+        ORDER BY MIN(sb.sold_at) DESC LIMIT 6
       `);
 
-      // 3. Biểu đồ sức khỏe (Các bệnh phổ biến)
-      const [diseaseData] = await pool.query(`
-        SELECT suspected_disease as name, COUNT(*) as value
-        FROM vet_diagnosis
-        WHERE suspected_disease IS NOT NULL AND suspected_disease != ''
-        GROUP BY name 
-        ORDER BY value DESC LIMIT 5
-      `);
+      // 8. Thống kê mũi tiêm vaccine
+      let vacQuery = "SELECT vaccine_name, COUNT(*) as total_doses FROM vaccinations WHERE 1=1";
+      let vacParams = [];
+      if (startDate && endDate) {
+        vacQuery += " AND vaccinated_at >= ? AND vaccinated_at <= ?";
+        vacParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      }
+      vacQuery += " GROUP BY vaccine_name ORDER BY total_doses DESC";
+      const [vaccineStats] = await pool.query(vacQuery, vacParams);
 
-      // 4. Biểu đồ tiêu thụ thức ăn
-      const [feedData] = await pool.query(`
-        SELECT feed_type as name, SUM(quantity_kg) as value
-        FROM feed_usages
-        GROUP BY feed_type
-      `);
+      // 9. Thống kê sử dụng thuốc
+      let medQuery = "SELECT medicine_name, SUM(quantity) as total_quantity, MAX(unit) as unit FROM medicine_usages WHERE 1=1";
+      let medParams = [];
+      if (startDate && endDate) {
+        medQuery += " AND used_at >= ? AND used_at <= ?";
+        medParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      }
+      medQuery += " GROUP BY medicine_name ORDER BY total_quantity DESC";
+      const [medicineUsage] = await pool.query(medQuery, medParams);
 
       return reply.send({
         success: true,
         data: {
-          stats: {
-            total_pigs: pigs[0].total,
-            total_barns: barns[0].total,
-            sick_pigs: sick[0].total,
-            dead_pigs: dead[0].total,
-            pregnant_pigs: pregnant[0].total,
-            ready_to_sell: ready[0].total,
+          activePigs: activePigs,
+          deadPigs: dead[0].total || 0,
+          soldPigs: sales[0].soldPigs || 0,
+          revenue: sales[0].revenue || 0,
+          barnStats: {
+            total_barns: barnStats[0].total_barns || 0,
+            total_capacity: barnStats[0].total_capacity || 0
           },
-          charts: {
-            // Recharts cần dữ liệu theo chiều thời gian tăng dần
-            revenue: revenueData.reverse(), 
-            disease: diseaseData.length > 0 ? diseaseData : [{ name: 'Chưa có dữ liệu', value: 1 }],
-            feed: feedData.length > 0 ? feedData : [{ name: 'Chưa có dữ liệu', value: 1 }],
-          }
+          feedUsage: feedUsage,
+          pendingReports: pendingReports[0].total || 0,
+          revenueTrend: revenueTrend.reverse(),
+          vaccineStats: vaccineStats,
+          medicineUsage: medicineUsage
         }
       });
     } catch (error) {

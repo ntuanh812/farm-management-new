@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 
 // Layout
@@ -6,9 +6,6 @@ import { AppLayout } from '@/components/layout/AppLayout'
 
 // Auth pages
 import { Login } from '@/pages/auth/Login'
-import { ForgotPassword } from '@/pages/auth/ForgotPassword'
-import { ResetPassword } from '@/pages/auth/ResetPassword'
-import { VerifyOtp } from '@/pages/auth/VerifyOtp'
 
 // Dashboard
 import { DashBoard } from '@/pages/dashboard/DashBoard'
@@ -33,7 +30,7 @@ import MedicineUsage from '@/pages/materials/Medicine'
 // Health
 import PigVaccination from '@/pages/health/PigVaccination'
 import VetDiagnosis from '@/pages/health/VetDiagnosis'
-import VetDiagnosisDetail from '@/pages/health/VetDiagnosisDetail'
+
 
 // Staff
 import StaffManagement from '@/pages/staff/StaffManagement'
@@ -48,12 +45,15 @@ import FarmReport from '@/pages/reports/FarmReport'
 function PrivateRoute({ children, roles = [] }) {
   const { token, user } = useAuthStore()
 
+  // Kiểm tra chặt chẽ token và thông tin user (phòng trường hợp local storage lưu chuỗi 'null' hoặc bị hỏng)
+  const isAuthenticated = token && token !== 'null' && user && user.role;
+
   // Chưa đăng nhập → về login
-  if (!token || !user) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  // Không đủ quyền → về trang chủ của role đó
+  // Không đủ quyền 
   if (roles.length > 0 && !roles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />
   }
@@ -61,14 +61,46 @@ function PrivateRoute({ children, roles = [] }) {
   return children
 }
 
+// ── RootRedirect: Điều hướng trang chủ (/) theo role ────────
+function RootRedirect() {
+  const { token, user } = useAuthStore()
+  
+  const isAuthenticated = token && token !== 'null' && user && user.role;
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+
+  switch (user.role) {
+    case 'ADMIN': return <Navigate to="/dashboard" replace />
+    case 'FARM_WORKER': return <Navigate to="/staff/dashboard" replace />
+    case 'VET_DOCTOR': return <Navigate to="/vet/dashboard" replace />
+    default: return <Navigate to="/login" replace />
+  }
+}
+
+// ── UnauthorizedPage: Giao diện báo lỗi không có quyền ────────
+function UnauthorizedPage() {
+  const { token, user } = useAuthStore()
+  const isAuthenticated = token && token !== 'null' && user && user.role;
+
+  return (
+    <div style={{ textAlign: 'center', padding: 100 }}>
+      <h2 style={{ color: '#cf1322' }}>⛔ Bạn không có quyền truy cập trang này</h2>
+      <p style={{ fontSize: 16, marginBottom: 24, color: '#555' }}>
+        {isAuthenticated 
+          ? 'Tài khoản của bạn không được phân quyền để xem thông tin tại đường dẫn này.'
+          : 'Vui lòng đăng nhập bằng tài khoản có quyền phù hợp để tiếp tục.'}
+      </p>
+      <Link to={isAuthenticated ? "/" : "/login"} style={{ padding: '10px 24px', background: '#2d5a27', color: '#fff', textDecoration: 'none', borderRadius: 8, fontWeight: 500 }}>
+        {isAuthenticated ? 'Quay về Bảng điều khiển' : 'Quay lại trang Đăng nhập'}
+      </Link>
+    </div>
+  )
+}
+
 export const AppRouter = () => {
   return (
     <Routes>
       {/* ── Public routes ───────────────────────────────── */}
       <Route path="/login"           element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password"  element={<ResetPassword />} />
-      <Route path="/verify-otp"      element={<VerifyOtp />} />
 
       {/* ── ADMIN routes ────────────────────────────────── */}
       <Route element={
@@ -123,18 +155,16 @@ export const AppRouter = () => {
         <Route path="/vet/health/vaccine"           element={<PigVaccination />} />
         <Route path="/vet/health/vet-diagnosis"      element={<VetDiagnosis />} />
         <Route path="/vet/reports/review"            element={<VetReview />} />
-        <Route path="/vet/health/vet-diagnosis/:id" element={<VetDiagnosisDetail />} />
       </Route>
 
       {/* ── Trang không có quyền ─────────────────────────── */}
-      <Route path="/unauthorized" element={
-        <div style={{ textAlign: 'center', padding: 60 }}>
-          <h2>⛔ Bạn không có quyền truy cập trang này</h2>
-        </div>
-      } />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       {/* ── Mặc định ─────────────────────────────────────── */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<RootRedirect />} />
+
+      {/* ── Bắt các URL không tồn tại (404) ─────────────── */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

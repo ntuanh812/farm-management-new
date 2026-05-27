@@ -46,7 +46,8 @@ export default function FarmReport() {
     feedUsage: [],
     pendingReports: 0,
     revenueTrend: [],
-    vaccineStats: []
+    vaccineStats: [],
+    medicineUsage: []
   });
 
   const fetchReportData = useCallback(async (values = {}) => {
@@ -285,23 +286,21 @@ export default function FarmReport() {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
-            <Card title="Tình trạng chuồng trại" bordered={false} style={{ height: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }} size="large">
-                <Statistic 
-                  title="Số lượng chuồng đang hoạt động" 
-                  value={data.barnStats?.total_barns || 0} 
-                  prefix={<HomeOutlined />} 
-                />
-                <div>
-                  <Text type="secondary">Công suất sử dụng toàn trang trại:</Text>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 4 }}>
-                    <Text strong style={{ fontSize: 24, color: totalActivePigs > (data.barnStats?.total_capacity || 0) ? 'red' : 'inherit' }}>
-                      {totalActivePigs}
-                    </Text> 
-                    <Text type="secondary">/ {data.barnStats?.total_capacity || 0} con</Text>
-                  </div>
-                </div>
-              </Space>
+            <Card title="Thống kê sử dụng thuốc & vật tư thú y" bordered={false} bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
+              <Table 
+                dataSource={data.medicineUsage} 
+                columns={[
+                  { title: 'Tên thuốc / Vật tư', dataIndex: 'medicine_name', key: 'medicine_name' },
+                  { 
+                    title: 'Số lượng đã dùng', 
+                    key: 'total_quantity',
+                    render: (_, r) => <Text strong>{Number(r.total_quantity).toLocaleString('vi-VN')} {r.unit}</Text>
+                  }
+                ]} 
+                pagination={false}
+                rowKey="medicine_name"
+                locale={{ emptyText: 'Không có dữ liệu sử dụng thuốc trong khoảng thời gian này' }}
+              />
             </Card>
           </Col>
           <Col xs={24} lg={12}>

@@ -76,8 +76,8 @@ export default function PigBreeding() {
       const values = await form.validateFields();
       const payload = {
         ...values,
-        breeding_date: dayjs().format('YYYY-MM-DD'),
-        expected_farrow_date: dayjs().add(114, 'day').format('YYYY-MM-DD'),
+        breeding_date: values.breeding_date.format('YYYY-MM-DD'),
+        expected_farrow_date: values.breeding_date.add(114, 'day').format('YYYY-MM-DD'),
         status: 'PENDING',
         staff_name: user?.full_name || user?.username || 'Hệ thống',
       };
@@ -177,7 +177,11 @@ export default function PigBreeding() {
         title="Quản lý Phối giống"
         subtitle="Ghi nhận lịch sử phối giống và theo dõi lịch dự sinh"
         actions={canEdit && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            form.resetFields();
+            form.setFieldsValue({ breeding_date: dayjs() });
+            setOpen(true);
+          }}>
             Thêm lượt phối giống
           </Button>
         )}
@@ -273,10 +277,25 @@ export default function PigBreeding() {
             </Form.Item>
           </Space>
 
-          <div style={{ background: '#f0f5ff', padding: '12px 16px', borderRadius: 8, border: '1px solid #adc6ff', marginBottom: 16 }}>
-            <div style={{ color: '#096dd9', fontWeight: 500, marginBottom: 4 }}>📅 Ngày phối: Hôm nay ({dayjs().format('DD/MM/YYYY')})</div>
-            <div style={{ color: '#d46b08', fontWeight: 500 }}>⏳ Dự kiến sinh: {dayjs().add(114, 'day').format('DD/MM/YYYY')} (Tự động +114 ngày)</div>
-          </div>
+          <Form.Item name="breeding_date" label="Ngày phối giống" rules={[{ required: true, message: 'Vui lòng chọn ngày phối' }]}>
+            <DatePicker 
+              format="DD/MM/YYYY" 
+              style={{ width: '100%' }} 
+              disabledDate={(current) => current && current > dayjs().endOf('day')} 
+            />
+          </Form.Item>
+
+          <Form.Item shouldUpdate noStyle>
+            {() => {
+              const bDate = form.getFieldValue('breeding_date');
+              if (!bDate) return null;
+              return (
+                <div style={{ background: '#f0f5ff', padding: '12px 16px', borderRadius: 8, border: '1px solid #adc6ff', marginBottom: 16 }}>
+                  <div style={{ color: '#d46b08', fontWeight: 500 }}>⏳ Dự kiến sinh: {bDate.add(114, 'day').format('DD/MM/YYYY')} (Tự động +114 ngày)</div>
+                </div>
+              );
+            }}
+          </Form.Item>
 
           <Form.Item name="note" label="Ghi chú thêm">
             <Input.TextArea rows={2} placeholder="Ghi chú về tinh, biểu hiện..." />
