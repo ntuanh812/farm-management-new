@@ -401,7 +401,7 @@ export default function PigManage() {
             <Col span={8}><Form.Item name="name" label="Tên gọi (nếu có)"><Input placeholder="VD: Nái Mẹ 1" /></Form.Item></Col>
             <Col span={8}>
               <Form.Item name="barn_id" label="Chuồng trại" rules={[{ required: true, message: 'Chọn chuồng' }]}>
-                <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn..." />
+                <Select disabled={!!editingId} showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn..." />
               </Form.Item>
             </Col>
           </Row>
@@ -415,7 +415,7 @@ export default function PigManage() {
             <Col span={8}><Form.Item name="breed" label="Giống lợn"><Input placeholder="VD: Duroc, Landrace" /></Form.Item></Col>
             <Col span={8}>
               <Form.Item name="gender" label="Giới tính" rules={[{ required: true }]}>
-                <Select options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
+                <Select disabled={!!editingId} options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
               </Form.Item>
             </Col>
           </Row>

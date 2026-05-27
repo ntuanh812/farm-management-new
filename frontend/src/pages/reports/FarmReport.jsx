@@ -45,7 +45,8 @@ export default function FarmReport() {
     feedUsage: [],
     pendingReports: 0,
     diseaseData: [],
-    revenueTrend: []
+    revenueTrend: [],
+    vaccineStats: []
   });
 
   const fetchReportData = async (values = {}) => {
@@ -80,13 +81,13 @@ export default function FarmReport() {
 
   const totalActivePigs = activePigsMapped.reduce((sum, item) => sum + item.count, 0);
 
-  const feedColumns = [
-    { title: 'Loại cám / Thức ăn', dataIndex: 'feed_type', key: 'feed_type' },
+  const vaccineColumns = [
+    { title: 'Tên Vaccine', dataIndex: 'vaccine_name', key: 'vaccine_name' },
     { 
-      title: 'Khối lượng đã dùng', 
-      dataIndex: 'total_kg', 
-      key: 'total_kg',
-      render: (val) => <Text strong>{Number(val).toLocaleString('vi-VN')} kg</Text>
+      title: 'Số mũi đã tiêm', 
+      dataIndex: 'total_doses', 
+      key: 'total_doses',
+      render: (val) => <Text strong>{Number(val).toLocaleString('vi-VN')} mũi</Text>
     }
   ];
 
@@ -239,19 +240,33 @@ export default function FarmReport() {
             </Card>
           </Col>
 
-          {/* 4. Biểu đồ các bệnh thường gặp */}
+          {/* 4. Biểu đồ Tỷ lệ trạng thái đàn lợn */}
           <Col xs={24} lg={12}>
-            <Card title="Top 5 Bệnh lý phổ biến" bordered={false}>
+            <Card title="Tỷ lệ trạng thái đàn lợn" bordered={false}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.diseaseData} layout="vertical" margin={{ top: 20, right: 30, left: 100, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={100} />
-                    <RechartsTooltip formatter={(value) => [`${value} ca`, 'Số lượng']} />
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Đang nuôi', count: totalActivePigs },
+                        { name: 'Đã xuất bán', count: data.soldPigs },
+                        { name: 'Đã chết', count: data.deadPigs }
+                      ].filter(item => item.count > 0)}
+                      cx="50%" cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="name"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {[{ name: 'Đang nuôi', count: totalActivePigs }, { name: 'Đã xuất bán', count: data.soldPigs }, { name: 'Đã chết', count: data.deadPigs }].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#3f8600', '#1890ff', '#d04444'][index]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(value) => [`${value} con`, 'Số lượng']} />
                     <Legend />
-                    <Bar dataKey="count" name="Số ca mắc" fill="#faad14" barSize={30} />
-                  </BarChart>
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             </Card>
@@ -282,13 +297,13 @@ export default function FarmReport() {
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card title="Tiêu thụ vật tư (Thức ăn/Cám)" bordered={false} bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
+            <Card title="Thống kê chiến dịch tiêm phòng" bordered={false} bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
               <Table 
-                dataSource={data.feedUsage} 
-                columns={feedColumns} 
+                dataSource={data.vaccineStats} 
+                columns={vaccineColumns} 
                 pagination={false}
-                rowKey="feed_type"
-                locale={{ emptyText: 'Không có dữ liệu tiêu thụ vật tư trong khoảng thời gian này' }}
+                rowKey="vaccine_name"
+                locale={{ emptyText: 'Không có dữ liệu tiêm phòng trong khoảng thời gian này' }}
               />
             </Card>
           </Col>

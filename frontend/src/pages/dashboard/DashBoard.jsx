@@ -23,6 +23,7 @@ import {
   AppleOutlined,
   AuditOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 import axios from "axios";
 import { 
@@ -115,6 +116,9 @@ export const DashBoard = () => {
           pigRes,
           employeeRes,
           reportRes,
+          saleRes,
+          feedRes,
+          moveRes,
         ] = await Promise.all([
 
           axios.get(
@@ -128,14 +132,29 @@ export const DashBoard = () => {
           ).catch(() => ({ data: { data: [] } })),
 
           axios.get(
-            `${API}/staff`,
+            `${API}/employees`,
             { headers }
           ).catch(() => ({ data: { data: [] } })),
 
           axios.get(
             `${API}/reports-dashboard/overview`,
             { headers }
-          ).catch(() => ({ data: { data: { charts: { revenue: [], feed: [] } } } })),
+          ).catch(() => ({ data: null })),
+
+          axios.get(
+            `${API}/sale-batches`,
+            { headers }
+          ).catch(() => ({ data: { data: [] } })),
+
+          axios.get(
+            `${API}/feed-usages`,
+            { headers }
+          ).catch(() => ({ data: { data: [] } })),
+
+          axios.get(
+            `${API}/movements`,
+            { headers }
+          ).catch(() => ({ data: { data: [] } })),
         ]);
 
         setBarns(
@@ -150,9 +169,33 @@ export const DashBoard = () => {
           employeeRes.data?.data || []
         );
 
+        let revenueChart = reportRes.data?.data?.charts?.revenue;
+        let feedChart = reportRes.data?.data?.charts?.feed;
+
+        // Tự động tính toán nếu API overview chưa có dữ liệu
+        if (!revenueChart || revenueChart.length === 0) {
+          const sales = saleRes.data?.data || [];
+          const revMap = {};
+          sales.forEach(s => {
+            const month = dayjs(s.sold_at || s.createdAt).format('MM/YYYY');
+            const amount = s.lines?.reduce((sum, l) => sum + Number(l.total_amount || 0), 0) || 0;
+            revMap[month] = (revMap[month] || 0) + amount;
+          });
+          revenueChart = Object.keys(revMap).map(k => ({ month: k, revenue: revMap[k] })).sort((a, b) => a.localeCompare(b));
+        }
+
+        if (!feedChart || feedChart.length === 0) {
+          const feeds = feedRes.data?.data || [];
+          const feedMap = {};
+          feeds.forEach(f => {
+            feedMap[f.feed_type] = (feedMap[f.feed_type] || 0) + Number(f.quantity_kg || 0);
+          });
+          feedChart = Object.keys(feedMap).map(k => ({ name: k, value: feedMap[k] }));
+        }
+
         setChartData({
-          revenue: reportRes.data?.data?.charts?.revenue || [],
-          feed: reportRes.data?.data?.charts?.feed || []
+          revenue: revenueChart || [],
+          feed: feedChart || []
         });
 
         setActivities([
@@ -165,6 +208,39 @@ export const DashBoard = () => {
               new Date(),
           },
         ]);
+        // Lấy danh sách hoạt động gần đây (từ chuyển chuồng và xuất bán)
+        const moves = moveRes.data?.data || [];
+        const activitiesList = moves.map(m => ({
+          id: `move_${m.id}`,
+          icon: "task",
+          content: `Chuyển lợn ${m.earTag || m.pigId || ''} từ ${m.fromBarnName || 'chuồng cũ'} sang ${m.toBarnName || 'chuồng mới'}`,
+          createdAt: m.movedAt || m.createdAt || new Date()
+        }));
+
+        const salesData = saleRes.data?.data || [];
+        salesData.forEach(s => {
+          activitiesList.push({
+            id: `sale_${s.id}`,
+            icon: "feeding",
+            content: `Xuất bán ${s.lines?.length || 0} con lợn thịt`,
+            createdAt: s.sold_at || s.createdAt || new Date()
+          });
+        });
+
+        activitiesList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (activitiesList.length > 0) {
+          setActivities(activitiesList.slice(0, 6));
+        } else {
+          setActivities([
+            {
+              id: 1,
+              icon: "task",
+              content: "Hệ thống đã khởi động",
+              createdAt: new Date(),
+            },
+          ]);
+        }
 
       } catch (err) {
 
@@ -427,6 +503,7 @@ export const DashBoard = () => {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={(val) => `${val / 1000000}M`} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
                         <Tooltip formatter={(value) => `${Number(value).toLocaleString()} VNĐ`} cursor={{fill: 'transparent'}}/>
                         <Legend />
                         <Bar dataKey="revenue" name="Doanh thu" fill="#2d5a27" radius={[4, 4, 0, 0]} maxBarSize={40} />

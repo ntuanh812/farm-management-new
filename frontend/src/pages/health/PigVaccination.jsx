@@ -70,7 +70,7 @@ export default function PigVaccination() {
 
   const columns = [
     {
-      title: "Ngày",
+      title: "Ngày tiêm",
       dataIndex: "vaccinated_at",
       key: "vaccinated_at",
       render: (iso) => (iso ? dayjs(iso).format("DD/MM/YYYY") : ""),
@@ -125,7 +125,11 @@ export default function PigVaccination() {
         subtitle="Gắn mũi tiêm với cá thể lợn"
         actions={
           canEdit && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              form.resetFields();
+              form.setFieldsValue({ vaccinated_at: dayjs() });
+              setOpen(true);
+            }}>
               Ghi nhận tiêm
             </Button>
           )
@@ -175,12 +179,27 @@ export default function PigVaccination() {
             label="Tên vaccine"
             rules={[{ required: true }]}
           >
-            <Input placeholder="VD: FMD, PRRS..." />
+            <Select 
+              showSearch 
+              placeholder="Chọn vaccine"
+              options={[
+                { value: "LMLM (Lở mồm long móng)", label: "LMLM (Lở mồm long móng)" },
+                { value: "PRRS (Tai xanh)", label: "PRRS (Tai xanh)" },
+                { value: "CSF (Dịch tả lợn cổ điển)", label: "CSF (Dịch tả lợn cổ điển)" },
+                { value: "PCV (Circo virus)", label: "PCV (Circo virus)" },
+                { value: "Mycoplasma (Suyễn lợn)", label: "Mycoplasma (Suyễn lợn)" },
+                { value: "PED (Dịch tiêu chảy cấp)", label: "PED (Dịch tiêu chảy cấp)" },
+                { value: "E.coli", label: "E.coli" },
+                { value: "Parvovirus", label: "Parvovirus" },
+                { value: "Khác", label: "Khác..." },
+              ]}
+            />
           </Form.Item>
 
           <Form.Item
             name="vaccinated_at"
             label="Ngày tiêm"
+            initialValue={dayjs()}
             rules={[{ required: true }]}
           >
             <DatePicker

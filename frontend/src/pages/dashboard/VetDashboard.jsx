@@ -1,75 +1,186 @@
-import { Row, Col, Card, Statistic } from 'antd'
-import { BugOutlined, CalendarOutlined, MedicineBoxOutlined } from '@ant-design/icons'
-import { usePigFarmStore } from '@/store/pigFarmStore'
-import { useAuthStore } from '@/store/authStore'
-import { PageHeader } from '@/components/layout/PageHeader'
-import dayjs from 'dayjs'
+import React, { useEffect, useMemo, useState } from "react";
+import { Card, Row, Col, List, message, Spin } from "antd";
+import {
+  RiseOutlined,
+  BugOutlined,
+  SnippetsOutlined,
+  CalendarOutlined,
+  MedicineBoxOutlined,
+  DashboardOutlined,
+  WarningOutlined
+} from "@ant-design/icons";
+import axios from "axios";
+import dayjs from "dayjs";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { useAuthStore } from "@/store/authStore";
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+function formatRelativeTime(dateString) {
+  if (!dateString) return "";
+  const time = new Date(dateString).getTime();
+  if (Number.isNaN(time)) return "";
+  const diffMs = Date.now() - time;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Vừa xong";
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} giờ trước`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay} ngày trước`;
+}
 
 export default function VetDashboard() {
-  const { vaccinations } = usePigFarmStore()
-  const { user } = useAuthStore()
+  const { token, user } = useAuthStore();
+  
+  const [loading, setLoading] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [vaccinations, setVaccinations] = useState([]);
 
-  const today = dayjs().format('YYYY-MM-DD')
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const headers = { Authorization: `Bearer ${token}` };
 
-  // Lịch tiêm hôm nay
-  const vaccineToday = vaccinations.filter(v =>
-    dayjs(v.scheduledDate).format('YYYY-MM-DD') === today
-  ).length
+      const [reportsRes, vaccinesRes] = await Promise.all([
+        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
+      ]);
 
-  // Giả lập số ca bệnh (chưa có API thật)
-  const treatingCases  = 5
-  const newCasesToday  = 2
+      setReports(reportsRes.data?.data || []);
+      setVaccinations(vaccinesRes.data?.data || []);
+
+    } catch (err) {
+      console.error(err);
+      message.error("Không tải được dữ liệu dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const todayStr = dayjs().format("YYYY-MM-DD");
+
+  const treatingCases = useMemo(() => {
+    return reports.filter(r => r.status === "cho_xu_ly" || r.status === "dang_xu_ly").length;
+  }, [reports]);
+
+  const newCasesToday = useMemo(() => {
+    return reports.filter(r => dayjs(r.created_at).format("YYYY-MM-DD") === todayStr).length;
+  }, [reports]);
+
+  const vaccineToday = useMemo(() => {
+    return vaccinations.filter(v => dayjs(v.scheduled_date || v.vaccination_date).format("YYYY-MM-DD") === todayStr).length;
+  }, [vaccinations]);
+
+  const recentActivities = useMemo(() => {
+    const combined = [
+      ...reports.map(r => ({
+        id: `report_${r.id}`,
+        type: 'report',
+        title: `Báo cáo: ${r.pig_id}`,
+        content: r.description,
+        createdAt: r.created_at,
+        icon: <WarningOutlined />
+      }))
+    ];
+    return combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+  }, [reports]);
+
+
+  const statsData = [
+    {
+      title: "Ca chờ / Đang xử lý",
+      value: treatingCases,
+      unit: "ca",
+      icon: <BugOutlined />,
+      type: "pigs",
+      trend: "Cần chú ý",
+      trendUp: true,
+    },
+    {
+      title: "Ca bệnh mới hôm nay",
+      value: newCasesToday,
+      unit: "ca",
+      icon: <MedicineBoxOutlined />,
+      type: "daily-tasks",
+      trend: "Trong ngày",
+      trendUp: true,
+    },
+    {
+      title: "Tiêm phòng",
+      value: vaccineToday,
+      unit: "mũi",
+      icon: <CalendarOutlined />,
+      type: "barn",
+      trend: "Cần thực hiện",
+      trendUp: true,
+    },
+  ];
 
   return (
-    <div>
+    <div className="dashboard">
       <PageHeader
-        title={`Xin chào, BS. ${user?.full_name || 'Bác sĩ'} 🩺`}
-        subtitle="Tổng quan ca bệnh hôm nay"
+        title={`Xin chào, BS. ${user?.full_name || user?.username || 'Bác sĩ'} 🩺`}
+        subtitle="Tổng quan công việc và tình trạng sức khỏe đàn lợn"
       />
 
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic
-              title="Ca đang điều trị"
-              value={treatingCases}
-              suffix="ca"
-              prefix={<BugOutlined style={{ color: '#c44536' }} />}
-              valueStyle={{ color: '#c44536', fontSize: 32 }}
-            />
-          </Card>
-        </Col>
+      <div className="dashboard__maincontent">
+        <Spin spinning={loading}>
+          {/* STATS ROW */}
+          <Row gutter={[20, 20]} className="dashboard-stats">
+            {statsData.map((stat, index) => (
+              <Col xs={24} sm={12} lg={8} key={index}>
+                <Card className={`stat-card stat-card--${stat.type}`}>
+                  <div className="stat-card__header">
+                    <span className="stat-card__title">{stat.title}</span>
+                    <div className="stat-card__icon">{stat.icon}</div>
+                  </div>
+                  <div className="stat-card__value">
+                    {stat.value}
+                    <span className="stat-card__label"> {stat.unit}</span>
+                  </div>
+                  <div className="stat-card__trend stat-card__trend--up">
+                    <RiseOutlined />
+                    <span>{stat.trend}</span>
+                  </div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
 
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic
-              title="Ca bệnh mới hôm nay"
-              value={newCasesToday}
-              suffix="ca"
-              prefix={<MedicineBoxOutlined style={{ color: '#f4a261' }} />}
-              valueStyle={{ color: '#f4a261', fontSize: 32 }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic
-              title="Lịch tiêm phòng hôm nay"
-              value={vaccineToday}
-              suffix="lịch"
-              prefix={<CalendarOutlined style={{ color: '#2d5a27' }} />}
-              valueStyle={{ color: '#2d5a27', fontSize: 32 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card style={{ marginTop: 24 }}>
-        <p style={{ color: '#888', textAlign: 'center', padding: 20 }}>
-          🩺 Sử dụng menu bên trái để ghi nhận chuẩn đoán bệnh và tiêm phòng.
-        </p>
-      </Card>
+          {/* ACTIVITIES ROW */}
+          <Row style={{ marginTop: 24 }}>
+            <Col span={24}>
+              <Card className="activity-card">
+                <div className="activity-card__header">
+                  <h3>Hoạt động & Báo cáo gần đây</h3>
+                </div>
+                <div className="activity-card__list">
+                  <List
+                    dataSource={recentActivities}
+                    locale={{ emptyText: "Chưa có hoạt động" }}
+                    renderItem={(item) => (
+                      <div className="activity-card__item" key={item.id}>
+                        <div className={`activity-card__icon ${item.type === 'report' ? 'activity-card__icon--task' : 'activity-card__icon--medical'}`}>
+                          {item.icon}
+                        </div>
+                        <div className="activity-card__content">
+                          <p><strong>{item.title}</strong>: {item.content}</p>
+                          <span>{formatRelativeTime(item.createdAt)}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </Spin>
+      </div>
     </div>
-  )
+  );
 }

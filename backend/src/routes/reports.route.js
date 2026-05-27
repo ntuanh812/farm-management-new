@@ -77,7 +77,7 @@ export default async function reportsRoute(app) {
         ORDER BY count DESC LIMIT 5
       `);
 
-      // 8. Doanh thu 6 tháng gần nhất (Lãi)
+      // 8. Doanh thu 6 thAng gn nht (LAi)
       const [revenueTrend] = await pool.query(`
         SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
         FROM sale_batches sb
@@ -85,6 +85,15 @@ export default async function reportsRoute(app) {
         LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
         GROUP BY month 
         ORDER BY MAX(sb.sold_at) DESC LIMIT 6
+      `);
+
+      // 9. Thống kê tiêm phòng
+      const [vaccineStats] = await pool.query(`
+        SELECT vaccine_name, COUNT(*) as total_doses
+        FROM vaccinations
+        WHERE 1=1 ${getAndDateCondition('vaccinated_at')}
+        GROUP BY vaccine_name
+        ORDER BY total_doses DESC
       `);
 
       return reply.send({
@@ -98,7 +107,8 @@ export default async function reportsRoute(app) {
           feedUsage,
           pendingReports: pendingReports[0].count,
           diseaseData,
-          revenueTrend: revenueTrend.reverse()
+          revenueTrend: revenueTrend.reverse(),
+          vaccineStats
         }
       });
     } catch (error) {

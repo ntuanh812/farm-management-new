@@ -5,6 +5,7 @@ import {
 } from 'antd'
 import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons'
 import axios from 'axios'
+import dayjs from 'dayjs'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 
@@ -104,6 +105,7 @@ export default function PigReport() {
 
   // ── Columns ──────────────────────────────────────────────
   const columns = [
+    { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
     { title: 'Mã lợn',    dataIndex: 'pig_id',       width: 100 },
     { title: 'Chuồng',    dataIndex: 'barn_name',     width: 110 },
     { title: 'Người báo', dataIndex: 'reporter_name', width: 140 },
@@ -194,17 +196,27 @@ export default function PigReport() {
             <Col span={12}>
               <Form.Item label="Mã lợn" name="pig_id"
                 rules={[{ required: true, message: 'Chọn mã lợn' }]}>
-                <Select showSearch placeholder="Chọn lợn">
-                  {pigs.filter(p => p.lifecycleStatus === 'ACTIVE').map(p => (
-                    <Option key={p.id} value={p.earTag}>{p.earTag} - {p.barnName}</Option>
-                  ))}
+                <Select 
+                  showSearch 
+                  placeholder="Chọn lợn"
+                  onChange={(val) => {
+                    const pig = pigs.find(p => p.earTag === val || p.pig_code === val || p.pigCode === val);
+                    if (pig) {
+                      form.setFieldsValue({ barn_id: pig.barnId || pig.barn_id });
+                    }
+                  }}
+                >
+                  {pigs.filter(p => (p.lifecycleStatus || p.lifecycle_status) === 'ACTIVE').map(p => {
+                    const code = p.earTag || p.pig_code || p.pigCode;
+                    return <Option key={p.id} value={code}>{code}</Option>;
+                  })}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="Chuồng" name="barn_id"
                 rules={[{ required: true, message: 'Chọn chuồng' }]}>
-                <Select placeholder="Chọn chuồng">
+                <Select disabled placeholder="Tự động điền khi chọn mã lợn">
                   {barns.map(b => <Option key={b.id} value={b.id}>{b.name}</Option>)}
                 </Select>
               </Form.Item>
