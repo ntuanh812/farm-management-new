@@ -85,6 +85,12 @@ export default function PigDead() {
 
   const columns = [
     {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: 'Ngày ghi nhận',
       key: 'death_date',
       render: (_, r) => dayjs(r.death_date || r.deathDate).format('DD/MM/YYYY')
@@ -142,7 +148,8 @@ export default function PigDead() {
         )}
       />
 
-      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
         <Col xs={24} sm={12} lg={12}>
           <Card className="stat-card stat-card--daily-tasks">
             <div className="stat-card__header">
@@ -169,7 +176,7 @@ export default function PigDead() {
         </Col>
       </Row>
 
-      <Card className="table-card">
+      <Card className="table-card" style={{ marginTop: 24 }}>
         <Table 
           columns={columns} 
           dataSource={deaths} 
@@ -228,6 +235,7 @@ export default function PigDead() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }

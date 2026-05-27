@@ -185,6 +185,12 @@ export default function PigManage() {
 
   const columns = [
     {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: 'Mã (Số tai)',
       key: 'earTag',
       render: (_, r) => <strong>{r.earTag || r.pig_code || r.pigCode}</strong>,
@@ -292,7 +298,8 @@ export default function PigManage() {
         }
       />
 
-      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--pigs">
             <div className="stat-card__header">
@@ -343,7 +350,7 @@ export default function PigManage() {
         </Col>
       </Row>
 
-      <Card className="table-card">
+      <Card className="table-card" style={{ marginTop: 24 }}>
         <Form 
           layout="inline" 
           style={{ marginBottom: 16 }}
@@ -462,6 +469,7 @@ export default function PigManage() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }

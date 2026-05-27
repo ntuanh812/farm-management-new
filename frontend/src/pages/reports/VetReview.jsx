@@ -62,6 +62,12 @@ export default function VetReview() {
   const pendingCount = list.filter(r => r.status === 'cho_xu_ly').length
 
   const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
     { title: 'Thời gian', dataIndex: 'created_at', width: 130, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Lợn & Chuồng',

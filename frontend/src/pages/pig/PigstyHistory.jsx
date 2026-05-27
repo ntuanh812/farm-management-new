@@ -208,7 +208,8 @@ export default function PigstyHistory() {
         }
       />
 
-      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
         <Col xs={24} sm={12} lg={12}>
           <Card className="stat-card stat-card--barn">
             <div className="stat-card__header">
@@ -235,7 +236,7 @@ export default function PigstyHistory() {
         </Col>
       </Row>
 
-      <Card className="table-card">
+      <Card className="table-card" style={{ marginTop: 24 }}>
           <Table
             loading={loading}
             columns={columns}
@@ -301,6 +302,7 @@ export default function PigstyHistory() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }

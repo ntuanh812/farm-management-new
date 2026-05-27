@@ -83,6 +83,12 @@ export default function FarmReport() {
   const totalActivePigs = activePigsMapped.reduce((sum, item) => sum + item.count, 0);
 
   const vaccineColumns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
     { title: 'Tên Vaccine', dataIndex: 'vaccine_name', key: 'vaccine_name' },
     { 
       title: 'Số mũi đã tiêm', 
@@ -290,6 +296,12 @@ export default function FarmReport() {
               <Table 
                 dataSource={data.medicineUsage} 
                 columns={[
+                  {
+                    title: 'STT',
+                    key: 'index',
+                    width: 60,
+                    render: (_, __, index) => index + 1,
+                  },
                   { title: 'Tên thuốc / Vật tư', dataIndex: 'medicine_name', key: 'medicine_name' },
                   { 
                     title: 'Số lượng đã dùng', 

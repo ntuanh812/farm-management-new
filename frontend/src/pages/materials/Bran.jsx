@@ -81,6 +81,12 @@ export default function Bran() {
   };
 
   const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
     { title: 'Ngày', dataIndex: 'used_at', key: 'used_at', render: (date) => dayjs(date).format('DD/MM/YYYY') },
     { title: 'Chuồng', dataIndex: 'barn_name', key: 'barn_name' },
     { title: 'Loại cám', dataIndex: 'feed_type', key: 'feed_type' },

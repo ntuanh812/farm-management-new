@@ -70,6 +70,12 @@ export default function PigVaccination() {
 
   const columns = [
     {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: "Ngày tiêm",
       dataIndex: "vaccinated_at",
       key: "vaccinated_at",

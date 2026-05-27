@@ -323,7 +323,7 @@ export default function StaffManagement() {
               beforeUpload={() => false} // Chặn tự động tải lên server
               showUploadList={false}
               maxCount={1}
-              onChange={({ file, fileList: newFileList }) => {
+              onChange={({ fileList: newFileList }) => {
                 // Ép buộc hệ thống CHỈ giữ lại 1 file mới nhất vừa được chọn
                 const latestList = [...newFileList].slice(-1);
 

@@ -136,6 +136,12 @@ export default function PigFarrowing() {
 
   const columns = [
     {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: 'Ngày đẻ',
       dataIndex: 'farrow_date',
       key: 'farrow_date',
@@ -208,7 +214,8 @@ export default function PigFarrowing() {
         )}
       />
 
-      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
         <Col xs={24} sm={12} lg={8}>
           <Card className="stat-card stat-card--pigs">
             <div className="stat-card__header">
@@ -247,7 +254,7 @@ export default function PigFarrowing() {
         </Col>
       </Row>
 
-      <Card className="table-card">
+      <Card className="table-card" style={{ marginTop: 24 }}>
         <Table columns={columns} dataSource={farrowings} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
       </Card>
 
@@ -364,6 +371,7 @@ export default function PigFarrowing() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }

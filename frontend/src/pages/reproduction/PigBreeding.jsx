@@ -94,6 +94,12 @@ export default function PigBreeding() {
 
   const columns = [
     {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: 'Ngày phối',
       dataIndex: 'breeding_date',
       key: 'breeding_date',
@@ -187,7 +193,8 @@ export default function PigBreeding() {
         )}
       />
 
-      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--pigs">
             <div className="stat-card__header">
@@ -238,7 +245,7 @@ export default function PigBreeding() {
         </Col>
       </Row>
 
-      <Card className="table-card">
+      <Card className="table-card" style={{ marginTop: 24 }}>
         <Table 
           columns={columns} 
           dataSource={breedings} 
@@ -302,6 +309,7 @@ export default function PigBreeding() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }

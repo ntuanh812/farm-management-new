@@ -106,6 +106,12 @@ export default function PigReport() {
 
   // ── Columns ──────────────────────────────────────────────
   const columns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
     { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Lợn & Chuồng',

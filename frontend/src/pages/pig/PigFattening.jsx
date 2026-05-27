@@ -281,7 +281,7 @@ export default function PigFattening() {
         </Row>
 
         {/* ===== FILTER CARD ===== */}
-        <Row gutter={[20, 20]} className="mt-24">
+        <Row gutter={[20, 20]} style={{ marginTop: 24 }}>
           <Col span={24}>
             <Card>
               <div>
@@ -322,7 +322,7 @@ export default function PigFattening() {
         </Row>
 
         {/* ===== TABLE ===== */}
-        <Row gutter={[20, 20]} className="mt-24">
+        <Row gutter={[20, 20]} style={{ marginTop: 24 }}>
           <Col span={24}>
             <Card className="activity-card">
               <div className="activity-card__header">

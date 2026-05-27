@@ -129,6 +129,12 @@ export default function PigBarns() {
 
   const columns = [
     {
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: 'Mã',
       dataIndex: 'code',
       key: 'code',
@@ -225,7 +231,8 @@ export default function PigBarns() {
         }
       />
 
-      <Row gutter={[20, 20]} className="dashboard-stats mb-24 mt-24">
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
         <Col xs={24} sm={12} lg={6}>
           <Card className="stat-card stat-card--barn">
             <div className="stat-card__header">
@@ -276,7 +283,7 @@ export default function PigBarns() {
         </Col>
       </Row>
 
-      <Card className="table-card">
+      <Card className="table-card" style={{ marginTop: 24 }}>
         <Form 
           layout="inline" 
           style={{ marginBottom: 16 }}
@@ -377,6 +384,7 @@ export default function PigBarns() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }
