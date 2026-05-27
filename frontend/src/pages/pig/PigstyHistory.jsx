@@ -86,7 +86,7 @@ export default function PigstyHistory() {
     {
       title: "STT",
       width: 60,
-      render: (_, __, index) => index + 1,
+      render: (_, record) => historyRows.indexOf(record) + 1,
     },
     {
       title: "Ngày chuyển",
@@ -132,7 +132,7 @@ export default function PigstyHistory() {
     {
       title: "STT",
       width: 60,
-      render: (_, __, index) => index + 1,
+      render: (_, record) => filteredPigs.indexOf(record) + 1,
     },
     {
       title: "Số tai",

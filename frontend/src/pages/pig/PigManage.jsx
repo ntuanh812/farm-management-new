@@ -188,7 +188,7 @@ export default function PigManage() {
       title: 'STT',
       key: 'index',
       width: 60,
-      render: (_, __, index) => index + 1,
+      render: (_, record) => filteredPigs.indexOf(record) + 1,
     },
     {
       title: 'Mã (Số tai)',
@@ -242,8 +242,9 @@ export default function PigManage() {
       title: 'Trọng lượng',
       key: 'weightKg',
       render: (_, r) => {
-        const w = r.weightKg || r.current_weight || r.entry_weight;
-        return w ? `${w} kg` : '-';
+        const w = r.weightKg ?? r.current_weight ?? r.entry_weight;
+        // Chỉ hiển thị số kg nếu có giá trị và giá trị đó lớn hơn 0
+        return (w !== null && w !== undefined && Number(w) > 0) ? `${w} kg` : '-';
       },
     },
     {
