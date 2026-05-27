@@ -43,8 +43,8 @@ const ADMIN_MENU = [
       { key: '/reports/pig-report',   label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
     ],
   },
-  { key: '/staff/management', label: '👥 Quản lý nhân sự', icon: <TeamOutlined /> },
-  { key: '/reports/farm-report', label: '📊 Báo cáo thống kê', icon: <BarChartOutlined /> },
+  { key: '/staff/management', label: '👥 Quản lý nhân sự' },
+  { key: '/reports/farm-report', label: '📊 Báo cáo thống kê'},
 ]
 
 // ── Menu FARM_WORKER ──────────────────────────────────────

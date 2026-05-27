@@ -108,7 +108,7 @@ export default function FarmReport() {
       {/* Form Lọc bằng Antd */}
       <Card bordered={false} style={{ marginBottom: 16 }}>
         <Form form={form} layout="inline" onFinish={fetchReportData}>
-          <Form.Item name="dateRange" label="Thời gian lọc (Xuất bán, Lợn chết, Vật tư)">
+          <Form.Item name="dateRange" label="Thời gian lọc (Xuất bán, Lợn chết, Vật tư, Thuốc, Tiêm phòng)">
             <RangePicker format="DD/MM/YYYY" placeholder={['Từ ngày', 'Đến ngày']} />
           </Form.Item>
           <Form.Item>
@@ -187,13 +187,89 @@ export default function FarmReport() {
           </Col>
         </Row>
 
+        <Divider orientation="left" style={{ borderColor: '#2d5a27', fontSize: 18 }}>1. Báo cáo Tài chính & Tiêu thụ</Divider>
+        <Row gutter={[16, 16]}>
+          {/* 2. Biểu đồ Doanh thu (Chi tiết theo ngày) */}
+          <Col xs={24} lg={12}>
+            <Card title="Doanh thu xuất bán (Chi tiết theo ngày)" bordered={false} style={{ height: '100%' }}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.revenueTrend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
+                    <RechartsTooltip formatter={(value) => [`${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ`, 'Doanh thu']} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" name="Doanh thu" stroke="#cf1322" strokeWidth={2} activeDot={{ r: 8 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
+          <Col xs={24} lg={12}>
+            <Card title="Tiêu thụ thức ăn / cám" bordered={false} style={{ height: '100%' }}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.feedUsage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="feed_type" />
+                    <YAxis />
+                    <RechartsTooltip formatter={(value) => [`${value} kg`, 'Khối lượng']} />
+                    <Legend />
+                    <Bar dataKey="total_kg" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
+        </Row>
+
         <Divider />
 
-        {/* CÁC BIỂU ĐỒ THỐNG KÊ */}
         <Row gutter={[16, 16]}>
-          {/* 1. Biểu đồ Cơ cấu lợn */}
           <Col xs={24} lg={12}>
-            <Card title="Cơ cấu đàn lợn" bordered={false}>
+            <Card title="Thống kê sử dụng thuốc & vật tư thú y" bordered={false} style={{ height: '100%' }}>
+              <Table 
+                dataSource={data.medicineUsage} 
+                columns={[
+                  {
+                    title: 'STT',
+                    key: 'index',
+                    width: 60,
+                    render: (_, __, index) => index + 1,
+                  },
+                  { title: 'Tên thuốc / Vật tư', dataIndex: 'medicine_name', key: 'medicine_name' },
+                  { 
+                    title: 'Số lượng đã dùng', 
+                    key: 'total_quantity',
+                    render: (_, r) => <Text strong>{Number(r.total_quantity).toLocaleString('vi-VN')} {r.unit}</Text>
+                  }
+                ]} 
+                pagination={{ pageSize: 5 }}
+                rowKey="medicine_name"
+                locale={{ emptyText: 'Không có dữ liệu sử dụng thuốc trong khoảng thời gian này' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card title="Chiến dịch tiêm phòng" bordered={false} style={{ height: '100%' }}>
+              <Table 
+                dataSource={data.vaccineStats} 
+                columns={vaccineColumns} 
+                pagination={{ pageSize: 5 }}
+                rowKey="vaccine_name"
+                locale={{ emptyText: 'Không có dữ liệu tiêm phòng trong khoảng thời gian này' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <Divider orientation="left" style={{ borderColor: '#2d5a27', fontSize: 18 }}>3. Báo cáo Cơ cấu đàn lợn</Divider>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={12}>
+            <Card title="Cơ cấu đàn lợn hiện tại" bordered={false} style={{ height: '100%' }}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -218,9 +294,8 @@ export default function FarmReport() {
             </Card>
           </Col>
 
-          {/* 4. Biểu đồ Tỷ lệ trạng thái đàn lợn */}
           <Col xs={24} lg={12}>
-            <Card title="Tỷ lệ trạng thái đàn lợn" bordered={false}>
+            <Card title="Tỷ lệ trạng thái toàn trại" bordered={false} style={{ height: '100%' }}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -247,83 +322,6 @@ export default function FarmReport() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            </Card>
-          </Col>
-
-          {/* 2. Biểu đồ Doanh thu (6 tháng) */}
-          <Col xs={24} lg={12}>
-            <Card title="Xu hướng doanh thu xuất bán (6 tháng gần nhất)" bordered={false}>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.revenueTrend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
-                    <RechartsTooltip formatter={(value) => [`${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ`, 'Doanh thu']} />
-                    <Legend />
-                    <Line type="monotone" dataKey="revenue" name="Doanh thu" stroke="#cf1322" strokeWidth={2} activeDot={{ r: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-
-          {/* 3. Biểu đồ Tiêu thụ vật tư (Cám) */}
-          <Col xs={24} lg={12}>
-            <Card title="Tiêu thụ thức ăn / cám" bordered={false}>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.feedUsage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="feed_type" />
-                    <YAxis />
-                    <RechartsTooltip formatter={(value) => [`${value} kg`, 'Khối lượng']} />
-                    <Legend />
-                    <Bar dataKey="total_kg" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-
-        </Row>
-
-        <Divider />
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} lg={12}>
-            <Card title="Thống kê sử dụng thuốc & vật tư thú y" bordered={false} bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
-              <Table 
-                dataSource={data.medicineUsage} 
-                columns={[
-                  {
-                    title: 'STT',
-                    key: 'index',
-                    width: 60,
-                    render: (_, __, index) => index + 1,
-                  },
-                  { title: 'Tên thuốc / Vật tư', dataIndex: 'medicine_name', key: 'medicine_name' },
-                  { 
-                    title: 'Số lượng đã dùng', 
-                    key: 'total_quantity',
-                    render: (_, r) => <Text strong>{Number(r.total_quantity).toLocaleString('vi-VN')} {r.unit}</Text>
-                  }
-                ]} 
-                pagination={false}
-                rowKey="medicine_name"
-                locale={{ emptyText: 'Không có dữ liệu sử dụng thuốc trong khoảng thời gian này' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} lg={12}>
-            <Card title="Thống kê chiến dịch tiêm phòng" bordered={false} bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
-              <Table 
-                dataSource={data.vaccineStats} 
-                columns={vaccineColumns} 
-                pagination={false}
-                rowKey="vaccine_name"
-                locale={{ emptyText: 'Không có dữ liệu tiêm phòng trong khoảng thời gian này' }}
-              />
             </Card>
           </Col>
         </Row>

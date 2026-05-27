@@ -96,7 +96,7 @@ export default function PigDead() {
       render: (_, r) => dayjs(r.death_date || r.deathDate).format('DD/MM/YYYY')
     },
     {
-      title: 'Mã Lợn',
+      title: 'Số tai',
       key: 'pig_code',
       render: (_, r) => <strong>{r.pig_code || r.pigCode || r.earTag || r.pig_id || '—'}</strong>
     },
@@ -197,7 +197,7 @@ export default function PigDead() {
         footer={canEdit ? undefined : null}
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
-          <Form.Item name="pig_id" label="Chọn mã lợn" rules={[{ required: true, message: 'Vui lòng chọn lợn' }]}>
+          <Form.Item name="pig_id" label="Chọn số tai" rules={[{ required: true, message: 'Vui lòng chọn lợn' }]}>
             <Select 
               showSearch 
               placeholder="Chỉ hiển thị các cá thể lợn đang sống"

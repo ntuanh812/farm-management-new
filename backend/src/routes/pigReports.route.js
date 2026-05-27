@@ -60,9 +60,9 @@ export default async function pigReportsRoute(app) {
     if (status)  { sql += ' AND pr.status = ?';  params.push(status) }
     if (barn_id) { sql += ' AND pr.barn_id = ?'; params.push(barn_id) }
 
-    // Nhân viên chỉ thấy báo cáo của mình
+    // Nhân viên thấy báo cáo của các chuồng được phân công quản lý
     if (request.user.role === 'FARM_WORKER') {
-      sql += ' AND pr.reporter_id = ?'
+      sql += ' AND pr.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)'
       params.push(request.user.staff_id)
     }
 

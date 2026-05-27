@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { Row, Col, Card, List, message, Spin } from 'antd'
-import { TeamOutlined, HomeOutlined, ShoppingCartOutlined, RiseOutlined, FallOutlined, DashboardOutlined, SnippetsOutlined } from '@ant-design/icons'
+import { Row, Col, Card, message, Spin } from 'antd'
+import { TeamOutlined, HomeOutlined, ShoppingCartOutlined, RiseOutlined, FallOutlined, DashboardOutlined, SnippetsOutlined, AuditOutlined, AppleOutlined } from '@ant-design/icons'
 import axios from 'axios'
+import dayjs from 'dayjs'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -50,24 +51,49 @@ export default function StaffDashboard() {
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const [barnRes, pigRes, feedRes, moveRes] = await Promise.all([
+      const [barnRes, pigRes, feedRes, moveRes, saleRes, reportRes] = await Promise.all([
         axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/feed-usages`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/sale-batches`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
       ]);
 
       setBarns(barnRes.data?.data || []);
       setPigs(pigRes.data?.data || []);
       setFeedUsages(feedRes.data?.data || []);
       
-      const acts = (moveRes.data?.data || []).slice(0, 5).map(m => ({
-        id: m.id,
+      const acts = (moveRes.data?.data || []).map(m => ({
+        id: `move_${m.id}`,
         icon: "task",
-        content: `Chuyển lợn ${m.earTag} từ ${m.fromBarnName} sang ${m.toBarnName}`,
-        createdAt: m.createdAt
+        content: `Chuyển lợn ${m.ear_tag || m.earTag || m.pig_code || m.pigCode || m.pig_id || m.pigId || ''} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
+        createdAt: m.createdAt || m.created_at || m.movedAt || m.moved_at || new Date()
       }));
-      setActivities(acts);
+
+      (saleRes.data?.data || []).forEach(s => {
+        acts.push({
+          id: `sale_${s.id}`,
+          icon: "feeding",
+          content: `Xuất bán ${s.lines?.length || 0} con lợn thịt`,
+          createdAt: s.createdAt || s.created_at || s.soldAt || s.sold_at || new Date()
+        });
+      });
+
+      (reportRes.data?.data || []).forEach(r => {
+        acts.push({
+          id: `report_${r.id}`,
+          icon: "medical",
+          content: `Báo cáo lợn bệnh ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
+          createdAt: r.created_at || r.createdAt || new Date()
+        });
+      });
+
+      const recentActs = acts
+        .filter(a => dayjs(a.createdAt).isValid())
+        .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
+
+      setActivities(recentActs.slice(0, 6));
 
     } catch (err) {
       console.error(err);
@@ -255,24 +281,24 @@ export default function StaffDashboard() {
             <Col span={24}>
               <Card className="activity-card">
                 <div className="activity-card__header">
-                  <h3>Hoạt động chuyển chuồng gần đây</h3>
+                  <h3>Hoạt động gần đây</h3>
                 </div>
                 <div className="activity-card__list">
-                  <List
-                    dataSource={activities}
-                    locale={{ emptyText: "Chưa có hoạt động" }}
-                    renderItem={(item) => (
+                  {activities && activities.length > 0 ? (
+                    activities.map((item) => (
                       <div className="activity-card__item" key={item.id}>
-                        <div className={`activity-card__icon activity-card__icon--${item.icon}`}>
-                          <SnippetsOutlined />
+                        <div className={`activity-card__icon activity-card__icon--${item.icon || 'default'}`}>
+                          {item.icon === 'medical' ? <AuditOutlined /> : item.icon === 'feeding' ? <AppleOutlined /> : <SnippetsOutlined />}
                         </div>
                         <div className="activity-card__content">
                           <p>{item.content}</p>
                           <span>{formatRelativeTime(item.createdAt)}</span>
                         </div>
                       </div>
-                    )}
-                  />
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#999', padding: '16px 0' }}>Chưa có hoạt động</div>
+                  )}
                 </div>
               </Card>
             </Col>

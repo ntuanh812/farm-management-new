@@ -183,14 +183,14 @@ export const DashBoard = () => {
           const sales = saleRes.data?.data || [];
           const revMap = {};
           sales.forEach(s => {
-            const month = dayjs(s.sold_at || s.createdAt).format('MM/YYYY');
+            const date = dayjs(s.sold_at || s.createdAt).format('DD/MM/YYYY');
             const amount = s.lines?.reduce((sum, l) => sum + Number(l.total_amount || 0), 0) || 0;
-            revMap[month] = (revMap[month] || 0) + amount;
+            revMap[date] = (revMap[date] || 0) + amount;
           });
-          revenueChart = Object.keys(revMap).map(k => ({ month: k, revenue: revMap[k] })).sort((a, b) => {
-            const [mA, yA] = a.month.split('/');
-            const [mB, yB] = b.month.split('/');
-            return new Date(yA, mA - 1) - new Date(yB, mB - 1);
+          revenueChart = Object.keys(revMap).map(k => ({ date: k, revenue: revMap[k] })).sort((a, b) => {
+            const [dA, mA, yA] = a.date.split('/');
+            const [dB, mB, yB] = b.date.split('/');
+            return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
           });
         }
 
@@ -223,8 +223,8 @@ export const DashBoard = () => {
         const activitiesList = moves.map(m => ({
           id: `move_${m.id}`,
           icon: "task",
-          content: `Chuyển lợn ${m.earTag || m.pigId || ''} từ ${m.fromBarnName || 'chuồng cũ'} sang ${m.toBarnName || 'chuồng mới'}`,
-          createdAt: m.movedAt || m.createdAt || new Date()
+          content: `Chuyển lợn ${m.ear_tag || m.earTag || m.pig_code || m.pigCode || m.pig_id || m.pigId || ''} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
+          createdAt: m.createdAt || m.created_at || m.movedAt || m.moved_at || new Date()
         }));
 
         const salesData = saleRes.data?.data || [];
@@ -233,7 +233,7 @@ export const DashBoard = () => {
             id: `sale_${s.id}`,
             icon: "feeding",
             content: `Xuất bán ${s.lines?.length || 0} con lợn thịt`,
-            createdAt: s.sold_at || s.createdAt || new Date()
+            createdAt: s.createdAt || s.created_at || s.soldAt || s.sold_at || new Date()
           });
         });
 
@@ -242,15 +242,16 @@ export const DashBoard = () => {
           activitiesList.push({
             id: `report_${r.id}`,
             icon: "medical",
-            content: `Báo cáo lợn bệnh ${r.pig_id || ''}: ${r.description || ''}`,
+            content: `Báo cáo lợn bệnh ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
             createdAt: r.created_at || r.createdAt || new Date()
           });
         });
 
         // Lọc lấy các hoạt động trong vòng 7 ngày qua
         const sevenDaysAgo = dayjs().subtract(7, 'day');
-        const recentActivitiesList = activitiesList.filter(a => dayjs(a.createdAt).isAfter(sevenDaysAgo));
-        recentActivitiesList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const recentActivitiesList = activitiesList
+          .filter(a => dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(sevenDaysAgo))
+          .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
 
         if (recentActivitiesList.length > 0) {
           setActivities(recentActivitiesList.slice(0, 6));
@@ -524,7 +525,7 @@ export const DashBoard = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData.revenue} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                        <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
                         <Tooltip formatter={(value) => `${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ`} cursor={{fill: 'transparent'}}/>
                         <Legend />

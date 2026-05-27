@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
-  Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col
+  Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col, Descriptions, Spin, Alert, Divider
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, ShoppingCartOutlined, HeartOutlined, DashboardOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, ShoppingCartOutlined, HeartOutlined, DashboardOutlined, EyeOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
@@ -41,6 +41,12 @@ export default function PigManage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
+
+  // Detail View States
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedPig, setSelectedPig] = useState(null);
+  const [pigHistory, setPigHistory] = useState({ movements: [], vaccinations: [], reports: [], medicines: [] });
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Filter states
   const [searchText, setSearchText] = useState('');
@@ -127,6 +133,34 @@ export default function PigManage() {
     setOpen(true);
   };
 
+  const handleViewDetail = async (record) => {
+    setSelectedPig(record);
+    setDetailOpen(true);
+    setLoadingHistory(true);
+    try {
+      const pigCode = record.earTag || record.pig_code || record.pigCode;
+      const bId = record.barnId || record.barn_id;
+      
+      const [moveRes, vacRes, repRes, medRes] = await Promise.all([
+        axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      const moves = (moveRes.data?.data || []).filter(m => m.pigId === record.id || m.pig_id === record.id);
+      const vacs = (vacRes.data?.data || []).filter(v => v.pig_id === record.id || v.pigId === record.id);
+      const reps = (repRes.data?.data || []).filter(r => r.pig_id === pigCode);
+      const meds = (medRes.data?.data || []).filter(m => m.barn_id === bId || m.barnId === bId);
+
+      setPigHistory({ movements: moves, vaccinations: vacs, reports: reps, medicines: meds });
+    } catch (error) {
+      message.error("Không thể tải lịch sử cá thể lợn");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const handleOpenEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
@@ -191,7 +225,7 @@ export default function PigManage() {
       render: (_, record) => filteredPigs.indexOf(record) + 1,
     },
     {
-      title: 'Mã (Số tai)',
+      title: 'Số tai',
       key: 'earTag',
       render: (_, r) => <strong>{r.earTag || r.pig_code || r.pigCode}</strong>,
     },
@@ -231,14 +265,6 @@ export default function PigManage() {
       },
     },
     {
-      title: 'Lưu chuồng',
-      key: 'daysInFarm',
-      render: (_, r) => {
-        const date = r.arrivedAt || r.entry_date;
-        return date ? `${dayjs().diff(dayjs(date), 'day')} ngày` : '-';
-      },
-    },
-    {
       title: 'Trọng lượng',
       key: 'weightKg',
       render: (_, r) => {
@@ -263,6 +289,13 @@ export default function PigManage() {
         const status = record.computedStatus;
         return canEdit && (
           <Space size="middle">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              style={{ color: '#1890ff' }}
+              onClick={() => handleViewDetail(record)}
+              title="Xem chi tiết"
+            />
             <Button
               type="text"
               icon={<EditOutlined />}
@@ -400,7 +433,7 @@ export default function PigManage() {
             <Col span={8}>
               <Form.Item 
                 name="pig_code" 
-                label="Mã lợn / Số tai" 
+                label="Số tai" 
                 rules={[
                   { required: true, message: 'Nhập mã' },
                   () => ({
@@ -469,6 +502,114 @@ export default function PigManage() {
             <Input.TextArea rows={2} placeholder="Các đặc điểm nhận dạng hoặc ghi chú khác..." />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* MODAL XEM CHI TIẾT */}
+      <Modal
+        title={`Hồ sơ chi tiết lợn: ${selectedPig?.earTag || selectedPig?.pig_code || selectedPig?.pigCode || ''}`}
+        open={detailOpen}
+        onCancel={() => setDetailOpen(false)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setDetailOpen(false)}>Đóng</Button>
+        ]}
+        width={850}
+      >
+        {selectedPig && (
+          <Spin spinning={loadingHistory}>
+            <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: 8 }}>
+              <Descriptions bordered size="small" column={{ xxl: 3, xl: 3, lg: 3, md: 2, sm: 2, xs: 1 }} style={{ marginBottom: 20 }}>
+                <Descriptions.Item label="Số tai"><strong>{selectedPig.earTag || selectedPig.pig_code || selectedPig.pigCode}</strong></Descriptions.Item>
+                <Descriptions.Item label="Phân loại"><Tag color="blue">{CATEGORY_MAP[selectedPig.category] || selectedPig.category}</Tag></Descriptions.Item>
+                <Descriptions.Item label="Giới tính">{GENDER_MAP[selectedPig.gender] || selectedPig.gender}</Descriptions.Item>
+                <Descriptions.Item label="Chuồng hiện tại">{selectedPig.barnName || selectedPig.barn_name}</Descriptions.Item>
+                <Descriptions.Item label="Trọng lượng">{(selectedPig.weightKg ?? selectedPig.current_weight ?? selectedPig.entry_weight) ? `${selectedPig.weightKg ?? selectedPig.current_weight ?? selectedPig.entry_weight} kg` : '-'}</Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">
+                  <Tag color={STATUS_MAP[selectedPig.computedStatus]?.color}>{STATUS_MAP[selectedPig.computedStatus]?.text || selectedPig.computedStatus}</Tag>
+                  {selectedPig.computedStatus === 'DEAD' && selectedPig.deathDate && (
+                    <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>({dayjs(selectedPig.deathDate).format('DD/MM/YYYY')})</span>
+                  )}
+                  {selectedPig.computedStatus === 'SOLD' && selectedPig.soldAt && (
+                    <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>({dayjs(selectedPig.soldAt).format('DD/MM/YYYY')})</span>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày sinh (đẻ)">
+                  {selectedPig.dob ? dayjs(selectedPig.dob).format('DD/MM/YYYY') : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày nhập">
+                  {selectedPig.arrivedAt || selectedPig.entry_date ? dayjs(selectedPig.arrivedAt || selectedPig.entry_date).format('DD/MM/YYYY') : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tuổi">
+                  {selectedPig.ageDays != null ? `${selectedPig.ageDays} ngày` : (selectedPig.dob ? `${dayjs().diff(dayjs(selectedPig.dob), 'day')} ngày` : '-')}
+                </Descriptions.Item>
+                <Descriptions.Item label="Lưu chuồng">
+                  {selectedPig.arrivedAt || selectedPig.entry_date ? `${dayjs().diff(dayjs(selectedPig.arrivedAt || selectedPig.entry_date), 'day')} ngày` : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ghi chú" span={3}>{selectedPig.note || 'Không có'}</Descriptions.Item>
+              </Descriptions>
+
+              <Divider orientation="left" style={{ margin: '12px 0' }}>Báo cáo bệnh án</Divider>
+              <Table 
+                dataSource={pigHistory.reports} 
+                rowKey="id" 
+                pagination={{ pageSize: 5 }} 
+                size="small"
+                columns={[
+                  { title: 'Ngày báo cáo', render: (_, r) => dayjs(r.createdAt || r.created_at).format('DD/MM/YYYY HH:mm') },
+                  { title: 'Triệu chứng', dataIndex: 'description' },
+                  { title: 'Trạng thái', dataIndex: 'status', render: s => s === 'da_xu_ly' ? <Tag color="green">Đã xử lý</Tag> : <Tag color="orange">Chờ xử lý</Tag> },
+                  { title: 'Bác sĩ phản hồi', dataIndex: 'vet_note', render: t => t || '-' }
+                ]} 
+                locale={{ emptyText: 'Chưa có báo cáo bệnh nào' }}
+              />
+              
+              <Divider orientation="left" style={{ margin: '12px 0' }}>Lịch sử tiêm phòng</Divider>
+              <Table 
+                dataSource={pigHistory.vaccinations} 
+                rowKey="id" 
+                pagination={{ pageSize: 5 }} 
+                size="small"
+                columns={[
+                  { title: 'Ngày tiêm', render: (_, r) => dayjs(r.vaccinatedAt || r.vaccinated_at).format('DD/MM/YYYY') },
+                  { title: 'Tên Vaccine', dataIndex: ['vaccineName', 'vaccine_name'], render: (_, r) => r.vaccineName || r.vaccine_name },
+                  { title: 'Người tiêm', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name || 'Hệ thống' },
+                  { title: 'Ghi chú', dataIndex: 'note' }
+                ]} 
+                locale={{ emptyText: 'Chưa có dữ liệu tiêm phòng' }}
+              />
+
+              <Divider orientation="left" style={{ margin: '12px 0' }}>Thuốc sử dụng (Theo chuồng)</Divider>
+              <Alert message="Thuốc được quản lý và sử dụng theo cấp độ Chuồng (không tiêm riêng lẻ). Dưới đây là danh sách thuốc đã dùng tại chuồng hiện tại của cá thể lợn này." type="info" showIcon style={{ marginBottom: 16 }} />
+              <Table 
+                dataSource={pigHistory.medicines} 
+                rowKey="id" 
+                pagination={{ pageSize: 5 }} 
+                size="small"
+                columns={[
+                  { title: 'Ngày dùng', render: (_, r) => dayjs(r.usedAt || r.used_at).format('DD/MM/YYYY') },
+                  { title: 'Tên thuốc', dataIndex: ['medicineName', 'medicine_name'], render: (_, r) => r.medicineName || r.medicine_name },
+                  { title: 'Liều lượng', render: (_, r) => `${r.quantity} ${r.unit}` },
+                  { title: 'Người thực hiện', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name }
+                ]} 
+                locale={{ emptyText: 'Chuồng này chưa sử dụng loại thuốc nào' }}
+              />
+
+              <Divider orientation="left" style={{ margin: '12px 0' }}>Lịch sử chuyển chuồng</Divider>
+              <Table 
+                dataSource={pigHistory.movements} 
+                rowKey="id" 
+                pagination={{ pageSize: 5 }} 
+                size="small"
+                columns={[
+                  { title: 'Ngày chuyển', render: (_, r) => dayjs(r.movedAt || r.move_date || r.createdAt || r.created_at).format('DD/MM/YYYY') },
+                  { title: 'Từ chuồng', dataIndex: ['fromBarnName', 'from_barn_name'], render: (_, r) => r.fromBarnName || r.from_barn_name || 'Không rõ' },
+                  { title: 'Đến chuồng', dataIndex: ['toBarnName', 'to_barn_name'], render: (_, r) => r.toBarnName || r.to_barn_name },
+                  { title: 'Người thực hiện', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name || 'Hệ thống' },
+                ]} 
+                locale={{ emptyText: 'Chưa có lịch sử chuyển chuồng' }}
+              />
+            </div>
+          </Spin>
+        )}
       </Modal>
       </div>
     </div>

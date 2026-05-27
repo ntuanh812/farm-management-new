@@ -54,15 +54,23 @@ export const reportsController = {
         "SELECT COUNT(*) as total FROM pig_reports WHERE status = 'cho_xu_ly'"
       );
 
-      // 7. Xu hướng doanh thu 6 tháng gần nhất (Không ảnh hưởng bởi filter trên trang)
-      const [revenueTrend] = await pool.query(`
-        SELECT DATE_FORMAT(sb.sold_at, '%m/%Y') AS month, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
+      // 7. Xu hướng doanh thu chi tiết theo ngày
+      let revQuery = `
+        SELECT DATE_FORMAT(sb.sold_at, '%d/%m/%Y') AS date, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
         FROM sale_batches sb
-        JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
+        LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
         LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
-        GROUP BY month 
-        ORDER BY MIN(sb.sold_at) DESC LIMIT 6
-      `);
+        WHERE 1=1
+      `;
+      let revParams = [];
+      if (startDate && endDate) {
+        revQuery += " AND sb.sold_at >= ? AND sb.sold_at <= ?";
+        revParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+      } else {
+        revQuery += " AND sb.sold_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+      }
+      revQuery += " GROUP BY date ORDER BY MIN(sb.sold_at) ASC";
+      const [revenueTrend] = await pool.query(revQuery, revParams);
 
       // 8. Thống kê mũi tiêm vaccine
       let vacQuery = "SELECT vaccine_name, COUNT(*) as total_doses FROM vaccinations WHERE 1=1";
@@ -97,7 +105,7 @@ export const reportsController = {
           },
           feedUsage: feedUsage,
           pendingReports: pendingReports[0].total || 0,
-          revenueTrend: revenueTrend.reverse(),
+          revenueTrend: revenueTrend,
           vaccineStats: vaccineStats,
           medicineUsage: medicineUsage
         }
