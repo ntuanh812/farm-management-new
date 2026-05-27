@@ -85,14 +85,6 @@ INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, status, vet_
 ('PIG-S002', 1, 2, 'Lợn nái bỏ ăn, sốt nhẹ, nằm ì một chỗ', 'cho_xu_ly', NULL, NULL),
 ('PIG-F001', 3, 2, 'Ho khạc, thở dốc, chảy nước mũi', 'da_xu_ly', 'Đã xuống khám và chẩn đoán viêm phổi. Cách ly tiêm thuốc.', 3);
 
-INSERT INTO vet_diagnosis (pig_id, barn_id, diagnosis_date, symptoms, suspected_disease, temperature, severity_level, status, vet_name) VALUES
-('PIG-F001', 3, CURDATE(), 'Ho, khó thở, chảy nước mũi', 'Viêm phổi màng phổi', 40.5, 'trung_binh', 'dang_dieu_tri', 'Trần Thị Thúy'),
-('PIG-F005', 6, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'Tiêu chảy, ủ rũ', 'Tiêu chảy cấp', 39.0, 'nhe', 'da_khoi', 'Trần Thị Thúy');
-
--- Đơn thuốc (Kê toa cho ca bệnh PIG-F001)
-INSERT INTO vet_diagnosis_medicines (diagnosis_id, medicine_id, dosage, unit, duration_days) VALUES
-(1, 2, '10', 'ml', 3);
-
 -- Lịch sử tiêm phòng
 INSERT INTO vaccinations (pig_id, vaccine_name, vaccinated_at, performed_by, note) VALUES
 (6, 'Vaccine Dịch tả lợn', CURDATE(), 3, 'Tiêm phòng lợn con 30 ngày tuổi'),

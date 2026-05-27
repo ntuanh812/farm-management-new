@@ -117,7 +117,10 @@ export default function Bran() {
       <Modal 
         title="Ghi nhận sử dụng cám" 
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => {
+          setOpen(false);
+          form.resetFields();
+        }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy" 
@@ -125,7 +128,7 @@ export default function Bran() {
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Form.Item name="used_at" label="Ngày cho ăn" rules={[{ required: true, message: 'Chọn ngày' }]}>
-            <DatePicker className="w-100" format="DD/MM/YYYY" />
+            <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && current > dayjs().endOf('day')} />
           </Form.Item>
           <Form.Item name="barn_id" label="Chuồng" rules={[{ required: true, message: 'Chọn chuồng' }]}>
             <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn chuồng..." />

@@ -162,9 +162,9 @@ export default function PigVaccination() {
             rules={[{ required: true }]}
           >
             <Select showSearch optionFilterProp="children">
-              {pigs.map((p) => (
+              {pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map((p) => (
                 <Option key={p.id} value={p.id}>
-                  {p.earTag || p.id}
+                  {p.earTag || p.pigCode || p.pig_code || p.id} - {p.barnName || p.barn_name || 'Không rõ chuồng'}
                 </Option>
               ))}
             </Select>

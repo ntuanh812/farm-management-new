@@ -39,7 +39,12 @@ export default async function pigsRoute(app) {
               DAY,
               p.dob,
               CURDATE()
-            ) AS ageDays
+            ) AS ageDays,
+            (
+              EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.pig_code AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))
+              OR 
+              EXISTS(SELECT 1 FROM vet_diagnosis vd WHERE vd.pig_id = p.pig_code AND vd.status = 'dang_dieu_tri')
+            ) AS isSick
           FROM pigs p
           LEFT JOIN barns b
           ON b.id = p.barn_id

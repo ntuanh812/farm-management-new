@@ -20,6 +20,7 @@ const CATEGORY_MAP = {
 
 const STATUS_MAP = {
   'ACTIVE': { text: 'Khỏe mạnh', color: 'green' },
+  'SICK': { text: 'Đang bệnh', color: 'orange' },
   'SOLD': { text: 'Đã xuất bán', color: 'blue' },
   'DEAD': { text: 'Đã chết', color: 'red' }
 };
@@ -35,6 +36,7 @@ export default function PigManage() {
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -52,13 +54,15 @@ export default function PigManage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [resPigs, resBarns] = await Promise.all([
+      const [resPigs, resBarns, resReports] = await Promise.all([
         axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/barns`, { headers })
+        axios.get(`${API}/barns`, { headers }),
+        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
 
       if (resPigs.data.success) setPigs(resPigs.data.data);
       if (resBarns.data.success) setBarns(resBarns.data.data);
+      if (resReports.data?.data) setReports(resReports.data.data);
     } catch (error) {
       message.error('Không thể tải dữ liệu đàn lợn');
     } finally {
@@ -70,27 +74,51 @@ export default function PigManage() {
     fetchData();
   }, []);
 
+  // Kết hợp trạng thái từ báo cáo lợn bệnh
+  const augmentedPigs = useMemo(() => {
+    return pigs.map(p => {
+      const code = p.earTag || p.pig_code || p.pigCode;
+      // Kiểm tra có báo cáo lợn bệnh nào chưa xử lý (cho_xu_ly, dang_xu_ly) không
+      const hasActiveReport = reports.some(r => r.pig_id === code && r.status !== 'da_xu_ly');
+      
+      let status = p.lifecycleStatus || p.lifecycle_status;
+      if (status === 'ACTIVE' && hasActiveReport) {
+        status = 'SICK';
+      }
+      
+      return {
+        ...p,
+        isSick: hasActiveReport,
+        computedStatus: status
+      };
+    });
+  }, [pigs, reports]);
+
   // Tính toán thống kê từ danh sách lợn
   const stats = useMemo(() => {
-    const activePigs = pigs.filter(p => p.lifecycleStatus === 'ACTIVE');
+    const activePigs = augmentedPigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE');
     return {
       total: activePigs.length,
       fattening: activePigs.filter(p => p.category === 'FATTENING').length,
       breeding: activePigs.filter(p => p.category === 'SOW' || p.category === 'BOAR').length,
       piglet: activePigs.filter(p => p.category === 'PIGLET').length,
     };
-  }, [pigs]);
+  }, [augmentedPigs]);
 
   // Lọc dữ liệu hiển thị trên bảng
   const filteredPigs = useMemo(() => {
-    return pigs.filter(p => {
-      const matchSearch = !searchText || (p.earTag || '').toLowerCase().includes(searchText.toLowerCase());
-      const matchBarn = !filterBarn || p.barnId === filterBarn;
+    const filtered = augmentedPigs.filter(p => {
+      const code = p.earTag || p.pig_code || p.pigCode || '';
+      const matchSearch = !searchText || code.toLowerCase().includes(searchText.toLowerCase());
+      const bId = p.barnId || p.barn_id;
+      const matchBarn = !filterBarn || bId === filterBarn;
       const matchCategory = !filterCategory || p.category === filterCategory;
-      const matchStatus = !filterStatus || p.lifecycleStatus === filterStatus;
+      const matchStatus = !filterStatus || p.computedStatus === filterStatus;
       return matchSearch && matchBarn && matchCategory && matchStatus;
     });
-  }, [pigs, searchText, filterBarn, filterCategory, filterStatus]);
+    // Đảo ngược mảng để lợn con mới sinh/lợn mới nhập luôn lên đầu bảng
+    return filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+  }, [augmentedPigs, searchText, filterBarn, filterCategory, filterStatus]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -102,18 +130,18 @@ export default function PigManage() {
   const handleOpenEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
-      pig_code: record.earTag,
+      pig_code: record.earTag || record.pig_code || record.pigCode,
       name: record.name,
-      barn_id: record.barnId,
+      barn_id: record.barnId || record.barn_id,
       category: record.category,
-      lifecycle_status: record.lifecycleStatus,
+      lifecycle_status: record.lifecycleStatus || record.lifecycle_status,
       breed: record.breed,
       gender: record.gender,
       dob: record.dob ? dayjs(record.dob) : null,
-      entry_date: record.arrivedAt ? dayjs(record.arrivedAt) : null,
+      entry_date: (record.arrivedAt || record.entry_date) ? dayjs(record.arrivedAt || record.entry_date) : null,
       entry_weight: record.entry_weight,
-      current_weight: record.weightKg,
-      purchase_price: record.purchasePrice,
+      current_weight: record.weightKg || record.current_weight,
+      purchase_price: record.purchasePrice || record.purchase_price,
       note: record.note
     });
     setOpen(true);
@@ -159,14 +187,13 @@ export default function PigManage() {
   const columns = [
     {
       title: 'Mã (Số tai)',
-      dataIndex: 'earTag',
       key: 'earTag',
-      render: (text) => <strong>{text}</strong>,
+      render: (_, r) => <strong>{r.earTag || r.pig_code || r.pigCode}</strong>,
     },
     {
       title: 'Chuồng',
-      dataIndex: 'barnName',
       key: 'barnName',
+      render: (_, r) => <span>{r.barnName || r.barn_name}</span>,
     },
     {
       title: 'Phân loại',
@@ -182,34 +209,43 @@ export default function PigManage() {
     },
     {
       title: 'Ngày nhập',
-      dataIndex: 'arrivedAt',
       key: 'arrivedAt',
-      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
+      render: (_, r) => {
+        const date = r.arrivedAt || r.entry_date;
+        return date ? dayjs(date).format('DD/MM/YYYY') : '-';
+      },
     },
     {
       title: 'Tuổi',
-      dataIndex: 'ageDays',
       key: 'ageDays',
-      render: (days) => days != null ? `${days} ngày` : '-',
+      render: (_, r) => {
+        const days = r.ageDays;
+        if (days != null) return `${days} ngày`;
+        if (r.dob) return `${dayjs().diff(dayjs(r.dob), 'day')} ngày`;
+        return '-';
+      },
     },
     {
       title: 'Lưu chuồng',
       key: 'daysInFarm',
-      render: (_, record) => record.arrivedAt 
-        ? `${dayjs().diff(dayjs(record.arrivedAt), 'day')} ngày` 
-        : '-',
+      render: (_, r) => {
+        const date = r.arrivedAt || r.entry_date;
+        return date ? `${dayjs().diff(dayjs(date), 'day')} ngày` : '-';
+      },
     },
     {
       title: 'Trọng lượng',
-      dataIndex: 'weightKg',
       key: 'weightKg',
-      render: (w) => (w ? `${w} kg` : '-'),
+      render: (_, r) => {
+        const w = r.weightKg || r.current_weight || r.entry_weight;
+        return w ? `${w} kg` : '-';
+      },
     },
     {
       title: 'Trạng thái',
-      dataIndex: 'lifecycleStatus',
       key: 'lifecycleStatus',
-      render: (status) => {
+      render: (_, r) => {
+        const status = r.computedStatus;
         const cfg = STATUS_MAP[status];
         return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{status}</Tag>;
       }
@@ -217,26 +253,29 @@ export default function PigManage() {
     {
       title: 'Thao tác',
       key: 'actions',
-      render: (_, record) => canEdit && (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            className={['DEAD', 'SOLD'].includes(record.lifecycleStatus) ? "" : "text-primary"}
-            onClick={() => handleOpenEdit(record)}
-            title={['DEAD', 'SOLD'].includes(record.lifecycleStatus) ? "Không thể sửa cá thể lợn đã chết hoặc xuất bán" : "Sửa"}
-            disabled={['DEAD', 'SOLD'].includes(record.lifecycleStatus)}
-          />
-          {canDelete && (
-            <Popconfirm
-              title="Chắc chắn xóa bản ghi này?"
-              onConfirm={() => handleDelete(record.id)}
-            >
-              <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => {
+        const status = record.computedStatus;
+        return canEdit && (
+          <Space size="middle">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              className={['DEAD', 'SOLD'].includes(status) ? "" : "text-primary"}
+              onClick={() => handleOpenEdit(record)}
+              title={['DEAD', 'SOLD'].includes(status) ? "Không thể sửa cá thể lợn đã chết hoặc xuất bán" : "Sửa"}
+              disabled={['DEAD', 'SOLD'].includes(status)}
+            />
+            {canDelete && (
+              <Popconfirm
+                title="Chắc chắn xóa bản ghi này?"
+                onConfirm={() => handleDelete(record.id)}
+              >
+                <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 

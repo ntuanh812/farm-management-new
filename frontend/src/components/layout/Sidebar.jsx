@@ -95,7 +95,6 @@ const VET_MENU = [
     key: 'health', label: '🩺 Thú y & Sức khỏe',
     children: [
       { key: '/vet/health/vaccine',       label: 'Tiêm phòng',      icon: <ClockCircleOutlined /> },
-      { key: '/vet/health/vet-diagnosis', label: 'Chuẩn đoán bệnh', icon: <BugOutlined /> },
       { key: '/vet/materials/medicine',   label: 'Quản lý Thuốc',   icon: <MedicineBoxOutlined /> },
       { key: '/vet/reports/review',       label: 'Phản hồi báo cáo', icon: <FileImageOutlined /> },
     ],

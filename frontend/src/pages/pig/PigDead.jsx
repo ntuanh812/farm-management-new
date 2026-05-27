@@ -182,7 +182,10 @@ export default function PigDead() {
       <Modal 
         title={<span className="text-danger">Ghi nhận cá thể lợn chết</span>}
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => {
+          setOpen(false);
+          form.resetFields();
+        }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"
@@ -209,7 +212,12 @@ export default function PigDead() {
               const minDate = pig?.arrivedAt;
               return (
                 <Form.Item name="death_date" label="Ngày chết" rules={[{ required: true, message: 'Chọn ngày' }]}>
-                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && minDate && current < dayjs(minDate).startOf('day')} />
+                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => {
+                    if (!current) return false;
+                    const isFuture = current > dayjs().endOf('day');
+                    const isBeforeMin = minDate && current < dayjs(minDate).startOf('day');
+                    return isFuture || isBeforeMin;
+                  }} />
                 </Form.Item>
               );
             }}

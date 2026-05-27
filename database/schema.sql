@@ -142,6 +142,8 @@ CREATE TABLE pigs (
     entry_weight DECIMAL(6,2),
     current_weight DECIMAL(6,2),
     purchase_price DECIMAL(15,2) DEFAULT 0,
+    farrowing_id INT UNSIGNED DEFAULT NULL COMMENT 'ID của ổ đẻ',
+    mother_id INT UNSIGNED DEFAULT NULL COMMENT 'ID lợn nái mẹ',
     note TEXT,
     deleted_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -321,36 +323,6 @@ CREATE TABLE sale_batch_lines (
 -- 13. THÚ Y VÀ BÁO CÁO BỆNH
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS vet_diagnosis (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  pig_id VARCHAR(50) NOT NULL COMMENT 'Mã lợn/Số tai nhập thủ công',
-  barn_id INT UNSIGNED NOT NULL,
-  diagnosis_date DATE NOT NULL,
-  next_check_date DATE,
-  symptoms TEXT,
-  suspected_disease VARCHAR(255),
-  final_disease VARCHAR(255),
-  temperature DECIMAL(4,1),
-  severity_level VARCHAR(50) DEFAULT 'nhe',
-  status VARCHAR(50) DEFAULT 'dang_dieu_tri',
-  treatment_plan TEXT,
-  vet_name VARCHAR(100),
-  note TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS vet_diagnosis_medicines (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  diagnosis_id INT UNSIGNED NOT NULL,
-  medicine_id INT UNSIGNED NOT NULL,
-  dosage VARCHAR(50),
-  unit VARCHAR(20),
-  duration_days INT DEFAULT 1,
-  FOREIGN KEY (diagnosis_id) REFERENCES vet_diagnosis(id) ON DELETE CASCADE,
-  FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS pig_reports (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   pig_id VARCHAR(50) NOT NULL COMMENT 'Mã lợn',
@@ -386,3 +358,11 @@ INSERT INTO employees (id, full_name, phone, email, role_id) VALUES
 
 INSERT INTO accounts (id, employee_id, username, password_hash, is_active) VALUES
 (1, 1, 'admin', '123456', 1);
+
+-- ============================================================
+-- CẬP NHẬT CÁC RÀNG BUỘC KHÓA NGOẠI CHÉO (CIRCULAR DEPENDENCY)
+-- ============================================================
+
+ALTER TABLE pigs
+  ADD CONSTRAINT fk_pigs_farrowing FOREIGN KEY (farrowing_id) REFERENCES pig_farrowings(id) ON DELETE SET NULL,
+  ADD CONSTRAINT fk_pigs_mother FOREIGN KEY (mother_id) REFERENCES pigs(id) ON DELETE SET NULL;

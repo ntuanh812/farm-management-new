@@ -48,8 +48,8 @@ export default function PigBreeding() {
     fetchData();
   }, []);
 
-  const activeSows = useMemo(() => pigs.filter(p => p.lifecycleStatus === 'ACTIVE' && p.category === 'SOW'), [pigs]);
-  const activeBoars = useMemo(() => pigs.filter(p => p.lifecycleStatus === 'ACTIVE' && p.category === 'BOAR'), [pigs]);
+  const activeSows = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'SOW'), [pigs]);
+  const activeBoars = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'BOAR'), [pigs]);
 
   const handleDelete = async (id) => {
     try {
@@ -123,11 +123,11 @@ export default function PigBreeding() {
       key: 'status',
       render: (status, record) => {
         const daysSinceBreeding = dayjs().diff(dayjs(record.breeding_date), 'day');
-        const isEditable = canEdit && daysSinceBreeding >= 18 && status !== 'FARROWED';
+        const isEditable = canEdit && daysSinceBreeding >= 18 && status === 'PENDING';
 
         if (!isEditable) {
           const cfg = STATUS_CONFIG[status] || { text: status, color: 'default' };
-          const tooltip = canEdit && daysSinceBreeding < 18 
+          const tooltip = (canEdit && status === 'PENDING' && daysSinceBreeding < 18)
             ? `Cần chờ thêm ${18 - daysSinceBreeding} ngày nữa mới được cập nhật kết quả` 
             : '';
           return <Tag color={cfg.color} title={tooltip}>{cfg.text}</Tag>;
@@ -247,7 +247,10 @@ export default function PigBreeding() {
       <Modal 
         title="Ghi nhận lượt phối giống" 
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => {
+          setOpen(false);
+          form.resetFields();
+        }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"
@@ -257,7 +260,7 @@ export default function PigBreeding() {
           <Space className="flex-baseline mb-8" align="baseline">
             <Form.Item name="sow_id" label="Lợn nái (Cái)" rules={[{ required: true, message: 'Chọn nái' }]} className="w-220">
               <Select showSearch placeholder="Chọn lợn nái">
-                {activeSows.map(p => <Select.Option key={p.id} value={p.id}>{p.earTag}</Select.Option>)}
+                {activeSows.map(p => <Select.Option key={p.id} value={p.id}>{p.pig_code || p.pigCode || p.earTag}</Select.Option>)}
               </Select>
             </Form.Item>
 
@@ -265,7 +268,7 @@ export default function PigBreeding() {
 
             <Form.Item name="boar_id" label="Lợn đực giống" rules={[{ required: true, message: 'Chọn đực' }]} className="w-220">
               <Select showSearch placeholder="Chọn lợn đực">
-                {activeBoars.map(p => <Select.Option key={p.id} value={p.id}>{p.earTag}</Select.Option>)}
+                {activeBoars.map(p => <Select.Option key={p.id} value={p.id}>{p.pig_code || p.pigCode || p.earTag}</Select.Option>)}
               </Select>
             </Form.Item>
           </Space>
