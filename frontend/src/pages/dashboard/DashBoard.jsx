@@ -119,6 +119,7 @@ export const DashBoard = () => {
           saleRes,
           feedRes,
           moveRes,
+          pigReportRes,
         ] = await Promise.all([
 
           axios.get(
@@ -132,7 +133,7 @@ export const DashBoard = () => {
           ).catch(() => ({ data: { data: [] } })),
 
           axios.get(
-            `${API}/employees`,
+            `${API}/staff`,
             { headers }
           ).catch(() => ({ data: { data: [] } })),
 
@@ -153,6 +154,11 @@ export const DashBoard = () => {
 
           axios.get(
             `${API}/movements`,
+            { headers }
+          ).catch(() => ({ data: { data: [] } })),
+
+          axios.get(
+            `${API}/pig-reports`,
             { headers }
           ).catch(() => ({ data: { data: [] } })),
         ]);
@@ -227,16 +233,29 @@ export const DashBoard = () => {
           });
         });
 
-        activitiesList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const pigReportsData = pigReportRes.data?.data || [];
+        pigReportsData.forEach(r => {
+          activitiesList.push({
+            id: `report_${r.id}`,
+            icon: "medical",
+            content: `Báo cáo lợn bệnh ${r.pig_id || ''}: ${r.description || ''}`,
+            createdAt: r.created_at || r.createdAt || new Date()
+          });
+        });
 
-        if (activitiesList.length > 0) {
-          setActivities(activitiesList.slice(0, 6));
+        // Lọc lấy các hoạt động trong vòng 7 ngày qua
+        const sevenDaysAgo = dayjs().subtract(7, 'day');
+        const recentActivitiesList = activitiesList.filter(a => dayjs(a.createdAt).isAfter(sevenDaysAgo));
+        recentActivitiesList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (recentActivitiesList.length > 0) {
+          setActivities(recentActivitiesList.slice(0, 6));
         } else {
           setActivities([
             {
               id: 1,
               icon: "task",
-              content: "Hệ thống đã khởi động",
+              content: "Không có hoạt động nào trong 7 ngày qua",
               createdAt: new Date(),
             },
           ]);
@@ -340,7 +359,7 @@ export const DashBoard = () => {
 
     {
       title:
-        "Hoạt động gần đây",
+        "Hoạt động 7 ngày gần đây",
 
       value:
         activities.length,
@@ -502,9 +521,8 @@ export const DashBoard = () => {
                       <BarChart data={chartData.revenue} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                        <YAxis tickFormatter={(val) => `${val / 1000000}M`} axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
-                        <Tooltip formatter={(value) => `${Number(value).toLocaleString()} VNĐ`} cursor={{fill: 'transparent'}}/>
+                        <Tooltip formatter={(value) => `${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ`} cursor={{fill: 'transparent'}}/>
                         <Legend />
                         <Bar dataKey="revenue" name="Doanh thu" fill="#2d5a27" radius={[4, 4, 0, 0]} maxBarSize={40} />
                       </BarChart>
@@ -573,7 +591,7 @@ export const DashBoard = () => {
                 <div className="activity-card__header">
 
                   <h3>
-                    Hoạt động gần đây
+                    Hoạt động 7 ngày gần đây
                   </h3>
                 </div>
 

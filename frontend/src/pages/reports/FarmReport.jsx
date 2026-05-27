@@ -6,7 +6,8 @@ import {
   HomeOutlined,
   WarningOutlined,
   RiseOutlined,
-  SearchOutlined
+  SearchOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { 
   PieChart, Pie, Cell, 
@@ -92,7 +93,7 @@ export default function FarmReport() {
   ];
 
   return (
-    <div className="farm-report-page">
+    <div className="dashboard farm-report-page">
       <PageHeader 
         title="Báo cáo thống kê tổng quan" 
         subtitle="Theo dõi tình hình hoạt động, tài chính và rủi ro của trang trại"
@@ -113,61 +114,68 @@ export default function FarmReport() {
       </Card>
 
       <Spin spinning={loading} tip="Đang tổng hợp dữ liệu báo cáo...">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false}>
-              <Statistic
-                title="Tổng lợn đang nuôi"
-                value={totalActivePigs}
-                valueStyle={{ color: '#3f8600' }}
-                prefix={<RiseOutlined />}
-                suffix="con"
-              />
-              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
-                {activePigsMapped.map(p => `${p.categoryName}: ${p.count}`).join(' | ')}
-                {activePigsMapped.length === 0 && 'Chưa có lợn trong chuồng'}
+        <Row gutter={[20, 20]} className="dashboard-stats mb-24">
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--pigs">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Tổng lợn đang nuôi</span>
+                <div className="stat-card__icon"><TeamOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {totalActivePigs}
+                <span className="stat-card__label"> con</span>
+              </div>
+              <div className="stat-card__trend stat-card__trend--up" style={{ fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activePigsMapped.map(p => `${p.categoryName}: ${p.count}`).join(' | ')}>
+                <RiseOutlined />
+                <span>{activePigsMapped.length > 0 ? activePigsMapped.map(p => `${p.categoryName}: ${p.count}`).join(' | ') : 'Chưa có lợn trong chuồng'}</span>
               </div>
             </Card>
           </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false}>
-              <Statistic
-                title="Doanh thu xuất bán"
-                value={data.revenue}
-                valueStyle={{ color: '#cf1322' }}
-                prefix={<DollarOutlined />}
-                suffix="VNĐ"
-              />
-              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
-                Đã xuất bán {data.soldPigs} con lợn thịt
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--daily-tasks">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Doanh thu xuất bán</span>
+                <div className="stat-card__icon"><DollarOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+              {data.revenue ? Math.round(Number(data.revenue)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 0}
+                <span className="stat-card__label"> VNĐ</span>
+              </div>
+              <div className="stat-card__trend stat-card__trend--up">
+                <RiseOutlined />
+                <span>Đã xuất bán {data.soldPigs} con lợn thịt</span>
               </div>
             </Card>
           </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false}>
-              <Statistic
-                title="Số lượng lợn chết"
-                value={data.deadPigs}
-                valueStyle={{ color: '#d04444' }}
-                prefix={<FallOutlined />}
-                suffix="con"
-              />
-              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
-                Cần theo dõi chặt chẽ rủi ro dịch bệnh
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--staff">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Số lượng lợn chết</span>
+                <div className="stat-card__icon"><FallOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {data.deadPigs}
+                <span className="stat-card__label"> con</span>
+              </div>
+              <div className="stat-card__trend stat-card__trend--down">
+                <FallOutlined />
+                <span>Cần theo dõi chặt chẽ rủi ro</span>
               </div>
             </Card>
           </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card bordered={false}>
-              <Statistic
-                title="Cảnh báo sức khỏe"
-                value={data.pendingReports}
-                valueStyle={{ color: '#faad14' }}
-                prefix={<WarningOutlined />}
-                suffix="báo cáo"
-              />
-              <div style={{ marginTop: 8, fontSize: '12px', color: '#888' }}>
-                Báo cáo bệnh chờ bác sĩ xử lý
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--barn">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Cảnh báo sức khỏe</span>
+                <div className="stat-card__icon"><WarningOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {data.pendingReports}
+                <span className="stat-card__label"> báo cáo</span>
+              </div>
+              <div className="stat-card__trend stat-card__trend--down">
+                <WarningOutlined />
+                <span>Báo cáo bệnh chờ bác sĩ xử lý</span>
               </div>
             </Card>
           </Col>
@@ -204,42 +212,6 @@ export default function FarmReport() {
             </Card>
           </Col>
 
-          {/* 2. Biểu đồ Doanh thu (6 tháng) */}
-          <Col xs={24} lg={12}>
-            <Card title="Xu hướng doanh thu (6 tháng gần nhất)" bordered={false}>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.revenueTrend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
-                    <RechartsTooltip formatter={(value) => [`${Number(value).toLocaleString('vi-VN')} VNĐ`, 'Doanh thu']} />
-                    <Legend />
-                    <Line type="monotone" dataKey="revenue" name="Doanh thu" stroke="#cf1322" strokeWidth={2} activeDot={{ r: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-
-          {/* 3. Biểu đồ Tiêu thụ vật tư (Cám) */}
-          <Col xs={24} lg={12}>
-            <Card title="Tiêu thụ thức ăn / cám" bordered={false}>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.feedUsage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="feed_type" />
-                    <YAxis />
-                    <RechartsTooltip formatter={(value) => [`${value} kg`, 'Khối lượng']} />
-                    <Legend />
-                    <Bar dataKey="total_kg" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-
           {/* 4. Biểu đồ Tỷ lệ trạng thái đàn lợn */}
           <Col xs={24} lg={12}>
             <Card title="Tỷ lệ trạng thái đàn lợn" bordered={false}>
@@ -271,6 +243,43 @@ export default function FarmReport() {
               </div>
             </Card>
           </Col>
+
+          {/* 2. Biểu đồ Doanh thu (6 tháng) */}
+          <Col xs={24} lg={12}>
+            <Card title="Xu hướng doanh thu xuất bán (6 tháng gần nhất)" bordered={false}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data.revenueTrend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
+                    <RechartsTooltip formatter={(value) => [`${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ`, 'Doanh thu']} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" name="Doanh thu" stroke="#cf1322" strokeWidth={2} activeDot={{ r: 8 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
+          {/* 3. Biểu đồ Tiêu thụ vật tư (Cám) */}
+          <Col xs={24} lg={12}>
+            <Card title="Tiêu thụ thức ăn / cám" bordered={false}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.feedUsage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="feed_type" />
+                    <YAxis />
+                    <RechartsTooltip formatter={(value) => [`${value} kg`, 'Khối lượng']} />
+                    <Legend />
+                    <Bar dataKey="total_kg" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+
         </Row>
 
         <Divider />

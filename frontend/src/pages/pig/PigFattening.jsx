@@ -265,7 +265,7 @@ export default function PigFattening() {
                 <div className="stat-card__icon"><DollarOutlined /></div>
               </div>
               <div className="stat-card__value">
-                {stats.revenue.toLocaleString()}
+              {Math.round(Number(stats.revenue)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 <span className="stat-card__label"> đ</span>
               </div>
             </Card>
@@ -352,7 +352,7 @@ export default function PigFattening() {
                     {
                       title: "Thành tiền",
                       dataIndex: "total",
-                      render: (v) => v.toLocaleString(),
+                      render: (v) => Math.round(Number(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
                     },
                     {
                       title: "Thao tác",
@@ -415,7 +415,7 @@ export default function PigFattening() {
                 const p = form.getFieldValue("price") || 0;
                 return (
                   <div className="mb-16 text-right text-primary">
-                    <b>Thành tiền: {(w * p).toLocaleString()} đ</b>
+                    <b>Thành tiền: {Math.round(Number(w * p)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} đ</b>
                   </div>
                 );
               }}
@@ -511,7 +511,7 @@ export default function PigFattening() {
                             {() => {
                               const w = bulkForm.getFieldValue(["items", field.name, "weight"]) || 0;
                               const p = bulkForm.getFieldValue(["items", field.name, "price"]) || 0;
-                              return <span style={{ color: '#1890ff', fontWeight: 500 }}>{(w * p).toLocaleString()} đ</span>;
+                            return <span style={{ color: '#1890ff', fontWeight: 500 }}>{Math.round(Number(w * p)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} đ</span>;
                             }}
                           </Form.Item>
                         </Col>
@@ -529,7 +529,7 @@ export default function PigFattening() {
                         <div className="mt-16 text-right">
                           <b>Tổng kg: {totalKg}</b>
                           <br />
-                          <b>Tổng tiền: {totalMoney.toLocaleString()} đ</b>
+                          <b>Tổng tiền: {Math.round(Number(totalMoney)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} đ</b>
                         </div>
                       );
                     }}
@@ -558,12 +558,12 @@ export default function PigFattening() {
               { title: "Ngày bán", dataIndex: "sold_at", render: (d) => dayjs(d).format("DD/MM/YYYY") },
               { title: "Số tai", dataIndex: "ear_tag" },
               { title: "Kg", dataIndex: "weight" },
-              { title: "Giá", dataIndex: "price", render: (v) => v?.toLocaleString() },
+              { title: "Giá", dataIndex: "price", render: (v) => v ? Math.round(Number(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-' },
               { title: "Doanh thu (Lãi)", key: "profit", render: (_, r) => {
                 const pig = pigs.find(p => p.earTag === r.ear_tag);
                 const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
                 const profit = (Number(r.total_amount) || 0) - purchasePrice;
-                return profit.toLocaleString();
+                return Math.round(Number(profit)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
               } },
               { title: "Người thực hiện", dataIndex: "staff_name" },
             ]}
