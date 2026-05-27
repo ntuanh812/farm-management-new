@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Table, Button, Modal, Form, Select, Input,
   Tag, Space, Image, Badge, message, Row, Col,
@@ -16,8 +16,8 @@ const STATUS_COLOR = { cho_xu_ly: 'orange', dang_xu_ly: 'blue', da_xu_ly: 'green
 const STATUS_LABEL = { cho_xu_ly: 'Chờ xử lý', dang_xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' }
 
 export default function VetReview() {
-  const { getAuthHeader } = useAuthStore()
-  const headers = getAuthHeader()
+  const { token } = useAuthStore()
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
 
   const [list, setList]           = useState([])
   const [loading, setLoading]     = useState(false)
@@ -27,7 +27,7 @@ export default function VetReview() {
   const [filterStatus, setFilterStatus] = useState(null)
   const [form] = Form.useForm()
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     setLoading(true)
     try {
       const params = {}
@@ -36,9 +36,9 @@ export default function VetReview() {
       setList(data.data)
     } catch { message.error('Lỗi tải dữ liệu') }
     finally { setLoading(false) }
-  }
+  }, [headers, filterStatus])
 
-  useEffect(() => { fetchList() }, [filterStatus])
+  useEffect(() => { fetchList() }, [fetchList])
 
   // ── Xem chi tiết ─────────────────────────────────────────
   const handleView = (rec) => {

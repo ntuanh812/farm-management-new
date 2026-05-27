@@ -2,6 +2,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useCallback,
 } from "react";
 
 import {
@@ -85,7 +86,7 @@ export const DashBoard = () => {
   const [pigs, setPigs] =
     useState([]);
 
-  const [employees, setEmployees] =
+  const [staffList, setStaffList] =
     useState([]);
 
   const [activities, setActivities] =
@@ -99,8 +100,7 @@ export const DashBoard = () => {
   // =========================================================
   // FETCH DATA
   // =========================================================
-  const fetchDashboard =
-    async () => {
+  const fetchDashboard = useCallback(async () => {
 
       try {
 
@@ -114,7 +114,7 @@ export const DashBoard = () => {
         const [
           barnRes,
           pigRes,
-          employeeRes,
+          staffRes,
           reportRes,
           saleRes,
           feedRes,
@@ -171,8 +171,8 @@ export const DashBoard = () => {
           pigRes.data?.data || []
         );
 
-        setEmployees(
-          employeeRes.data?.data || []
+        setStaffList(
+          staffRes.data?.data || []
         );
 
         let revenueChart = reportRes.data?.data?.revenueTrend;
@@ -277,14 +277,14 @@ export const DashBoard = () => {
 
         setLoading(false);
       }
-    };
+    }, [token]);
 
   // =========================================================
   // LOAD
   // =========================================================
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
 
   // =========================================================
   // ACTIVE PIGS
@@ -347,7 +347,7 @@ export const DashBoard = () => {
       title: "Nhân sự",
 
       value:
-        employees.length,
+        staffList.length,
 
       unit: "người",
 

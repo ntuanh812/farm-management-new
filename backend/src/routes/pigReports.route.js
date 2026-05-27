@@ -51,9 +51,9 @@ export default async function pigReportsRoute(app) {
              b.name        AS barn_name,
              v.full_name   AS vet_name
       FROM pig_reports pr
-      JOIN employees e ON pr.reporter_id   = e.id
+      JOIN staffs e ON pr.reporter_id   = e.id
       JOIN barns     b ON pr.barn_id       = b.id
-      LEFT JOIN employees v ON pr.vet_doctor_id = v.id
+      LEFT JOIN staffs v ON pr.vet_doctor_id = v.id
       WHERE 1=1`
     const params = []
 
@@ -63,7 +63,7 @@ export default async function pigReportsRoute(app) {
     // Nhân viên chỉ thấy báo cáo của mình
     if (request.user.role === 'FARM_WORKER') {
       sql += ' AND pr.reporter_id = ?'
-      params.push(request.user.employee_id)
+      params.push(request.user.staff_id)
     }
 
     sql += ' ORDER BY pr.created_at DESC'
@@ -88,7 +88,7 @@ export default async function pigReportsRoute(app) {
       return reply.code(400).send({ success: false, message: 'Thiếu thông tin bắt buộc' })
     }
 
-    const reporter_id = request.user.employee_id
+    const reporter_id = request.user.staff_id
     const [result] = await pool.query(
       `INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images)
        VALUES (?, ?, ?, ?, ?)`,
@@ -108,7 +108,7 @@ export default async function pigReportsRoute(app) {
     preHandler: [verifyToken, authorizeRoles('ADMIN', 'VET_DOCTOR')],
   }, async (request, reply) => {
     const { status, vet_note } = request.body
-    const vet_doctor_id = request.user.employee_id
+    const vet_doctor_id = request.user.staff_id
 
     await pool.query(
       `UPDATE pig_reports

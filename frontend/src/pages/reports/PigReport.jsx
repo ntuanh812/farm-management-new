@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Table, Button, Modal, Form, Input, Select,
   Upload, Tag, Space, Popconfirm, Image, message, Row, Col,
@@ -17,8 +17,8 @@ const STATUS_COLOR = { cho_xu_ly: 'orange', dang_xu_ly: 'blue', da_xu_ly: 'green
 const STATUS_LABEL = { cho_xu_ly: 'Chờ xử lý', dang_xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' }
 
 export default function PigReport() {
-  const { getAuthHeader, user } = useAuthStore()
-  const headers = getAuthHeader()
+  const { token, user } = useAuthStore()
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
 
   const [list, setList]       = useState([])
   const [barns, setBarns]     = useState([])
@@ -30,16 +30,16 @@ export default function PigReport() {
   const [form] = Form.useForm()
 
   // ── Fetch danh sách ──────────────────────────────────────
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     setLoading(true)
     try {
       const { data } = await axios.get(`${API}/pig-reports`, { headers })
       setList(data.data)
     } catch { message.error('Lỗi tải dữ liệu') }
     finally { setLoading(false) }
-  }
+  }, [headers])
 
-  const fetchDropdowns = async () => {
+  const fetchDropdowns = useCallback(async () => {
     try {
       const [barnsRes, pigsRes] = await Promise.all([
         axios.get(`${API}/barns`, { headers }),
@@ -48,9 +48,9 @@ export default function PigReport() {
       setBarns(barnsRes.data?.data || [])
       setPigs(pigsRes.data?.data || [])
     } catch { /* lỗi thì bỏ qua */ }
-  }
+  }, [headers])
 
-  useEffect(() => { fetchList(); fetchDropdowns() }, [])
+  useEffect(() => { fetchList(); fetchDropdowns() }, [fetchList, fetchDropdowns])
 
   // ── Xử lý upload ảnh ────────────────────────────────────
   const handleUpload = async ({ file, onSuccess, onError }) => {

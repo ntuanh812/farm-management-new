@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -21,7 +21,7 @@ const UNIT_TYPES = ['ml', 'mg', 'lọ', 'gói', 'viên'];
 
 export default function Medicine() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [medicineUsages, setMedicineUsages] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -33,7 +33,7 @@ export default function Medicine() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VET_DOCTOR';
   const canDelete = user?.role === 'ADMIN';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resUsages, resBarns] = await Promise.all([
@@ -47,11 +47,11 @@ export default function Medicine() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleDelete = async (id) => {
     try {

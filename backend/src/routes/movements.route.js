@@ -42,8 +42,8 @@ export default async function movementsRoute(app) {
         const params = [];
 
         if (request.user.role === 'FARM_WORKER') {
-          sql += ' WHERE m.from_barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?) OR m.to_barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-          params.push(request.user.employee_id, request.user.employee_id);
+          sql += ' WHERE m.from_barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?) OR m.to_barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+          params.push(request.user.staff_id, request.user.staff_id);
         }
 
         sql += ' ORDER BY m.move_date DESC, m.id DESC';
@@ -149,7 +149,7 @@ export default async function movementsRoute(app) {
             SELECT
               full_name
 
-            FROM employees
+            FROM staffs
 
             WHERE id = ?
             `,

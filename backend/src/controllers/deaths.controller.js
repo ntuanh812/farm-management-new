@@ -11,8 +11,8 @@ export const deathsController = {
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-        params.push(request.user.employee_id);
+        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+        params.push(request.user.staff_id);
       }
       sql += ' ORDER BY d.death_date DESC, d.created_at DESC';
 

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import {
-  addDaysISO,
   BreedingStatus,
   LifecycleStatus,
   PigCategory,
@@ -14,9 +13,7 @@ function uid(prefix = "id") {
   return `${prefix}-${u}`;
 }
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
-
-export const usePigFarmStore = create((set, get) => ({
+export const usePigFarmStore = create((set) => ({
   // ✅ STATE
   barns: [],
   staff: [],

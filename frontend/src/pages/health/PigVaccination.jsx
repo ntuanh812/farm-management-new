@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Card,
   Table,
@@ -23,7 +23,7 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function PigVaccination() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   // States
   const [vaccinations, setVaccinations] = useState([]);
@@ -37,7 +37,7 @@ export default function PigVaccination() {
   const canEdit = user?.role === "ADMIN" || user?.role === "VET_DOCTOR";
 
   // Lấy dữ liệu từ Backend
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resVac, resPigs] = await Promise.all([
@@ -52,11 +52,11 @@ export default function PigVaccination() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleDelete = async (id) => {
     try {
@@ -104,7 +104,7 @@ export default function PigVaccination() {
         const payload = {
           ...values,
           vaccinated_at: values.vaccinated_at.format("YYYY-MM-DD"),
-          performed_by: user?.employee_id || user?.id,
+          performed_by: user?.staff_id || user?.id,
         };
         
         await axios.post(`${API}/vaccinations`, payload, { headers });

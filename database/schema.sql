@@ -41,10 +41,10 @@ CREATE TABLE role_permissions (
 );
 
 -- ============================================================
--- 1. EMPLOYEES
+-- 1. staffS
 -- ============================================================
 
-CREATE TABLE employees (
+CREATE TABLE staffs (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20) UNIQUE,
@@ -68,14 +68,14 @@ CREATE TABLE employees (
 
 CREATE TABLE accounts (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    employee_id INT UNSIGNED NOT NULL,
+    staff_id INT UNSIGNED NOT NULL,
     username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     last_login DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_accounts_employee FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT fk_accounts_staff FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- ============================================================
@@ -96,17 +96,17 @@ CREATE TABLE barns (
 );
 
 -- ============================================================
--- 3.5. EMPLOYEE_BARNS (Barn-Level Access)
+-- 3.5. staff_BARNS (Barn-Level Access)
 -- ============================================================
 
-CREATE TABLE employee_barns (
+CREATE TABLE staff_barns (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    employee_id INT UNSIGNED NOT NULL,
+    staff_id INT UNSIGNED NOT NULL,
     barn_id INT UNSIGNED NOT NULL,
     assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_eb_employee FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+    CONSTRAINT fk_eb_staff FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE CASCADE,
     CONSTRAINT fk_eb_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_assignment (employee_id, barn_id)
+    UNIQUE KEY unique_assignment (staff_id, barn_id)
 );
 
 -- ============================================================
@@ -236,7 +236,7 @@ CREATE TABLE vaccinations (
     note TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_vac_pig FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE,
-    CONSTRAINT fk_vac_emp FOREIGN KEY (performed_by) REFERENCES employees(id) ON DELETE SET NULL
+    CONSTRAINT fk_vac_emp FOREIGN KEY (performed_by) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -336,8 +336,8 @@ CREATE TABLE IF NOT EXISTS pig_reports (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
-  FOREIGN KEY (reporter_id) REFERENCES employees(id) ON DELETE CASCADE,
-  FOREIGN KEY (vet_doctor_id) REFERENCES employees(id) ON DELETE SET NULL
+  FOREIGN KEY (reporter_id) REFERENCES staffs(id) ON DELETE CASCADE,
+  FOREIGN KEY (vet_doctor_id) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -353,10 +353,10 @@ INSERT INTO roles (id, code, name, description) VALUES
 -- TÀI KHOẢN ADMIN MẶC ĐỊNH (Mật khẩu: 123456)
 -- ============================================================
 
-INSERT INTO employees (id, full_name, phone, email, role_id) VALUES
+INSERT INTO staffs (id, full_name, phone, email, role_id) VALUES
 (1, 'Admin System', '0987654321', 'admin@farmpro.com', 1);
 
-INSERT INTO accounts (id, employee_id, username, password_hash, is_active) VALUES
+INSERT INTO accounts (id, staff_id, username, password_hash, is_active) VALUES
 (1, 1, 'admin', '123456', 1);
 
 -- ============================================================

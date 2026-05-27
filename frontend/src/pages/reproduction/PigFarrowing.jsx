@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, UsergroupAddOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -10,7 +10,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function PigFarrowing() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [farrowings, setFarrowings] = useState([]);
   const [pigs, setPigs] = useState([]);
@@ -24,7 +24,7 @@ export default function PigFarrowing() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resFarrow, resPigs, resBreedings, resBarns] = await Promise.all([
@@ -42,11 +42,11 @@ export default function PigFarrowing() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const eligibleSows = useMemo(() => {
     // 1. Lọc ra các lượt phối giống đang ở trạng thái SUCCESS (Đậu thai) trước
@@ -282,7 +282,6 @@ export default function PigFarrowing() {
               {!editingRecord && (
                 <Form.Item noStyle shouldUpdate={(prev, curr) => prev.alive_piglets !== curr.alive_piglets}>
                 {({ getFieldValue }) => {
-                  const alive = getFieldValue('alive_piglets') || 0;
                   
                   // Chỉ cho phép chọn các chuồng thuộc loại PIGLET (Chuồng lợn con) đang hoạt động
                   const validBarns = barns.filter(b => (b.status === 'ACTIVE' || !b.status) && b.barn_type === 'PIGLET');

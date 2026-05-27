@@ -48,36 +48,36 @@ const ADMIN_MENU = [
 ]
 
 // ── Menu FARM_WORKER ──────────────────────────────────────
-const EMPLOYEE_MENU = [
-  { key: '/employee/dashboard', label: '🏠 Tổng quan' },
+const STAFF_MENU = [
+  { key: '/staff/dashboard', label: '🏠 Tổng quan' },
   {
     key: 'pigmanage', label: '🐷 Quản lý lợn',
     children: [
-      { key: '/employee/pig/manage',   label: 'Danh sách lợn',   icon: <ProfileOutlined /> },
-      { key: '/employee/pig/barns',    label: 'Chuồng trại',     icon: <HomeOutlined /> },
-      { key: '/employee/pig/history',  label: 'Chuyển chuồng',   icon: <SwapRightOutlined /> },
-      { key: '/employee/pig/dead',     label: 'Lợn chết',        icon: <CloseCircleOutlined /> },
-      { key: '/employee/pig/fattening',label: 'Xuất bán',          icon: <IdcardOutlined /> },
+      { key: '/staff/pig/manage',   label: 'Danh sách lợn',   icon: <ProfileOutlined /> },
+      { key: '/staff/pig/barns',    label: 'Chuồng trại',     icon: <HomeOutlined /> },
+      { key: '/staff/pig/history',  label: 'Chuyển chuồng',   icon: <SwapRightOutlined /> },
+      { key: '/staff/pig/dead',     label: 'Lợn chết',        icon: <CloseCircleOutlined /> },
+      { key: '/staff/pig/fattening',label: 'Xuất bán',          icon: <IdcardOutlined /> },
     ],
   },
   {
     key: 'reproduction', label: '🐣 Sinh sản',
     children: [
-      { key: '/employee/reproduction/breeding',  label: 'Phối giống', icon: <HeartOutlined /> },
-      { key: '/employee/reproduction/farrowing', label: 'Đẻ con',     icon: <UsergroupAddOutlined /> },
+      { key: '/staff/reproduction/breeding',  label: 'Phối giống', icon: <HeartOutlined /> },
+      { key: '/staff/reproduction/farrowing', label: 'Đẻ con',     icon: <UsergroupAddOutlined /> },
     ],
   },
   {
     key: 'materials', label: '🍽️ Vật tư',
     children: [
-      { key: '/employee/materials/bran', label: 'Thức ăn (Cám)', icon: <ShoppingCartOutlined /> },
+      { key: '/staff/materials/bran', label: 'Thức ăn (Cám)', icon: <ShoppingCartOutlined /> },
     ],
   },
   {
     key: 'health', label: '💊 Thú y & Sức khỏe',
     children: [
-      { key: '/employee/health/vaccine', label: 'Tiêm phòng', icon: <ClockCircleOutlined /> },
-      { key: '/employee/reports/pig-report', label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
+      { key: '/staff/health/vaccine', label: 'Tiêm phòng', icon: <ClockCircleOutlined /> },
+      { key: '/staff/reports/pig-report', label: 'Báo cáo lợn bệnh', icon: <FileImageOutlined /> },
     ],
   },
 ]
@@ -104,7 +104,7 @@ const VET_MENU = [
 // Chọn menu theo role
 function getMenuByRole(role) {
   if (role === 'ADMIN')       return ADMIN_MENU
-  if (role === 'FARM_WORKER') return EMPLOYEE_MENU
+  if (role === 'FARM_WORKER') return STAFF_MENU
   if (role === 'VET_DOCTOR')  return VET_MENU
   return []
 }

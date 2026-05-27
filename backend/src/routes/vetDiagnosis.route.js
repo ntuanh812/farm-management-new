@@ -10,7 +10,7 @@ export default async function vetDiagnosisRoute(app) {
     const { barn_id, status, from_date, to_date, pig_id } = request.query
     let sql = `SELECT vd.*, e.full_name AS vet_name, b.name AS barn_name
                FROM vet_diagnosis vd
-               LEFT JOIN employees e ON vd.vet_doctor_id = e.id
+               LEFT JOIN staffs e ON vd.vet_doctor_id = e.id
                LEFT JOIN barns b ON vd.barn_id = b.id
                WHERE 1=1`
     const params = []
@@ -22,8 +22,8 @@ export default async function vetDiagnosisRoute(app) {
     if (to_date)   { sql += ' AND vd.diagnosis_date <= ?';     params.push(to_date) }
     
     if (request.user.role === 'FARM_WORKER') {
-      sql += ' AND vd.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-      params.push(request.user.employee_id);
+      sql += ' AND vd.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+      params.push(request.user.staff_id);
     }
 
     sql += ' ORDER BY vd.diagnosis_date DESC'
@@ -36,7 +36,7 @@ export default async function vetDiagnosisRoute(app) {
     const [rows] = await pool.query(
       `SELECT vd.*, e.full_name AS vet_name, b.name AS barn_name
        FROM vet_diagnosis vd
-       LEFT JOIN employees e ON vd.vet_doctor_id = e.id
+       LEFT JOIN staffs e ON vd.vet_doctor_id = e.id
        LEFT JOIN barns b ON vd.barn_id = b.id
        WHERE vd.id = ?`,
       [request.params.id]
@@ -62,7 +62,7 @@ export default async function vetDiagnosisRoute(app) {
       treatment_plan, next_check_date, status, note, medicines = []
     } = request.body
 
-    const vet_doctor_id = request.user.employee_id
+    const vet_doctor_id = request.user.staff_id
 
     const [result] = await pool.query(
       `INSERT INTO vet_diagnosis

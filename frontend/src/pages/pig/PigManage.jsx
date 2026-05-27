@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
   Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col
@@ -32,7 +32,7 @@ const GENDER_MAP = {
 
 export default function PigManage() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -51,7 +51,7 @@ export default function PigManage() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resPigs, resBarns, resReports] = await Promise.all([
@@ -68,11 +68,11 @@ export default function PigManage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Kết hợp trạng thái từ báo cáo lợn bệnh
   const augmentedPigs = useMemo(() => {

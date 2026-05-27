@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, Col, Row, Statistic, Table, Typography, Space, Spin, message, Divider, Form, DatePicker, Button } from 'antd';
 import {
   DollarOutlined,
@@ -31,7 +31,7 @@ const CATEGORY_MAP = {
 
 export default function FarmReport() {
   const { token } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -49,7 +49,7 @@ export default function FarmReport() {
     vaccineStats: []
   });
 
-  const fetchReportData = async (values = {}) => {
+  const fetchReportData = useCallback(async (values = {}) => {
     setLoading(true);
     try {
       let params = {};
@@ -67,11 +67,11 @@ export default function FarmReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchReportData();
-  }, []);
+  }, [fetchReportData]);
 
   // Map dữ liệu loại lợn sang tiếng Việt
   const activePigsMapped = data.activePigs.map(p => ({

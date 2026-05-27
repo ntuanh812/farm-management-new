@@ -14,7 +14,7 @@ export default async function authRoute(app) {
     const [rows] = await pool.query(
       `SELECT a.*, e.full_name, r.code AS role
        FROM accounts a
-       JOIN employees e ON a.employee_id = e.id
+       JOIN staffs e ON a.staff_id = e.id
        LEFT JOIN roles r ON e.role_id = r.id
        WHERE a.username = ? AND a.is_active = 1`,
       [username]
@@ -42,7 +42,7 @@ export default async function authRoute(app) {
     }
 
     const token = app.jwt.sign(
-      { id: account.id, employee_id: account.employee_id, role: account.role, full_name: account.full_name },
+      { id: account.id, staff_id: account.staff_id, role: account.role, full_name: account.full_name },
       { expiresIn: process.env.JWT_EXPIRES || '7d' }
     )
 

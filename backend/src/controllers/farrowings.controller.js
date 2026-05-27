@@ -10,8 +10,8 @@ export const farrowingsController = {
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-        params.push(request.user.employee_id);
+        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+        params.push(request.user.staff_id);
       }
       sql += ' ORDER BY pf.farrow_date DESC, pf.created_at DESC';
 

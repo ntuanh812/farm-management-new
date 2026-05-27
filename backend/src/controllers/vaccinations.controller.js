@@ -11,12 +11,12 @@ export const vaccinationsController = {
           e.full_name AS performed_by_name
         FROM vaccinations v
         LEFT JOIN pigs p ON v.pig_id = p.id
-        LEFT JOIN employees e ON v.performed_by = e.id
+        LEFT JOIN staffs e ON v.performed_by = e.id
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-        params.push(request.user.employee_id);
+        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+        params.push(request.user.staff_id);
       }
       sql += ' ORDER BY v.vaccinated_at DESC';
 

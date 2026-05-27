@@ -1,7 +1,7 @@
 import pool from '../config/db.js'
 
 export async function checkBarnAccess(request, reply) {
-  const { role, employee_id } = request.user;
+  const { role, staff_id } = request.user;
   
   // ADMIN has access to all barns
   if (role === 'ADMIN') return;
@@ -15,8 +15,8 @@ export async function checkBarnAccess(request, reply) {
 
   try {
     const [rows] = await pool.query(
-      'SELECT 1 FROM employee_barns WHERE employee_id = ? AND barn_id = ?',
-      [employee_id, barn_id]
+      'SELECT 1 FROM staff_barns WHERE staff_id = ? AND barn_id = ?',
+      [staff_id, barn_id]
     );
 
     if (rows.length === 0) {

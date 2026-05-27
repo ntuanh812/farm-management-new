@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS pig_reports (
   updated_at    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   FOREIGN KEY (barn_id)       REFERENCES barns(id)      ON DELETE CASCADE,
-  FOREIGN KEY (reporter_id)   REFERENCES employees(id)  ON DELETE CASCADE,
-  FOREIGN KEY (vet_doctor_id) REFERENCES employees(id)  ON DELETE SET NULL,
+  FOREIGN KEY (reporter_id)   REFERENCES staffs(id)  ON DELETE CASCADE,
+  FOREIGN KEY (vet_doctor_id) REFERENCES staffs(id)  ON DELETE SET NULL,
 
   INDEX idx_status    (status),
   INDEX idx_reporter  (reporter_id),

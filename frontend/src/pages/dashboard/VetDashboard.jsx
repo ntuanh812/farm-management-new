@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, Row, Col, List, message, Spin } from "antd";
 import {
   RiseOutlined,
@@ -37,7 +37,7 @@ export default function VetDashboard() {
   const [reports, setReports] = useState([]);
   const [vaccinations, setVaccinations] = useState([]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
@@ -56,11 +56,11 @@ export default function VetDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
   const todayStr = dayjs().format("YYYY-MM-DD");
 
@@ -70,7 +70,7 @@ export default function VetDashboard() {
 
   const vaccineToday = useMemo(() => {
     return vaccinations.filter(v => dayjs(v.scheduled_date || v.vaccination_date).format("YYYY-MM-DD") === todayStr).length;
-  }, [vaccinations]);
+  }, [vaccinations, todayStr]);
 
   const recentActivities = useMemo(() => {
     const combined = [

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -26,7 +26,7 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function PigFattening() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [pigs, setPigs] = useState([]);
   const [saleBatches, setSaleBatches] = useState([]);
@@ -57,7 +57,7 @@ export default function PigFattening() {
   const canEdit = user?.role === "ADMIN" || user?.role === "FARM_WORKER";
 
   // ===== FETCH DATA =====
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resPigs, resSales] = await Promise.all([
@@ -71,11 +71,11 @@ export default function PigFattening() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // ===== DATA =====
   const fatteningActive = useMemo(() => {
@@ -107,7 +107,7 @@ export default function PigFattening() {
     );
 
     return { revenue, totalKg, soldCount };
-  }, [saleBatches]);
+  }, [saleBatches, pigs]);
 
   // ===== FILTER =====
   const sellRows = useMemo(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Card, Space, Tag, Row, Col } from 'antd';
 import { PlusOutlined, DeleteOutlined, HeartOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
 
 export default function PigBreeding() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [breedings, setBreedings] = useState([]);
   const [pigs, setPigs] = useState([]);
@@ -28,7 +28,7 @@ export default function PigBreeding() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resBreed, resPigs] = await Promise.all([
@@ -42,11 +42,11 @@ export default function PigBreeding() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const activeSows = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'SOW'), [pigs]);
   const activeBoars = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'BOAR'), [pigs]);

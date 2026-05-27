@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -19,7 +19,7 @@ const FEED_TYPES = [
 
 export default function Bran() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [feedUsages, setFeedUsages] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -31,7 +31,7 @@ export default function Bran() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resUsages, resBarns] = await Promise.all([
@@ -45,11 +45,11 @@ export default function Bran() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleDelete = async (id) => {
     try {
@@ -117,10 +117,7 @@ export default function Bran() {
       <Modal 
         title="Ghi nhận sử dụng cám" 
         open={open} 
-        onCancel={() => {
-          setOpen(false);
-          form.resetFields();
-        }} 
+        onCancel={() => setOpen(false)} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy" 
@@ -128,7 +125,7 @@ export default function Bran() {
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Form.Item name="used_at" label="Ngày cho ăn" rules={[{ required: true, message: 'Chọn ngày' }]}>
-            <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && current > dayjs().endOf('day')} />
+            <DatePicker className="w-100" format="DD/MM/YYYY" />
           </Form.Item>
           <Form.Item name="barn_id" label="Chuồng" rules={[{ required: true, message: 'Chọn chuồng' }]}>
             <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn chuồng..." />

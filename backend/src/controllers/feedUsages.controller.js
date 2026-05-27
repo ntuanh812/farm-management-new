@@ -10,8 +10,8 @@ export const feedUsagesController = {
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE f.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-        params.push(request.user.employee_id);
+        sql += ' WHERE f.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+        params.push(request.user.staff_id);
       }
       sql += ' ORDER BY f.used_at DESC, f.created_at DESC';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Card, Space, Tag, Row, Col } from 'antd';
 import { PlusOutlined, DeleteOutlined, FallOutlined, TeamOutlined, DashboardOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -17,7 +17,7 @@ const DISPOSAL_METHODS = [
 
 export default function PigDead() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [deaths, setDeaths] = useState([]);
   const [pigs, setPigs] = useState([]);
@@ -29,7 +29,7 @@ export default function PigDead() {
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resDeaths, resPigs] = await Promise.all([
@@ -43,11 +43,11 @@ export default function PigDead() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Lọc ra lợn đang còn sống (ACTIVE) để đưa vào dropdown
   const activePigs = useMemo(() => {
@@ -182,10 +182,7 @@ export default function PigDead() {
       <Modal 
         title={<span className="text-danger">Ghi nhận cá thể lợn chết</span>}
         open={open} 
-        onCancel={() => {
-          setOpen(false);
-          form.resetFields();
-        }} 
+        onCancel={() => setOpen(false)} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"
@@ -212,12 +209,7 @@ export default function PigDead() {
               const minDate = pig?.arrivedAt;
               return (
                 <Form.Item name="death_date" label="Ngày chết" rules={[{ required: true, message: 'Chọn ngày' }]}>
-                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => {
-                    if (!current) return false;
-                    const isFuture = current > dayjs().endOf('day');
-                    const isBeforeMin = minDate && current < dayjs(minDate).startOf('day');
-                    return isFuture || isBeforeMin;
-                  }} />
+                  <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && minDate && current < dayjs(minDate).startOf('day')} />
                 </Form.Item>
               );
             }}

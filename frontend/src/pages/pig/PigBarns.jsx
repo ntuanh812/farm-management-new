@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
   Select, InputNumber, message, Popconfirm, Card, Row, Col, Progress
@@ -26,7 +26,7 @@ const STATUS_CONFIG = {
 
 export default function PigBarns() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [barns, setBarns] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function PigBarns() {
   // Phân quyền: Admin và Nhân viên có quyền thao tác
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await axios.get(`${API}/barns`, { headers });
@@ -54,11 +54,11 @@ export default function PigBarns() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Tính toán thống kê chuồng trại
   const stats = useMemo(() => {

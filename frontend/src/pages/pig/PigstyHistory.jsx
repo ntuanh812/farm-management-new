@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Card, Table, Button, Modal, Form, Select, Row, Col,
   DatePicker, Input, Space, Tag, message
@@ -21,7 +21,7 @@ const CATEGORY_MAP = {
 
 export default function PigstyHistory() {
   const { token, user } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -34,7 +34,7 @@ export default function PigstyHistory() {
 
   const canEdit = user?.role === "ADMIN" || user?.role === "FARM_WORKER";
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [pigRes, barnRes, movementRes] = await Promise.all([
@@ -51,11 +51,11 @@ export default function PigstyHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const activePigs = useMemo(() => {
     return pigs.filter((p) => p.lifecycleStatus === "ACTIVE");
@@ -171,7 +171,7 @@ export default function PigstyHistory() {
         pigIds: selectedRowKeys,
         toBarnId: values.toBarnId,
         movedAt: dayjs().format("YYYY-MM-DD"),
-        staffId: user?.employee_id || user?.id,
+        staffId: user?.staff_id || user?.id,
         note: values.note,
       };
 

@@ -6,12 +6,12 @@ USE farmpro_pig;
 
 -- 1. THÊM NHÂN VIÊN VÀ TÀI KHOẢN (role_id 2: FARM_WORKER, 3: VET_DOCTOR)
 -- Admin (role 1) đã được thêm mặc định ở cuối file schema.sql
-INSERT INTO employees (id, full_name, phone, email, role_id) VALUES
+INSERT INTO staffs (id, full_name, phone, email, role_id) VALUES
 (2, 'Nguyễn Văn Công', '0911222333', 'worker@farmpro.com', 2),
 (3, 'Trần Thị Thúy', '0988777666', 'vet@farmpro.com', 3),
 (4, 'Lê Hoàng Anh', '0933444555', 'worker2@farmpro.com', 2);
 
-INSERT INTO accounts (id, employee_id, username, password_hash, is_active) VALUES
+INSERT INTO accounts (id, staff_id, username, password_hash, is_active) VALUES
 (2, 2, 'worker', '123456', 1),
 (3, 3, 'vet', '123456', 1),
 (4, 4, 'worker2', '123456', 1);
@@ -26,7 +26,7 @@ INSERT INTO barns (id, code, name, capacity, barn_type, status) VALUES
 (6, 'B06', 'Chuồng Lợn Thịt B', 100, 'FATTENING', 'ACTIVE');
 
 -- Phân công chuồng cho nhân viên
-INSERT INTO employee_barns (employee_id, barn_id) VALUES
+INSERT INTO staff_barns (staff_id, barn_id) VALUES
 (2, 1), (2, 3), (2, 4), (2, 5),
 (4, 2), (4, 6);
 

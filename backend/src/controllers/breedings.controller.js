@@ -11,8 +11,8 @@ export const breedingsController = {
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE p1.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?) OR p2.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-        params.push(request.user.employee_id, request.user.employee_id);
+        sql += ' WHERE p1.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?) OR p2.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+        params.push(request.user.staff_id, request.user.staff_id);
       }
       sql += ' ORDER BY pb.breeding_date DESC, pb.created_at DESC';
 

@@ -41,9 +41,7 @@ export default async function pigsRoute(app) {
               CURDATE()
             ) AS ageDays,
             (
-              EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.pig_code AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))
-              OR 
-              EXISTS(SELECT 1 FROM vet_diagnosis vd WHERE vd.pig_id = p.pig_code AND vd.status = 'dang_dieu_tri')
+            EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.pig_code AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))
             ) AS isSick
           FROM pigs p
           LEFT JOIN barns b
@@ -52,8 +50,10 @@ export default async function pigsRoute(app) {
         const params = [];
 
         if (request.user.role === 'FARM_WORKER') {
-          sql += ' WHERE p.barn_id IN (SELECT barn_id FROM employee_barns WHERE employee_id = ?)';
-          params.push(request.user.employee_id);
+          // Fallback: Lấy staff_id, dự phòng token cũ đang còn lưu employee_id
+          const staffId = request.user.staff_id || request.user.employee_id || request.user.id;
+          sql += ' WHERE p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
+          params.push(staffId);
         }
         
         sql += ' ORDER BY p.created_at DESC';

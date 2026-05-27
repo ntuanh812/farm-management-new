@@ -27,16 +27,16 @@ export default function StaffManagement() {
   // States
   const [staffData, setStaffData] = useState([]);
   const [barns, setBarns] = useState([]);
-  const [employeesNoAccount, setEmployeesNoAccount] = useState([]);
+  const [staffNoAccount, setStaffNoAccount] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Modal States
-  const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [isAccModalOpen, setIsAccModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [editingStaff, setEditingStaff] = useState(null);
 
   // Forms
-  const [empForm] = Form.useForm();
+  const [staffForm] = Form.useForm();
   const [accForm] = Form.useForm();
 
   // Fetch Data
@@ -55,10 +55,10 @@ export default function StaffManagement() {
         setBarns(resBarns.data.data);
       }
 
-      // Lấy danh sách nhân viên chưa có tài khoản (cho form thêm tài khoản)
-      const resEmpNoAcc = await axios.get(`${API}/staff/no-account`, { headers });
-      if (resEmpNoAcc.data.success) {
-        setEmployeesNoAccount(resEmpNoAcc.data.data);
+      // Lấy danh sách nhân sự chưa có tài khoản (cho form thêm tài khoản)
+      const resStaffNoAcc = await axios.get(`${API}/staff/no-account`, { headers });
+      if (resStaffNoAcc.data.success) {
+        setStaffNoAccount(resStaffNoAcc.data.data);
       }
     } catch (error) {
       message.error('Không thể tải dữ liệu nhân sự');
@@ -72,24 +72,24 @@ export default function StaffManagement() {
   }, []);
 
   // Handlers
-  const handleSaveEmployee = async (values) => {
+  const handleSaveStaff = async (values) => {
     try {
       // Format date
       if (values.dob) values.dob = values.dob.format('YYYY-MM-DD');
       
-      if (editingEmployee) {
-        await axios.put(`${API}/staff/employees/${editingEmployee.id}`, values, { headers });
-        message.success('Cập nhật nhân viên thành công!');
+      if (editingStaff) {
+        await axios.put(`${API}/staff/${editingStaff.id}`, values, { headers });
+        message.success('Cập nhật nhân sự thành công!');
       } else {
-        await axios.post(`${API}/staff/employees`, values, { headers });
-        message.success('Thêm nhân viên thành công!');
+        await axios.post(`${API}/staff`, values, { headers });
+        message.success('Thêm nhân sự thành công!');
       }
-      setIsEmpModalOpen(false);
-      setEditingEmployee(null);
-      empForm.resetFields();
+      setIsStaffModalOpen(false);
+      setEditingStaff(null);
+      staffForm.resetFields();
       fetchData();
     } catch (error) {
-      message.error(error.response?.data?.message || 'Lỗi khi lưu nhân viên');
+      message.error(error.response?.data?.message || 'Lỗi khi lưu nhân sự');
     }
   };
 
@@ -127,13 +127,13 @@ export default function StaffManagement() {
   };
 
   const handleEdit = (record) => {
-    setEditingEmployee(record);
-    empForm.setFieldsValue({
+    setEditingStaff(record);
+    staffForm.setFieldsValue({
       ...record,
       dob: record.dob ? dayjs(record.dob) : null,
       barn_ids: record.barns ? record.barns.map(b => b.id) : [],
     });
-    setIsEmpModalOpen(true);
+    setIsStaffModalOpen(true);
   };
 
   // Table Columns
@@ -236,19 +236,19 @@ export default function StaffManagement() {
     <div className="staff-management">
       <PageHeader 
         title="Quản lý nhân sự tổng hợp" 
-        subtitle="Quản lý thông tin nhân viên, tài khoản đăng nhập và phân công chuồng trại"
+        subtitle="Quản lý thông tin nhân sự, tài khoản đăng nhập và phân công chuồng trại"
         actions={
           <Space>
             <Button 
               type="primary" 
               icon={<UserAddOutlined />} 
               onClick={() => {
-                setEditingEmployee(null);
-                empForm.resetFields();
-                setIsEmpModalOpen(true);
+                setEditingStaff(null);
+                staffForm.resetFields();
+                setIsStaffModalOpen(true);
               }}
             >
-              Thêm nhân viên
+              Thêm nhân sự
             </Button>
             <Button 
               icon={<PlusOutlined />} 
@@ -270,17 +270,17 @@ export default function StaffManagement() {
         />
       </Card>
 
-      {/* MODAL THÊM NHÂN VIÊN */}
+      {/* MODAL THÊM NHÂN SỰ */}
       <Modal
-        title={editingEmployee ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}
-        open={isEmpModalOpen}
-        onCancel={() => { setIsEmpModalOpen(false); setEditingEmployee(null); empForm.resetFields(); }}
-        onOk={() => empForm.submit()}
+        title={editingStaff ? "Cập nhật nhân sự" : "Thêm nhân sự mới"}
+        open={isStaffModalOpen}
+        onCancel={() => { setIsStaffModalOpen(false); setEditingStaff(null); staffForm.resetFields(); }}
+        onOk={() => staffForm.submit()}
         width={800}
         okText="Lưu thông tin"
         cancelText="Hủy"
       >
-        <Form form={empForm} layout="vertical" onFinish={handleSaveEmployee}>
+        <Form form={staffForm} layout="vertical" onFinish={handleSaveStaff}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="full_name" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
@@ -354,14 +354,14 @@ export default function StaffManagement() {
       >
         <Form form={accForm} layout="vertical" onFinish={handleAddAccount}>
           <Form.Item 
-            name="employee_id" 
-            label="Chọn nhân viên liên kết" 
-            rules={[{ required: true, message: 'Vui lòng chọn nhân viên' }]}
+            name="staff_id" 
+            label="Chọn nhân sự liên kết" 
+            rules={[{ required: true, message: 'Vui lòng chọn nhân sự' }]}
           >
             <Select 
               showSearch
-              placeholder="Chọn nhân viên chưa có tài khoản"
-              options={employeesNoAccount.map(e => ({ label: `${e.full_name} (${e.role_name || 'Chưa phân quyền'})`, value: e.id }))}
+              placeholder="Chọn nhân sự chưa có tài khoản"
+              options={staffNoAccount.map(e => ({ label: `${e.full_name} (${e.role_name || 'Chưa phân quyền'})`, value: e.id }))}
               filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
             />
           </Form.Item>

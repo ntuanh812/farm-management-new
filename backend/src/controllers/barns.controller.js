@@ -19,8 +19,8 @@ export const barnsController = {
       const params = [];
       
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' JOIN employee_barns eb ON b.id = eb.barn_id WHERE eb.employee_id = ?';
-        params.push(request.user.employee_id);
+        sql += ' JOIN staff_barns eb ON b.id = eb.barn_id WHERE eb.staff_id = ?';
+        params.push(request.user.staff_id);
       }
       
       sql += ' ORDER BY b.created_at DESC';

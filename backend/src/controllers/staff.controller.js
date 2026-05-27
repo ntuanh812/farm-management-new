@@ -5,19 +5,19 @@ export const staffController = {
   // 1. Lấy danh sách nhân sự tổng hợp
   getAllStaff: async (request, reply) => {
     try {
-      // NOTE: employees has role_id, not role.
+      // NOTE: staffs has role_id, not role.
       // e.role is used in previous query, I need to check schema.
-      // employees: role_id.
+      // staffs: role_id.
       const [rows] = await pool.query(`
         SELECT 
           e.id, e.full_name, e.phone, e.email, e.gender, e.dob, e.address, e.role_id, e.created_at,
           r.name AS role_name, r.code as role_code,
           a.id AS account_id, a.username, a.is_active,
           b.id AS barn_id, b.name AS barn_name
-        FROM employees e
+        FROM staffs e
         LEFT JOIN roles r ON e.role_id = r.id
-        LEFT JOIN accounts a ON e.id = a.employee_id
-        LEFT JOIN employee_barns eb ON e.id = eb.employee_id
+        LEFT JOIN accounts a ON e.id = a.staff_id
+        LEFT JOIN staff_barns eb ON e.id = eb.staff_id
         LEFT JOIN barns b ON eb.barn_id = b.id
         ORDER BY e.created_at DESC
       `);
@@ -52,13 +52,13 @@ export const staffController = {
   },
 
   // 2. Lấy danh sách NV chưa có tài khoản
-  getEmployeesNoAccount: async (request, reply) => {
+  getstaffsNoAccount: async (request, reply) => {
     try {
       const [rows] = await pool.query(`
         SELECT e.id, e.full_name, e.role_id, r.name as role_name 
-        FROM employees e
+        FROM staffs e
         LEFT JOIN roles r ON e.role_id = r.id
-        LEFT JOIN accounts a ON e.id = a.employee_id
+        LEFT JOIN accounts a ON e.id = a.staff_id
         WHERE a.id IS NULL
         ORDER BY e.full_name
       `);
@@ -71,7 +71,7 @@ export const staffController = {
   },
 
   // 3. Thêm nhân viên & Phân công chuồng (Dùng Transaction)
-  createEmployee: async (request, reply) => {
+  createstaff: async (request, reply) => {
     const { full_name, phone, email, gender, dob, address, role_id, barn_ids } = request.body;
     
     // Basic validation
@@ -85,27 +85,27 @@ export const staffController = {
 
       // Insert nhân viên
       const [empResult] = await conn.query(
-        `INSERT INTO employees (full_name, phone, email, gender, dob, address, role_id) 
+        `INSERT INTO staffs (full_name, phone, email, gender, dob, address, role_id) 
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, role_id || null]
       );
       
-      const employeeId = empResult.insertId;
+      const staffId = empResult.insertId;
 
-      // Nếu có phân công chuồng, Insert vào employee_barns
+      // Nếu có phân công chuồng, Insert vào staff_barns
       if (Array.isArray(barn_ids) && barn_ids.length > 0) {
         // Lọc trùng barn_ids
         const uniqueBarnIds = [...new Set(barn_ids)];
-        const barnValues = uniqueBarnIds.map(barnId => [employeeId, barnId]);
+        const barnValues = uniqueBarnIds.map(barnId => [staffId, barnId]);
         
         await conn.query(
-          `INSERT INTO employee_barns (employee_id, barn_id) VALUES ?`,
+          `INSERT INTO staff_barns (staff_id, barn_id) VALUES ?`,
           [barnValues]
         );
       }
 
       await conn.commit();
-      return reply.code(201).send({ success: true, message: 'Thêm nhân viên thành công', data: { id: employeeId } });
+      return reply.code(201).send({ success: true, message: 'Thêm nhân viên thành công', data: { id: staffId } });
     } catch (error) {
       await conn.rollback();
       if (request.log) request.log.error(error);
@@ -127,7 +127,7 @@ export const staffController = {
   },
 
   // 3.5 Cập nhật nhân viên & Phân công chuồng
-  updateEmployee: async (request, reply) => {
+  updatestaff: async (request, reply) => {
     const { id } = request.params;
     const { full_name, phone, email, gender, dob, address, role_id, barn_ids } = request.body;
 
@@ -141,7 +141,7 @@ export const staffController = {
 
       // Cập nhật thông tin nhân viên
       await conn.query(
-        `UPDATE employees 
+        `UPDATE staffs 
          SET full_name = ?, phone = ?, email = ?, gender = ?, dob = ?, address = ?, role_id = ?
          WHERE id = ?`,
         [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, role_id || null, id]
@@ -149,12 +149,12 @@ export const staffController = {
 
       // Cập nhật phân công chuồng
       if (Array.isArray(barn_ids)) {
-        await conn.query('DELETE FROM employee_barns WHERE employee_id = ?', [id]);
+        await conn.query('DELETE FROM staff_barns WHERE staff_id = ?', [id]);
         if (barn_ids.length > 0) {
           const uniqueBarnIds = [...new Set(barn_ids)];
           const barnValues = uniqueBarnIds.map(barnId => [id, barnId]);
           await conn.query(
-            'INSERT INTO employee_barns (employee_id, barn_id) VALUES ?',
+            'INSERT INTO staff_barns (staff_id, barn_id) VALUES ?',
             [barnValues]
           );
         }
@@ -178,15 +178,15 @@ export const staffController = {
 
   // 4. Tạo tài khoản đăng nhập
   createAccount: async (request, reply) => {
-    const { employee_id, username, password } = request.body;
+    const { staff_id, username, password } = request.body;
 
-    if (!employee_id || !username || !password) {
+    if (!staff_id || !username || !password) {
       return reply.code(400).send({ success: false, message: 'Vui lòng nhập đầy đủ thông tin' });
     }
 
     try {
-      // 1. Kiểm tra employee đã có tài khoản chưa
-      const [existingAccount] = await pool.query('SELECT id FROM accounts WHERE employee_id = ?', [employee_id]);
+      // 1. Kiểm tra staff đã có tài khoản chưa
+      const [existingAccount] = await pool.query('SELECT id FROM accounts WHERE staff_id = ?', [staff_id]);
       if (existingAccount.length > 0) {
         return reply.code(400).send({ success: false, message: 'Nhân viên này đã có tài khoản' });
       }
@@ -201,8 +201,8 @@ export const staffController = {
       const password_hash = await bcrypt.hash(password, 10);
 
       await pool.query(
-        `INSERT INTO accounts (employee_id, username, password_hash, is_active) VALUES (?, ?, ?, 1)`,
-        [employee_id, username, password_hash]
+        `INSERT INTO accounts (staff_id, username, password_hash, is_active) VALUES (?, ?, ?, 1)`,
+        [staff_id, username, password_hash]
       );
 
       return reply.code(201).send({ success: true, message: 'Tạo tài khoản thành công' });

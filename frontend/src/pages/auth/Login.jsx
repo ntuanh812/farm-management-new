@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 // Redirect theo role sau khi login thành công
 const ROLE_HOME = {
   ADMIN:       '/dashboard',
-  FARM_WORKER: '/employee/dashboard',
+  FARM_WORKER: '/staff/dashboard',
   VET_DOCTOR:  '/vet/dashboard',
 }
 

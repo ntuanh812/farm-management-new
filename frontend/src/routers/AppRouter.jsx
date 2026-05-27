@@ -12,7 +12,7 @@ import { VerifyOtp } from '@/pages/auth/VerifyOtp'
 
 // Dashboard
 import { DashBoard } from '@/pages/dashboard/DashBoard'
-import EmployeeDashboard from '@/pages/dashboard/EmployeeDashboard'
+import StaffDashboard from '@/pages/dashboard/StaffDashboard'
 import VetDashboard from '@/pages/dashboard/VetDashboard'
 
 // Pig management
@@ -98,17 +98,17 @@ export const AppRouter = () => {
           <AppLayout />
         </PrivateRoute>
       }>
-        <Route path="/employee/dashboard"             element={<EmployeeDashboard />} />
-        <Route path="/employee/pig/barns"             element={<PigBarns />} />
-        <Route path="/employee/pig/manage"            element={<PigManage />} />
-        <Route path="/employee/pig/history"           element={<PigstyHistory />} />
-        <Route path="/employee/pig/dead"              element={<PigDead />} />
-        <Route path="/employee/pig/fattening"         element={<PigFattening />} />
-        <Route path="/employee/reproduction/breeding" element={<PigBreeding />} />
-        <Route path="/employee/reproduction/farrowing" element={<PigFarrowing />} />
-        <Route path="/employee/materials/bran"        element={<BranUsage />} />
-        <Route path="/employee/health/vaccine"        element={<PigVaccination />} />
-        <Route path="/employee/reports/pig-report"    element={<PigReport />} />
+        <Route path="/staff/dashboard"             element={<StaffDashboard />} />
+        <Route path="/staff/pig/barns"             element={<PigBarns />} />
+        <Route path="/staff/pig/manage"            element={<PigManage />} />
+        <Route path="/staff/pig/history"           element={<PigstyHistory />} />
+        <Route path="/staff/pig/dead"              element={<PigDead />} />
+        <Route path="/staff/pig/fattening"         element={<PigFattening />} />
+        <Route path="/staff/reproduction/breeding" element={<PigBreeding />} />
+        <Route path="/staff/reproduction/farrowing" element={<PigFarrowing />} />
+        <Route path="/staff/materials/bran"        element={<BranUsage />} />
+        <Route path="/staff/health/vaccine"        element={<PigVaccination />} />
+        <Route path="/staff/reports/pig-report"    element={<PigReport />} />
       </Route>
 
       {/* ── VET_DOCTOR routes ───────────────────────────── */}
