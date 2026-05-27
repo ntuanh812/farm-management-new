@@ -68,10 +68,6 @@ export default function VetDashboard() {
     return reports.filter(r => r.status === "cho_xu_ly" || r.status === "dang_xu_ly").length;
   }, [reports]);
 
-  const newCasesToday = useMemo(() => {
-    return reports.filter(r => dayjs(r.created_at).format("YYYY-MM-DD") === todayStr).length;
-  }, [reports]);
-
   const vaccineToday = useMemo(() => {
     return vaccinations.filter(v => dayjs(v.scheduled_date || v.vaccination_date).format("YYYY-MM-DD") === todayStr).length;
   }, [vaccinations]);
@@ -93,7 +89,7 @@ export default function VetDashboard() {
 
   const statsData = [
     {
-      title: "Ca chờ / Đang xử lý",
+      title: "Ca bệnh chờ / Đang xử lý",
       value: treatingCases,
       unit: "ca",
       icon: <BugOutlined />,
@@ -102,21 +98,12 @@ export default function VetDashboard() {
       trendUp: true,
     },
     {
-      title: "Ca bệnh mới hôm nay",
-      value: newCasesToday,
-      unit: "ca",
-      icon: <MedicineBoxOutlined />,
-      type: "daily-tasks",
-      trend: "Trong ngày",
-      trendUp: true,
-    },
-    {
       title: "Tiêm phòng",
       value: vaccineToday,
       unit: "mũi",
       icon: <CalendarOutlined />,
       type: "barn",
-      trend: "Cần thực hiện",
+      trend: "Đã thực hiện",
       trendUp: true,
     },
   ];
@@ -133,7 +120,7 @@ export default function VetDashboard() {
           {/* STATS ROW */}
           <Row gutter={[20, 20]} className="dashboard-stats">
             {statsData.map((stat, index) => (
-              <Col xs={24} sm={12} lg={8} key={index}>
+              <Col xs={24} sm={12} lg={12} key={index}>
                 <Card className={`stat-card stat-card--${stat.type}`}>
                   <div className="stat-card__header">
                     <span className="stat-card__title">{stat.title}</span>

@@ -196,7 +196,7 @@ app.register(
 app.register(
   reportsRoute,
   {
-    prefix: "/api/reports-dashboard",
+    prefix: "/api/reports",
   }
 );
 

@@ -45,7 +45,6 @@ export default function FarmReport() {
     barnStats: { total_barns: 0, total_capacity: 0 },
     feedUsage: [],
     pendingReports: 0,
-    diseaseData: [],
     revenueTrend: [],
     vaccineStats: []
   });
@@ -59,7 +58,7 @@ export default function FarmReport() {
         params.endDate = values.dateRange[1].format('YYYY-MM-DD');
       }
 
-      const res = await axios.get(`${API}/reports-dashboard/farm-overview`, { headers, params });
+      const res = await axios.get(`${API}/reports/farm-overview`, { headers, params });
       if (res.data.success) {
         setData(res.data.data);
       }

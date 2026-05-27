@@ -138,7 +138,7 @@ export const DashBoard = () => {
           ).catch(() => ({ data: { data: [] } })),
 
           axios.get(
-            `${API}/reports-dashboard/overview`,
+            `${API}/reports/farm-overview`,
             { headers }
           ).catch(() => ({ data: null })),
 
@@ -175,8 +175,8 @@ export const DashBoard = () => {
           employeeRes.data?.data || []
         );
 
-        let revenueChart = reportRes.data?.data?.charts?.revenue;
-        let feedChart = reportRes.data?.data?.charts?.feed;
+        let revenueChart = reportRes.data?.data?.revenueTrend;
+        let feedChart = reportRes.data?.data?.feedUsage?.map(f => ({ name: f.feed_type, value: Number(f.total_kg) }));
 
         // Tự động tính toán nếu API overview chưa có dữ liệu
         if (!revenueChart || revenueChart.length === 0) {
@@ -187,7 +187,11 @@ export const DashBoard = () => {
             const amount = s.lines?.reduce((sum, l) => sum + Number(l.total_amount || 0), 0) || 0;
             revMap[month] = (revMap[month] || 0) + amount;
           });
-          revenueChart = Object.keys(revMap).map(k => ({ month: k, revenue: revMap[k] })).sort((a, b) => a.localeCompare(b));
+          revenueChart = Object.keys(revMap).map(k => ({ month: k, revenue: revMap[k] })).sort((a, b) => {
+            const [mA, yA] = a.month.split('/');
+            const [mB, yB] = b.month.split('/');
+            return new Date(yA, mA - 1) - new Date(yB, mB - 1);
+          });
         }
 
         if (!feedChart || feedChart.length === 0) {

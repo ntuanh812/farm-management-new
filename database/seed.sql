@@ -41,7 +41,11 @@ INSERT INTO pigs (id, pig_code, barn_id, category, lifecycle_status, gender, ent
 (9, 'PIG-P002', 4, 'PIGLET', 'ACTIVE', 'female', '2023-09-20', 2.6, 6.2),
 (7, 'PIG-F003', 3, 'FATTENING', 'SOLD', 'male', '2023-05-01', 15.0, 105.0),
 (8, 'PIG-F004', 5, 'FATTENING', 'DEAD', 'female', '2023-06-01', 15.0, 40.0),
-(10, 'PIG-F005', 6, 'FATTENING', 'ACTIVE', 'male', '2023-08-15', 16.0, 70.0);
+(10, 'PIG-F005', 6, 'FATTENING', 'ACTIVE', 'male', '2023-08-15', 16.0, 70.0),
+(11, 'PIG-F006', 3, 'FATTENING', 'SOLD', 'male', '2023-10-01', 15.0, 105.0),
+(12, 'PIG-F007', 3, 'FATTENING', 'SOLD', 'female', '2023-11-15', 14.0, 110.0),
+(13, 'PIG-F008', 6, 'FATTENING', 'SOLD', 'male', '2023-12-05', 16.0, 108.0),
+(14, 'PIG-F009', 6, 'FATTENING', 'SOLD', 'female', '2024-01-10', 15.5, 115.0);
 
 -- 4. LỊCH SỬ CHUYỂN CHUỒNG (PIG MOVEMENTS)
 INSERT INTO pig_movements (pig_id, from_barn_id, to_barn_id, move_date, staff_name, note) VALUES
@@ -75,10 +79,18 @@ INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, recorded_by
 (8, DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'Viêm phổi phức hợp', 'Tiêu hủy sinh học (Đốt)', 'Lê Hoàng Anh');
 
 INSERT INTO sale_batches (id, sold_at, staff_name) VALUES
-(1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'Admin System');
+(1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'Admin System'),
+(2, '2024-02-15', 'Nguyễn Văn Công'),
+(3, '2024-03-20', 'Nguyễn Văn Công'),
+(4, '2024-04-10', 'Lê Hoàng Anh'),
+(5, '2024-05-12', 'Lê Hoàng Anh');
 
 INSERT INTO sale_batch_lines (sale_batch_id, ear_tag, weight, price, total_amount) VALUES
-(1, 'PIG-F003', 105.0, 50000, 5250000);
+(1, 'PIG-F003', 105.0, 50000, 5250000),
+(2, 'PIG-F006', 105.0, 52000, 5460000),
+(3, 'PIG-F007', 110.0, 51000, 5610000),
+(4, 'PIG-F008', 108.0, 53000, 5724000),
+(5, 'PIG-F009', 115.0, 55000, 6325000);
 
 -- 8. THÚ Y: BÁO CÁO BỆNH, KHÁM CHỮA BỆNH & TIÊM PHÒNG
 INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, status, vet_note, vet_doctor_id) VALUES
