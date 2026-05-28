@@ -6,17 +6,19 @@ export const vaccinationsController = {
     try {
       let sql = `
         SELECT 
-          v.id, v.pig_id, v.vaccine_name, v.vaccinated_at, v.note,
+          v.id, v.pig_id, v.barn_id, v.vaccine_name, v.vaccinated_at, v.note,
           p.pig_code AS ear_tag, 
+          b.name AS barn_name,
           e.full_name AS performed_by_name
         FROM vaccinations v
         LEFT JOIN pigs p ON v.pig_id = p.id
+        LEFT JOIN barns b ON v.barn_id = b.id
         LEFT JOIN staffs e ON v.performed_by = e.id
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
-        params.push(request.user.staff_id);
+        sql += ' WHERE (p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?) OR v.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?))';
+        params.push(request.user.staff_id, request.user.staff_id);
       }
       sql += ' ORDER BY v.vaccinated_at DESC';
 
@@ -30,13 +32,13 @@ export const vaccinationsController = {
 
   // Thêm bản ghi tiêm phòng mới
   create: async (request, reply) => {
-    const { pig_id, vaccine_name, vaccinated_at, performed_by, note } = request.body;
+    const { pig_id, barn_id, vaccine_name, vaccinated_at, performed_by, note } = request.body;
     
     try {
       const [result] = await pool.query(
-        `INSERT INTO vaccinations (pig_id, vaccine_name, vaccinated_at, performed_by, note) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [pig_id, vaccine_name, vaccinated_at, performed_by, note || '']
+        `INSERT INTO vaccinations (pig_id, barn_id, vaccine_name, vaccinated_at, performed_by, note) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [pig_id || null, barn_id || null, vaccine_name, vaccinated_at, performed_by, note || '']
       );
       
       return reply.code(201).send({ 

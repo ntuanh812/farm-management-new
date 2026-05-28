@@ -48,7 +48,20 @@ export default function PigBreeding() {
     fetchData();
   }, [fetchData]);
 
-  const activeSows = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'SOW'), [pigs]);
+  const activeSows = useMemo(() => {
+    const sows = pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'SOW');
+    return sows.filter(sow => {
+      const sowBreedings = breedings.filter(b => b.sow_id === sow.id);
+      if (sowBreedings.length === 0) return true; // Chưa từng phối giống
+      
+      // Lấy lượt phối giống mới nhất của nái này
+      sowBreedings.sort((a, b) => dayjs(b.breeding_date).valueOf() - dayjs(a.breeding_date).valueOf());
+      const latestBreeding = sowBreedings[0];
+      
+      // Không hiển thị nái nếu lượt phối gần nhất đang "Chờ kết quả" hoặc "Đậu thai"
+      return latestBreeding.status !== 'PENDING' && latestBreeding.status !== 'SUCCESS';
+    });
+  }, [pigs, breedings]);
   const activeBoars = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'BOAR'), [pigs]);
 
   const handleDelete = async (id) => {
@@ -270,7 +283,7 @@ export default function PigBreeding() {
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Space className="flex-baseline mb-8" align="baseline">
             <Form.Item name="sow_id" label="Lợn nái (Cái)" rules={[{ required: true, message: 'Chọn nái' }]} className="w-220">
-              <Select showSearch placeholder="Chọn lợn nái">
+              <Select showSearch placeholder="Chỉ hiển thị nái trống">
                 {activeSows.map(p => <Select.Option key={p.id} value={p.id}>{p.pig_code || p.pigCode || p.earTag}</Select.Option>)}
               </Select>
             </Form.Item>

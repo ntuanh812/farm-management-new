@@ -140,6 +140,7 @@ export default function PigManage() {
     try {
       const pigCode = record.earTag || record.pig_code || record.pigCode;
       const bId = record.barnId || record.barn_id;
+      const entryDate = record.entryDate || record.entry_date;
       
       const [moveRes, vacRes, repRes, medRes] = await Promise.all([
         axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
@@ -149,9 +150,42 @@ export default function PigManage() {
       ]);
 
       const moves = (moveRes.data?.data || []).filter(m => m.pigId === record.id || m.pig_id === record.id);
-      const vacs = (vacRes.data?.data || []).filter(v => v.pig_id === record.id || v.pigId === record.id);
       const reps = (repRes.data?.data || []).filter(r => r.pig_id === pigCode);
-      const meds = (medRes.data?.data || []).filter(m => m.barn_id === bId || m.barnId === bId);
+
+      // Sort movements descending by move_date
+      const sortedMoves = [...moves].sort((a, b) => dayjs(b.movedAt || b.move_date).valueOf() - dayjs(a.movedAt || a.move_date).valueOf());
+
+      const getPigBarnOnDate = (targetDate) => {
+        if (entryDate && dayjs(targetDate).isBefore(dayjs(entryDate), 'day')) return null;
+        let currentBarn = bId;
+        for (let m of sortedMoves) {
+          if (dayjs(m.movedAt || m.move_date).isAfter(dayjs(targetDate), 'day')) {
+            currentBarn = m.fromBarnId || m.from_barn_id;
+          } else {
+            break;
+          }
+        }
+        return currentBarn;
+      };
+
+      const vacs = (vacRes.data?.data || []).filter(v => {
+        if (v.pig_id === record.id || v.pigId === record.id) return true;
+        if (v.barn_id) {
+          const barnOnDate = getPigBarnOnDate(v.vaccinated_at);
+          return barnOnDate === v.barn_id;
+        }
+        return false;
+      });
+
+      const meds = (medRes.data?.data || []).filter(m => {
+        const pId = m.pigId || m.pig_id;
+        if (pId === record.id) return true;
+        if (m.note && m.note.includes(`[Cá thể: ${pigCode}]`)) return true;
+        if (m.note && m.note.startsWith('[Cá thể:')) return false;
+        
+        const barnOnDate = getPigBarnOnDate(m.used_at);
+        return barnOnDate === (m.barn_id || m.barnId);
+      });
 
       setPigHistory({ movements: moves, vaccinations: vacs, reports: reps, medicines: meds });
     } catch (error) {
@@ -462,12 +496,22 @@ export default function PigManage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="category" label="Phân loại" rules={[{ required: true, message: 'Chọn loại' }]}>
-                <Select options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))} />
+                <Select options={Object.entries(CATEGORY_MAP).map(([val, label]) => ({ label, value: val }))} onChange={(val) => {
+                  if (val === 'SOW') {
+                    form.setFieldsValue({ gender: 'female' });
+                  } else if (val === 'BOAR') {
+                    form.setFieldsValue({ gender: 'male' });
+                  }
+                }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="gender" label="Giới tính" rules={[{ required: true }]}>
-                <Select disabled={!!editingId} options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
+              <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.category !== currentValues.category}>
+                {({ getFieldValue }) => (
+                  <Form.Item name="gender" label="Giới tính" rules={[{ required: true }]}>
+                    <Select disabled={!!editingId || getFieldValue('category') === 'SOW' || getFieldValue('category') === 'BOAR'} options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
+                  </Form.Item>
+                )}
               </Form.Item>
             </Col>
           </Row>
@@ -571,14 +615,20 @@ export default function PigManage() {
                 columns={[
                   { title: 'Ngày tiêm', render: (_, r) => dayjs(r.vaccinatedAt || r.vaccinated_at).format('DD/MM/YYYY') },
                   { title: 'Tên Vaccine', dataIndex: ['vaccineName', 'vaccine_name'], render: (_, r) => r.vaccineName || r.vaccine_name },
+                  { title: 'Hình thức', render: (_, r) => r.barn_id || (r.note && r.note.startsWith('[Chuồng:')) ? <Tag>Cả chuồng</Tag> : <Tag color="blue">Tiêm riêng</Tag> },
                   { title: 'Người tiêm', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name || 'Hệ thống' },
-                  { title: 'Ghi chú', dataIndex: 'note' }
+                  { title: 'Ghi chú', dataIndex: 'note', render: text => {
+                      if (text && text.startsWith('[Chuồng:')) {
+                        return text.replace(/^\[Chuồng:\s*[^\]]+\]\s*/, '') || '-';
+                      }
+                      return text || '-';
+                  } }
                 ]} 
                 locale={{ emptyText: 'Chưa có dữ liệu tiêm phòng' }}
               />
 
-              <Divider orientation="left" style={{ margin: '12px 0' }}>Thuốc sử dụng (Theo chuồng)</Divider>
-              <Alert message="Thuốc được quản lý và sử dụng theo cấp độ Chuồng (không tiêm riêng lẻ). Dưới đây là danh sách thuốc đã dùng tại chuồng hiện tại của cá thể lợn này." type="info" showIcon style={{ marginBottom: 16 }} />
+              <Divider orientation="left" style={{ margin: '12px 0' }}>Thuốc đã sử dụng</Divider>
+              <Alert message="Bao gồm các loại thuốc được cấp phát chung cho cả chuồng và thuốc tiêm riêng cho cá thể lợn này." type="info" showIcon style={{ marginBottom: 16 }} />
               <Table 
                 dataSource={pigHistory.medicines} 
                 rowKey="id" 
@@ -588,9 +638,10 @@ export default function PigManage() {
                   { title: 'Ngày dùng', render: (_, r) => dayjs(r.usedAt || r.used_at).format('DD/MM/YYYY') },
                   { title: 'Tên thuốc', dataIndex: ['medicineName', 'medicine_name'], render: (_, r) => r.medicineName || r.medicine_name },
                   { title: 'Liều lượng', render: (_, r) => `${r.quantity} ${r.unit}` },
+                  { title: 'Hình thức', render: (_, r) => r.note && r.note.includes('[Cá thể:') ? <Tag color="blue">Dùng riêng</Tag> : <Tag>Cả chuồng</Tag> },
                   { title: 'Người thực hiện', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name }
                 ]} 
-                locale={{ emptyText: 'Chuồng này chưa sử dụng loại thuốc nào' }}
+                locale={{ emptyText: 'Chưa có dữ liệu sử dụng thuốc' }}
               />
 
               <Divider orientation="left" style={{ margin: '12px 0' }}>Lịch sử chuyển chuồng</Divider>

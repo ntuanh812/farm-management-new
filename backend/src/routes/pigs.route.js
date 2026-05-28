@@ -218,7 +218,7 @@ export default async function pigsRoute(app) {
             purchase_price,
             note
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             pig_code,

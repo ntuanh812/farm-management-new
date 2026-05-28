@@ -229,13 +229,15 @@ CREATE TABLE medicine_usages (
 
 CREATE TABLE vaccinations (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    pig_id INT UNSIGNED NOT NULL,
+    pig_id INT UNSIGNED,
+    barn_id INT UNSIGNED,
     vaccine_name VARCHAR(100) NOT NULL,
     vaccinated_at DATE NOT NULL,
     performed_by INT UNSIGNED,
     note TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_vac_pig FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE,
+    CONSTRAINT fk_vac_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
     CONSTRAINT fk_vac_emp FOREIGN KEY (performed_by) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
