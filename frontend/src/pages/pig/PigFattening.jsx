@@ -163,7 +163,6 @@ export default function PigFattening() {
     try {
       const payload = {
         sold_at: values.sold_at.format("YYYY-MM-DD"),
-        staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines: [
           {
             pig_id: values.pigId,
@@ -206,7 +205,6 @@ export default function PigFattening() {
 
       const payload = {
         sold_at: values.sold_at.format("YYYY-MM-DD"),
-        staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines,
       };
 

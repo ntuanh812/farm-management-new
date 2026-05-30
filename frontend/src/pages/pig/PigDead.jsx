@@ -70,7 +70,6 @@ export default function PigDead() {
       const payload = {
         ...values,
         death_date: values.death_date.format('YYYY-MM-DD'),
-        recorded_by: user?.full_name || user?.username || 'Hệ thống',
       };
 
       await axios.post(`${API}/deaths`, payload, { headers });
@@ -121,7 +120,7 @@ export default function PigDead() {
     {
       title: 'Người ghi nhận',
       key: 'recorded_by',
-      render: (_, r) => <span>{r.recorded_by || r.recordedBy || r.staff_name || '—'}</span>
+      render: (_, r) => <span>{r.recorded_by_name || r.recorded_by || '—'}</span>
     },
     {
       title: 'Ghi chú',

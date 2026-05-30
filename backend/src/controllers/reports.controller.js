@@ -40,13 +40,13 @@ export const reportsController = {
       );
 
       // 5. Tiêu thụ thức ăn
-      let feedQuery = "SELECT feed_type, COALESCE(SUM(quantity_kg), 0) as total_kg FROM feed_usages WHERE 1=1";
+      let feedQuery = "SELECT fd.name AS feed_type, COALESCE(SUM(fu.quantity_kg), 0) as total_kg FROM feed_usages fu JOIN feeds fd ON fu.feed_id = fd.id WHERE 1=1";
       let feedParams = [];
       if (startDate && endDate) {
-        feedQuery += " AND used_at >= ? AND used_at <= ?";
+        feedQuery += " AND fu.used_at >= ? AND fu.used_at <= ?";
         feedParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
       }
-      feedQuery += " GROUP BY feed_type";
+      feedQuery += " GROUP BY fd.name";
       const [feedUsage] = await pool.query(feedQuery, feedParams);
 
       // 6. Báo cáo bệnh chờ xử lý (hiện tại)
@@ -81,13 +81,13 @@ export const reportsController = {
       const [vaccineStats] = await pool.query(vacQuery, vacParams);
 
       // 9. Thống kê sử dụng thuốc
-      let medQuery = "SELECT medicine_name, SUM(quantity) as total_quantity, MAX(unit) as unit FROM medicine_usages WHERE 1=1";
+      let medQuery = "SELECT m.name AS medicine_name, SUM(mu.quantity) as total_quantity, MAX(mu.unit) as unit FROM medicine_usages mu JOIN medicines m ON mu.medicine_id = m.id WHERE 1=1";
       let medParams = [];
       if (startDate && endDate) {
-        medQuery += " AND used_at >= ? AND used_at <= ?";
+        medQuery += " AND mu.used_at >= ? AND mu.used_at <= ?";
         medParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
       }
-      medQuery += " GROUP BY medicine_name ORDER BY total_quantity DESC";
+      medQuery += " GROUP BY m.name ORDER BY total_quantity DESC";
       const [medicineUsage] = await pool.query(medQuery, medParams);
 
       return reply.send({

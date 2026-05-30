@@ -27,7 +27,8 @@ export default async function movementsRoute(app) {
             b1.name AS fromBarnName,
             b2.name AS toBarnName,
             m.move_date AS movedAt,
-            m.staff_name AS staffName,
+            m.staff_id AS staffId,
+            s.full_name AS staffName,
             m.note,
             m.created_at AS createdAt
           FROM pig_movements m
@@ -37,6 +38,8 @@ export default async function movementsRoute(app) {
           ON b1.id = m.from_barn_id
           LEFT JOIN barns b2
           ON b2.id = m.to_barn_id
+          LEFT JOIN staffs s
+          ON s.id = m.staff_id
         `;
         const params = [];
 
@@ -90,9 +93,10 @@ export default async function movementsRoute(app) {
           pigIds,
           toBarnId,
           movedAt,
-          staffId,
           note,
         } = request.body;
+
+        const staffId = request.user.staff_id;
 
         // =====================================================
         // VALIDATE
@@ -305,7 +309,7 @@ export default async function movementsRoute(app) {
               from_barn_id,
               to_barn_id,
               move_date,
-              staff_name,
+            staff_id,
               note
             )
             VALUES (?, ?, ?, ?, ?, ?)
@@ -315,7 +319,7 @@ export default async function movementsRoute(app) {
               pig.barn_id,
               toBarnId,
               movedAt,
-              staffName,
+            staffId,
               note || null,
             ]
           );

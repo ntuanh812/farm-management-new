@@ -26,6 +26,7 @@ export default function Medicine() {
   const [medicineUsages, setMedicineUsages] = useState([]);
   const [barns, setBarns] = useState([]);
   const [pigs, setPigs] = useState([]);
+  const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [applyType, setApplyType] = useState('barn');
@@ -38,14 +39,16 @@ export default function Medicine() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resUsages, resBarns, resPigs] = await Promise.all([
+      const [resUsages, resBarns, resPigs, resMeds] = await Promise.all([
         axios.get(`${API}/medicine-usages`, { headers }),
         axios.get(`${API}/barns`, { headers }),
-        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } }))
+        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/medicines`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setMedicineUsages(resUsages.data?.data || []);
       setBarns(resBarns.data?.data || []);
       setPigs(resPigs.data?.data || []);
+      setMedicines(resMeds.data?.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu sử dụng thuốc');
     } finally {
@@ -70,15 +73,14 @@ export default function Medicine() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const { apply_type, barn_id, pig_ids, medicine_name, quantity, unit, note, used_at } = values;
+      const { apply_type, barn_id, pig_ids, medicine_id, quantity, unit, note, used_at } = values;
       
       const basePayload = {
-        medicine_name,
+        medicine_id,
         quantity,
         unit,
         note,
         used_at: used_at.format('YYYY-MM-DD'),
-        staff_name: user?.full_name || user?.username
       };
 
       if (apply_type === 'barn') {
@@ -197,8 +199,8 @@ export default function Medicine() {
             </Form.Item>
           )}
 
-          <Form.Item name="medicine_name" label="Tên thuốc/Vật tư" rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
-            <Select showSearch options={MEDICINE_TYPES.map(t => ({ label: t, value: t }))} placeholder="VD: Kháng sinh, Vitamin..." />
+      <Form.Item name="medicine_id" label="Tên thuốc/Vật tư" rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
+        <Select showSearch options={medicines.length > 0 ? medicines.map(m => ({ label: m.name, value: m.id })) : MEDICINE_TYPES.map(t => ({ label: t, value: t }))} placeholder="VD: Kháng sinh, Vitamin..." />
           </Form.Item>
           <Space align="baseline">
             <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>

@@ -201,7 +201,8 @@ export const DashBoard = () => {
           const feeds = feedRes.data?.data || [];
           const feedMap = {};
           feeds.forEach(f => {
-            feedMap[f.feed_type] = (feedMap[f.feed_type] || 0) + Number(f.quantity_kg || 0);
+            const key = f.feed_name || f.feed_type || 'Không rõ';
+            feedMap[key] = (feedMap[key] || 0) + Number(f.quantity_kg || 0);
           });
           feedChart = Object.keys(feedMap).map(k => ({ name: k, value: feedMap[k] }));
         }

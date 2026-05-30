@@ -43,7 +43,7 @@ export default async function authRoute(app) {
 
     const token = app.jwt.sign(
       { id: account.id, staff_id: account.staff_id, role: account.role, full_name: account.full_name },
-      { expiresIn: process.env.JWT_EXPIRES || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES || '1d' }
     )
 
     // Cập nhật last_login

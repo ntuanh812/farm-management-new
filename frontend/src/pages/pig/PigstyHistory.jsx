@@ -170,7 +170,6 @@ export default function PigstyHistory() {
         pigIds: selectedRowKeys,
         toBarnId: values.toBarnId,
         movedAt: dayjs().format("YYYY-MM-DD"),
-        staffId: user?.staff_id || user?.id,
         note: values.note,
       };
 

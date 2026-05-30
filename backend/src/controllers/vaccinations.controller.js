@@ -31,7 +31,8 @@ export const vaccinationsController = {
 
   // Thêm bản ghi tiêm phòng mới
   create: async (request, reply) => {
-    const { pig_id, barn_id, vaccine_name, vaccinated_at, performed_by, note } = request.body;
+    const { pig_id, barn_id, vaccine_name, vaccinated_at, note } = request.body;
+    const performed_by = request.user.staff_id;
     
     try {
       const [result] = await pool.query(

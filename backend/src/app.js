@@ -33,7 +33,11 @@ import movementsRoute from "./routes/movements.route.js";
 
 import saleBatchesRoute from "./routes/saleBatches.route.js";
 
+import feedsRoute from "./routes/feeds.route.js";
+
 import feedUsagesRoute from "./routes/feedUsages.route.js";
+
+import medicinesRoute from "./routes/medicines.route.js";
 
 import medicineUsagesRoute from "./routes/medicineUsages.route.js";
 
@@ -140,9 +144,19 @@ app.register(saleBatchesRoute, {
   prefix: "/api/sale-batches",
 });
 
+// FEEDS
+app.register(feedsRoute, {
+  prefix: "/api/feeds",
+});
+
 // FEED USAGES
 app.register(feedUsagesRoute, {
   prefix: "/api/feed-usages",
+});
+
+// MEDICINES
+app.register(medicinesRoute, {
+  prefix: "/api/medicines",
 });
 
 // MEDICINE USAGES

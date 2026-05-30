@@ -162,12 +162,13 @@ CREATE TABLE pig_movements (
     from_barn_id INT UNSIGNED,
     to_barn_id INT UNSIGNED,
     move_date DATE NOT NULL,
-    staff_name VARCHAR(255),
+    staff_id INT UNSIGNED,
     note TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_pm_pig FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_pm_from FOREIGN KEY (from_barn_id) REFERENCES barns(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_pm_to FOREIGN KEY (to_barn_id) REFERENCES barns(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_pm_staff FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE SET NULL,
     INDEX idx_pm_pig (pig_id),
     INDEX idx_pm_date (move_date)
 );
@@ -195,13 +196,15 @@ CREATE TABLE medicines (
 CREATE TABLE feed_usages (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     barn_id INT UNSIGNED NOT NULL,
-    feed_type VARCHAR(100) NOT NULL,
+    feed_id INT UNSIGNED NOT NULL,
     quantity_kg DECIMAL(10,2) NOT NULL,
     used_at DATE NOT NULL,
-    staff_name VARCHAR(100),
+    staff_id INT UNSIGNED,
     note TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_feed_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE
+    CONSTRAINT fk_feed_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
+    CONSTRAINT fk_feed_f FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE,
+    CONSTRAINT fk_feed_staff FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -211,14 +214,16 @@ CREATE TABLE feed_usages (
 CREATE TABLE medicine_usages (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     barn_id INT UNSIGNED NOT NULL,
-    medicine_name VARCHAR(100) NOT NULL,
+    medicine_id INT UNSIGNED NOT NULL,
     quantity DECIMAL(10,2) NOT NULL,
     unit VARCHAR(50) NOT NULL,
     used_at DATE NOT NULL,
-    staff_name VARCHAR(100),
+    staff_id INT UNSIGNED,
     note TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_medu_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE
+    CONSTRAINT fk_medu_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
+    CONSTRAINT fk_medu_m FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    CONSTRAINT fk_medu_staff FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -268,9 +273,10 @@ CREATE TABLE pig_deaths (
   reason VARCHAR(255) NOT NULL,
   disposal_method VARCHAR(255),
   note TEXT,
-  recorded_by VARCHAR(100),
+  recorded_by INT UNSIGNED,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE
+  FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE,
+  FOREIGN KEY (recorded_by) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 CREATE TABLE pig_breedings (
@@ -280,11 +286,12 @@ CREATE TABLE pig_breedings (
   breeding_date DATE NOT NULL,
   expected_farrow_date DATE,
   status VARCHAR(50) DEFAULT 'PENDING',
-  staff_name VARCHAR(100),
+  staff_id INT UNSIGNED,
   note TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (sow_id) REFERENCES pigs(id) ON DELETE CASCADE,
-  FOREIGN KEY (boar_id) REFERENCES pigs(id) ON DELETE CASCADE
+  FOREIGN KEY (boar_id) REFERENCES pigs(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 CREATE TABLE pig_farrowings (
@@ -294,17 +301,19 @@ CREATE TABLE pig_farrowings (
   alive_piglets INT NOT NULL DEFAULT 0,
   dead_piglets INT NOT NULL DEFAULT 0,
   total_weight DECIMAL(10,2),
-  staff_name VARCHAR(100),
+  staff_id INT UNSIGNED,
   note TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (sow_id) REFERENCES pigs(id) ON DELETE CASCADE
+  FOREIGN KEY (sow_id) REFERENCES pigs(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 CREATE TABLE sale_batches (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   sold_at DATE NOT NULL,
-  staff_name VARCHAR(100),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  staff_id INT UNSIGNED,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (staff_id) REFERENCES staffs(id) ON DELETE SET NULL
 );
 
 CREATE TABLE sale_batch_lines (

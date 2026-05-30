@@ -4,10 +4,11 @@ export const deathsController = {
   getAll: async (request, reply) => {
     try {
       let sql = `
-        SELECT d.*, b.name AS barn_name 
+        SELECT d.*, b.name AS barn_name, s.full_name AS recorded_by_name
         FROM pig_deaths d
         LEFT JOIN pigs p ON d.pig_id = p.id
         LEFT JOIN barns b ON p.barn_id = b.id
+        LEFT JOIN staffs s ON d.recorded_by = s.id
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
@@ -25,7 +26,8 @@ export const deathsController = {
   },
   
   create: async (request, reply) => {
-    const { pig_id, death_date, reason, disposal_method, note, recorded_by } = request.body;
+    const { pig_id, death_date, reason, disposal_method, note } = request.body;
+    const recorded_by = request.user.staff_id;
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();

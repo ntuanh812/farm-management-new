@@ -186,7 +186,6 @@ export default function PigVaccination() {
             barn_id: barn_id,
             vaccine_name,
             vaccinated_at: vaccinated_at.format("YYYY-MM-DD"),
-            performed_by: user?.staff_id || user?.id,
             note: note || ''
           };
           await axios.post(`${API}/vaccinations`, payload, { headers });
@@ -197,7 +196,6 @@ export default function PigVaccination() {
               pig_id: pigId,
               vaccine_name,
               vaccinated_at: vaccinated_at.format("YYYY-MM-DD"),
-              performed_by: user?.staff_id || user?.id,
               note: note || ''
             };
             return axios.post(`${API}/vaccinations`, payload, { headers });

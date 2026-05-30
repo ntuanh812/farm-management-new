@@ -4,9 +4,11 @@ export const medicineUsagesController = {
   getAll: async (request, reply) => {
     try {
       let sql = `
-        SELECT m.*, b.name AS barn_name 
+        SELECT m.*, b.name AS barn_name, md.name AS medicine_name, s.full_name AS staff_name
         FROM medicine_usages m
         LEFT JOIN barns b ON m.barn_id = b.id
+        LEFT JOIN medicines md ON m.medicine_id = md.id
+        LEFT JOIN staffs s ON m.staff_id = s.id
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
@@ -23,15 +25,16 @@ export const medicineUsagesController = {
     }
   },
   create: async (request, reply) => {
-    const { barn_id, medicine_name, quantity, unit, used_at, staff_name, note } = request.body;
+    const { barn_id, medicine_id, quantity, unit, used_at, note } = request.body;
+    const staff_id = request.user.staff_id;
     
     // Extract value if it is passed as an array due to "tags" mode in Antd Select
-    const medName = Array.isArray(medicine_name) ? medicine_name[0] : medicine_name;
+    const medId = Array.isArray(medicine_id) ? medicine_id[0] : medicine_id;
     
     try {
       await pool.query(
-        'INSERT INTO medicine_usages (barn_id, medicine_name, quantity, unit, used_at, staff_name, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [barn_id, medName, quantity, unit, used_at, staff_name, note]
+        'INSERT INTO medicine_usages (barn_id, medicine_id, quantity, unit, used_at, staff_id, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [barn_id, medId, quantity, unit, used_at, staff_id, note]
       );
       return reply.code(201).send({ success: true, message: 'Ghi nhận sử dụng thuốc thành công' });
     } catch (error) {

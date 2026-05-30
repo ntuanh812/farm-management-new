@@ -92,7 +92,6 @@ export default function PigBreeding() {
         breeding_date: values.breeding_date.format('YYYY-MM-DD'),
         expected_farrow_date: values.breeding_date.add(114, 'day').format('YYYY-MM-DD'),
         status: 'PENDING',
-        staff_name: user?.full_name || user?.username || 'Hệ thống',
       };
 
       await axios.post(`${API}/breedings`, payload, { headers });

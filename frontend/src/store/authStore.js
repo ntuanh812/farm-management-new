@@ -3,11 +3,11 @@ import axios from 'axios'
 
 const API = 'http://localhost:3000/api'
 
-// Lấy user đã lưu từ localStorage (khi refresh trang)
+// Lấy user đã lưu từ sessionStorage (khi refresh trang)
 function loadFromStorage() {
   try {
-    const token = localStorage.getItem('token')
-    const user  = JSON.parse(localStorage.getItem('user') || 'null')
+    const token = sessionStorage.getItem('token')
+    const user  = JSON.parse(sessionStorage.getItem('user') || 'null')
     return { token, user }
   } catch {
     return { token: null, user: null }
@@ -26,9 +26,9 @@ export const useAuthStore = create((set, get) => ({
       const { data } = await axios.post(`${API}/auth/login`, { username, password })
       const { token, user } = data.data
 
-      // Lưu vào localStorage để giữ đăng nhập khi reload
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
+      // Lưu vào sessionStorage để giữ đăng nhập khi reload, tự xóa khi đóng trình duyệt
+      sessionStorage.setItem('token', token)
+      sessionStorage.setItem('user', JSON.stringify(user))
 
       set({ token, user, loading: false })
       return { success: true, role: user.role }
@@ -41,6 +41,9 @@ export const useAuthStore = create((set, get) => ({
 
   // ── Logout ────────────────────────────────────────────
   logout: () => {
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
+    // Xóa thêm ở localStorage phòng trường hợp phiên bản cũ còn lưu
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     set({ token: null, user: null, error: null })

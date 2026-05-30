@@ -4,10 +4,11 @@ export const breedingsController = {
   getAll: async (request, reply) => {
     try {
       let sql = `
-        SELECT pb.*, p1.id AS sow_code, p2.id AS boar_code
+        SELECT pb.*, p1.id AS sow_code, p2.id AS boar_code, s.full_name AS staff_name
         FROM pig_breedings pb
         LEFT JOIN pigs p1 ON pb.sow_id = p1.id
         LEFT JOIN pigs p2 ON pb.boar_id = p2.id
+        LEFT JOIN staffs s ON pb.staff_id = s.id
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
@@ -24,11 +25,12 @@ export const breedingsController = {
     }
   },
   create: async (request, reply) => {
-    const { sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_name, note } = request.body;
+    const { sow_id, boar_id, breeding_date, expected_farrow_date, status, note } = request.body;
+    const staff_id = request.user.staff_id;
     try {
       await pool.query(
-        'INSERT INTO pig_breedings (sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_name, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_name, note]
+        'INSERT INTO pig_breedings (sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_id, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_id, note]
       );
       return reply.code(201).send({ success: true, message: 'Ghi nhận phối giống thành công' });
     } catch (error) {

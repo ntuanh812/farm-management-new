@@ -6,7 +6,7 @@ export const saleBatchesController = {
     try {
       const [rows] = await pool.query(`
         SELECT 
-          sb.id, sb.sold_at, sb.staff_name, sb.created_at,
+          sb.id, sb.sold_at, sb.staff_id, s.full_name AS staff_name, sb.created_at,
           sbl.id AS line_id,
           sbl.pig_id,
           sbl.weight,
@@ -16,6 +16,7 @@ export const saleBatchesController = {
           sbl.note
         FROM sale_batches sb
         LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
+        LEFT JOIN staffs s ON sb.staff_id = s.id
         ORDER BY sb.sold_at DESC, sb.created_at DESC
       `);
 
@@ -56,7 +57,8 @@ export const saleBatchesController = {
 
   // Ghi nhận lô xuất bán mới (Thêm Batch, Thêm Lines và Cập nhật trạng thái lợn)
   create: async (request, reply) => {
-    const { sold_at, staff_name, lines } = request.body;
+    const { sold_at, lines } = request.body;
+    const staff_id = request.user.staff_id;
     
     const conn = await pool.getConnection();
     try {
@@ -64,8 +66,8 @@ export const saleBatchesController = {
 
       // 1. Tạo lô bán (Batch)
       const [batchResult] = await conn.query(
-        'INSERT INTO sale_batches (sold_at, staff_name) VALUES (?, ?)',
-        [sold_at, staff_name || null]
+        'INSERT INTO sale_batches (sold_at, staff_id) VALUES (?, ?)',
+        [sold_at, staff_id || null]
       );
       const batchId = batchResult.insertId;
 

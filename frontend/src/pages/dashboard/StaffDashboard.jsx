@@ -134,7 +134,8 @@ export default function StaffDashboard() {
 
   const feedChartData = useMemo(() => {
     const counts = feedUsages.reduce((acc, feed) => {
-      acc[feed.feed_type] = (acc[feed.feed_type] || 0) + Number(feed.quantity_kg || 0);
+      const key = feed.feed_name || feed.feed_type || 'Không rõ';
+      acc[key] = (acc[key] || 0) + Number(feed.quantity_kg || 0);
       return acc;
     }, {});
     return Object.keys(counts).map(key => ({

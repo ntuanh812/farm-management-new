@@ -4,9 +4,10 @@ export const farrowingsController = {
   getAll: async (request, reply) => {
     try {
       let sql = `
-        SELECT pf.*, p.id AS sow_code
+        SELECT pf.*, p.id AS sow_code, s.full_name AS staff_name
         FROM pig_farrowings pf
         LEFT JOIN pigs p ON pf.sow_id = p.id
+        LEFT JOIN staffs s ON pf.staff_id = s.id
       `;
       const params = [];
       if (request.user.role === 'FARM_WORKER') {
@@ -23,14 +24,15 @@ export const farrowingsController = {
     }
   },
   create: async (request, reply) => {
-    const { sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name, note, piglet_barn_id } = request.body;
+    const { sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, note, piglet_barn_id } = request.body;
+    const staff_id = request.user.staff_id;
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
       const [farrowingResult] = await connection.query(
-        'INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name, note]
+        'INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_id, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_id, note]
       );
 
       const farrowingId = farrowingResult.insertId;

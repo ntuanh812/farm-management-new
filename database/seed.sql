@@ -47,16 +47,16 @@ INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date,
 ('Lợn chết C1', 4, 'FATTENING', 'DEAD', 'female', '2023-11-01', 12, 30, 1200000);
 
 -- Thêm lịch sử chuyển chuồng
-INSERT INTO pig_movements (pig_id, from_barn_id, to_barn_id, move_date, staff_name) VALUES
-(4, 3, 4, '2023-11-15', 'Nguyễn Văn Chăn Nuôi');
+INSERT INTO pig_movements (pig_id, from_barn_id, to_barn_id, move_date, staff_id) VALUES
+(4, 3, 4, '2023-11-15', 2);
 
 -- Phối giống mẫu
-INSERT INTO pig_breedings (sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_name) VALUES
-(1, 3, '2023-08-01', '2023-11-24', 'SUCCESS', 'Nguyễn Văn Chăn Nuôi');
+INSERT INTO pig_breedings (sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_id) VALUES
+(1, 3, '2023-08-01', '2023-11-24', 'SUCCESS', 2);
 
 -- Lịch sử đẻ (Đẻ ra 2 con lợn con)
-INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name) VALUES
-(1, '2023-11-25', 2, 0, 3.5, 'Nguyễn Văn Chăn Nuôi');
+INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_id) VALUES
+(1, '2023-11-25', 2, 0, 3.5, 2);
 
 INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, farrowing_id, mother_id) VALUES
 ('Lợn con ổ 1 - 1', 3, 'PIGLET', 'ACTIVE', 'male', '2023-11-25', 1.75, 5, 1, 1),
@@ -64,11 +64,11 @@ INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date,
 
 -- Dữ liệu lợn chết
 INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, recorded_by) VALUES
-(8, '2023-12-10', 'Viêm phổi nặng', 'Tiêu hủy', 'Trần Thị Thú Y');
+(8, '2023-12-10', 'Viêm phổi nặng', 'Tiêu hủy', 3);
 
 -- Dữ liệu xuất bán
-INSERT INTO sale_batches (sold_at, staff_name) VALUES
-('2023-12-15', 'Admin System');
+INSERT INTO sale_batches (sold_at, staff_id) VALUES
+('2023-12-15', 1);
 
 INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount, reason) VALUES
 (1, 7, 100, 55000, 5500000, 'Xuất chuồng chuẩn');
@@ -77,8 +77,8 @@ INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount
 INSERT INTO vaccinations (pig_id, barn_id, vaccine_name, vaccinated_at) VALUES
 (NULL, 4, 'Tai xanh', '2023-10-15');
 
-INSERT INTO feed_usages (barn_id, feed_type, quantity_kg, used_at, staff_name) VALUES
-(4, 'Cám heo thịt', 50, '2023-12-01', 'Nguyễn Văn Chăn Nuôi');
+INSERT INTO feed_usages (barn_id, feed_id, quantity_kg, used_at, staff_id) VALUES
+(4, 1, 50, '2023-12-01', 2);
 
 -- Báo cáo bệnh
 INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images, status) VALUES

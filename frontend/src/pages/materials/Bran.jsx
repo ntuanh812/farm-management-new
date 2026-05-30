@@ -23,6 +23,7 @@ export default function Bran() {
 
   const [feedUsages, setFeedUsages] = useState([]);
   const [barns, setBarns] = useState([]);
+  const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -34,12 +35,14 @@ export default function Bran() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resUsages, resBarns] = await Promise.all([
+      const [resUsages, resBarns, resFeeds] = await Promise.all([
         axios.get(`${API}/feed-usages`, { headers }),
-        axios.get(`${API}/barns`, { headers })
+        axios.get(`${API}/barns`, { headers }),
+        axios.get(`${API}/feeds`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
       setFeedUsages(resUsages.data?.data || []);
       setBarns(resBarns.data?.data || []);
+      setFeeds(resFeeds.data?.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu sử dụng cám');
     } finally {
@@ -66,8 +69,7 @@ export default function Bran() {
       const values = await form.validateFields();
       const payload = {
         ...values,
-        used_at: values.used_at.format('YYYY-MM-DD'),
-        staff_name: user?.full_name || user?.username
+        used_at: values.used_at.format('YYYY-MM-DD')
       };
 
       await axios.post(`${API}/feed-usages`, payload, { headers });
@@ -89,7 +91,7 @@ export default function Bran() {
     },
     { title: 'Ngày', dataIndex: 'used_at', key: 'used_at', render: (date) => dayjs(date).format('DD/MM/YYYY') },
     { title: 'Chuồng', dataIndex: 'barn_name', key: 'barn_name' },
-    { title: 'Loại cám', dataIndex: 'feed_type', key: 'feed_type' },
+    { title: 'Loại cám', dataIndex: 'feed_name', key: 'feed_name', render: (_, r) => <strong className="text-primary">{r.feed_name || r.feed_type}</strong> },
     { title: 'Số lượng (kg)', dataIndex: 'quantity_kg', key: 'quantity_kg', render: (val) => <strong>{val} kg</strong> },
     { title: 'Người thực hiện', dataIndex: 'staff_name', key: 'staff_name' },
     { title: 'Ghi chú', dataIndex: 'note', key: 'note' },
@@ -136,8 +138,8 @@ export default function Bran() {
           <Form.Item name="barn_id" label="Chuồng" rules={[{ required: true, message: 'Chọn chuồng' }]}>
             <Select showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn chuồng..." />
           </Form.Item>
-          <Form.Item name="feed_type" label="Loại cám" rules={[{ required: true, message: 'Chọn loại cám' }]}>
-            <Select options={FEED_TYPES.map(t => ({ label: t, value: t }))} placeholder="Chọn loại cám..." />
+          <Form.Item name="feed_id" label="Loại cám" rules={[{ required: true, message: 'Chọn loại cám' }]}>
+            <Select showSearch options={feeds.length > 0 ? feeds.map(f => ({ label: f.name, value: f.id })) : FEED_TYPES.map(t => ({ label: t, value: t }))} placeholder="Chọn loại cám..." />
           </Form.Item>
           <Form.Item name="quantity_kg" label="Số lượng (kg)" rules={[{ required: true, message: 'Nhập số lượng kg' }]}>
             <InputNumber min={0.1} step={0.1} className="w-100" />

@@ -116,7 +116,6 @@ export default function PigFarrowing() {
         ...values,
         total_weight: values.total_weight ?? null,
         farrow_date: values.farrow_date.format('YYYY-MM-DD'),
-        staff_name: user?.full_name || user?.username || 'Hệ thống',
       };
 
       if (editingRecord) {
