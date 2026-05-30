@@ -176,7 +176,7 @@ export default function StaffManagement() {
       key: 'staff_info',
       render: (_, record) => (
         <Space>
-          <Avatar src={record.avatar ? `http://localhost:3000${record.avatar}` : null} icon={!record.avatar && <UserOutlined />} />
+          <Avatar src={record.avatar ? `http://localhost:3000${record.avatar}` : null} icon={<UserOutlined />} />
           <strong>{record.full_name}</strong>
         </Space>
       ),
@@ -316,7 +316,7 @@ export default function StaffManagement() {
           <Avatar 
             size={80} 
             src={fileList.length > 0 ? (fileList[0].url || fileList[0].thumbUrl) : null}
-            icon={fileList.length === 0 && <UserOutlined />}
+            icon={<UserOutlined />}
           />
           <Space direction="vertical">
             <Upload

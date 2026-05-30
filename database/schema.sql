@@ -130,7 +130,6 @@ CREATE TABLE feeds (
 
 CREATE TABLE pigs (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    pig_code VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(100),
     barn_id INT UNSIGNED NOT NULL,
     category ENUM('SOW', 'BOAR', 'PIGLET', 'FATTENING') NOT NULL,
@@ -150,7 +149,6 @@ CREATE TABLE pigs (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_pigs_barn FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_pigs_barn (barn_id),
-    INDEX idx_pigs_code (pig_code),
     INDEX idx_pigs_status (lifecycle_status)
 );
 
@@ -312,13 +310,14 @@ CREATE TABLE sale_batches (
 CREATE TABLE sale_batch_lines (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   sale_batch_id INT UNSIGNED NOT NULL,
-  ear_tag VARCHAR(50) NOT NULL,
+  pig_id INT UNSIGNED NOT NULL,
   weight DECIMAL(10, 2) NOT NULL,
   price DECIMAL(15, 2) NOT NULL,
   total_amount DECIMAL(15, 2) NOT NULL,
   reason VARCHAR(255),
   note TEXT,
-  FOREIGN KEY (sale_batch_id) REFERENCES sale_batches(id) ON DELETE CASCADE
+  FOREIGN KEY (sale_batch_id) REFERENCES sale_batches(id) ON DELETE CASCADE,
+  FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE
 );
 
 -- ============================================================
@@ -327,16 +326,17 @@ CREATE TABLE sale_batch_lines (
 
 CREATE TABLE IF NOT EXISTS pig_reports (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  pig_id VARCHAR(50) NOT NULL COMMENT 'Mã lợn',
+  pig_id INT UNSIGNED NOT NULL COMMENT 'Mã lợn',
   barn_id INT UNSIGNED NOT NULL COMMENT 'Chuồng',
   reporter_id INT UNSIGNED NOT NULL COMMENT 'Nhân viên báo cáo',
   description TEXT NOT NULL COMMENT 'Mô tả triệu chứng',
   images JSON COMMENT 'Danh sách đường dẫn ảnh',
-  status VARCHAR(50) DEFAULT 'cho_xu_ly',
+  status ENUM('cho_xu_ly','dang_xu_ly','da_xu_ly') DEFAULT 'cho_xu_ly',
   vet_note TEXT COMMENT 'Ghi chú phản hồi của bác sĩ',
   vet_doctor_id INT UNSIGNED COMMENT 'Bác sĩ xử lý',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (pig_id) REFERENCES pigs(id) ON DELETE CASCADE,
   FOREIGN KEY (barn_id) REFERENCES barns(id) ON DELETE CASCADE,
   FOREIGN KEY (reporter_id) REFERENCES staffs(id) ON DELETE CASCADE,
   FOREIGN KEY (vet_doctor_id) REFERENCES staffs(id) ON DELETE SET NULL

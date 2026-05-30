@@ -119,7 +119,7 @@ export default function PigReport() {
       width: 130,
       render: (_, rec) => (
         <div>
-          <div className="reports-page__pig-id">{rec.pig_id}</div>
+          <div className="reports-page__pig-id">Lợn số {rec.pig_id}</div>
           <div className="reports-page__barn-name">{rec.barn_name}</div>
         </div>
       )
@@ -218,15 +218,14 @@ export default function PigReport() {
                   showSearch 
                   placeholder="Chọn lợn"
                   onChange={(val) => {
-                    const pig = pigs.find(p => p.earTag === val || p.pig_code === val || p.pigCode === val);
+                    const pig = pigs.find(p => p.id === val);
                     if (pig) {
                       form.setFieldsValue({ barn_id: pig.barnId || pig.barn_id });
                     }
                   }}
                 >
                   {pigs.filter(p => (p.lifecycleStatus || p.lifecycle_status) === 'ACTIVE').map(p => {
-                    const code = p.earTag || p.pig_code || p.pigCode;
-                    return <Option key={p.id} value={code}>{code}</Option>;
+                    return <Option key={p.id} value={p.id}>Lợn số {p.id}</Option>;
                   })}
                 </Select>
               </Form.Item>
@@ -272,6 +271,7 @@ export default function PigReport() {
           </Form.Item>
         </Form>
       </Modal>
-    </div> 
+    </div>
   )
 }
+        

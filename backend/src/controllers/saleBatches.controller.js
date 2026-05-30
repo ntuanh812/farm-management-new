@@ -8,7 +8,7 @@ export const saleBatchesController = {
         SELECT 
           sb.id, sb.sold_at, sb.staff_name, sb.created_at,
           sbl.id AS line_id,
-          sbl.ear_tag,
+          sbl.pig_id,
           sbl.weight,
           sbl.price,
           sbl.total_amount,
@@ -37,7 +37,7 @@ export const saleBatchesController = {
         if (row.line_id) {
           batchMap[row.id].lines.push({
             id: row.line_id,
-            ear_tag: row.ear_tag,
+            pig_id: row.pig_id,
             weight: row.weight,
             price: row.price,
             total_amount: row.total_amount,
@@ -71,15 +71,15 @@ export const saleBatchesController = {
 
       if (lines && lines.length > 0) {
         // 2. Lưu chi tiết từng con xuất bán
-        const lineValues = lines.map(l => [batchId, l.ear_tag, l.weight, l.price, l.total_amount, l.reason || null, l.note || null]);
+        const lineValues = lines.map(l => [batchId, l.pig_id, l.weight, l.price, l.total_amount, l.reason || null, l.note || null]);
         await conn.query(
-          'INSERT INTO sale_batch_lines (sale_batch_id, ear_tag, weight, price, total_amount, reason, note) VALUES ?',
+          'INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount, reason, note) VALUES ?',
           [lineValues]
         );
 
         // 3. Cập nhật trạng thái những con lợn này thành SOLD
-        const earTags = lines.map(l => l.ear_tag);
-        await conn.query('UPDATE pigs SET lifecycle_status = "SOLD" WHERE pig_code IN (?)', [earTags]);
+        const pigIds = lines.map(l => l.pig_id);
+        await conn.query('UPDATE pigs SET lifecycle_status = "SOLD" WHERE id IN (?)', [pigIds]);
       }
 
       await conn.commit();

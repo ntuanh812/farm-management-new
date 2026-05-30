@@ -175,16 +175,21 @@ export const DashBoard = () => {
           staffRes.data?.data || []
         );
 
-        let revenueChart = reportRes.data?.data?.revenueTrend;
-        let feedChart = reportRes.data?.data?.feedUsage?.map(f => ({ name: f.feed_type, value: Number(f.total_kg) }));
+        let revenueChart = reportRes.data?.data?.revenueTrend || [];
+        let feedChart = reportRes.data?.data?.feedUsage?.map(f => ({ name: f.feed_type, value: Number(f.total_kg) })) || [];
 
-        // Tự động tính toán nếu API overview chưa có dữ liệu
-        if (!revenueChart || revenueChart.length === 0) {
+        // Tự động tính toán nếu API overview gặp lỗi (không trả về data)
+        if (!reportRes.data) {
           const sales = saleRes.data?.data || [];
+          const allPigs = pigRes.data?.data || [];
           const revMap = {};
           sales.forEach(s => {
             const date = dayjs(s.sold_at || s.createdAt).format('DD/MM/YYYY');
-            const amount = s.lines?.reduce((sum, l) => sum + Number(l.total_amount || 0), 0) || 0;
+            const amount = s.lines?.reduce((sum, l) => {
+              const pig = allPigs.find(p => p.id === l.pig_id);
+              const pp = pig ? Number(pig.purchasePrice || pig.purchase_price || 0) : 0;
+              return sum + (Number(l.total_amount || 0) - pp);
+            }, 0) || 0;
             revMap[date] = (revMap[date] || 0) + amount;
           });
           revenueChart = Object.keys(revMap).map(k => ({ date: k, revenue: revMap[k] })).sort((a, b) => {
@@ -192,9 +197,7 @@ export const DashBoard = () => {
             const [dB, mB, yB] = b.date.split('/');
             return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
           });
-        }
 
-        if (!feedChart || feedChart.length === 0) {
           const feeds = feedRes.data?.data || [];
           const feedMap = {};
           feeds.forEach(f => {
@@ -204,8 +207,8 @@ export const DashBoard = () => {
         }
 
         setChartData({
-          revenue: revenueChart || [],
-          feed: feedChart || []
+          revenue: revenueChart,
+          feed: feedChart
         });
 
         setActivities([
@@ -223,7 +226,7 @@ export const DashBoard = () => {
         const activitiesList = moves.map(m => ({
           id: `move_${m.id}`,
           icon: "task",
-          content: `Chuyển lợn ${m.ear_tag || m.earTag || m.pig_code || m.pigCode || m.pig_id || m.pigId || ''} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
+          content: `Chuyển lợn số ${m.pig_id || m.pigId} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
           createdAt: m.createdAt || m.created_at || m.movedAt || m.moved_at || new Date()
         }));
 
@@ -242,7 +245,7 @@ export const DashBoard = () => {
           activitiesList.push({
             id: `report_${r.id}`,
             icon: "medical",
-            content: `Báo cáo lợn bệnh ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
+            content: `Báo cáo lợn bệnh số ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
             createdAt: r.created_at || r.createdAt || new Date()
           });
         });

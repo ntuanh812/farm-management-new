@@ -4,7 +4,7 @@ export const breedingsController = {
   getAll: async (request, reply) => {
     try {
       let sql = `
-        SELECT pb.*, p1.pig_code AS sow_code, p2.pig_code AS boar_code
+        SELECT pb.*, p1.id AS sow_code, p2.id AS boar_code
         FROM pig_breedings pb
         LEFT JOIN pigs p1 ON pb.sow_id = p1.id
         LEFT JOIN pigs p2 ON pb.boar_id = p2.id

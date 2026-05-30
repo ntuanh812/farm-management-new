@@ -4,7 +4,7 @@ export const farrowingsController = {
   getAll: async (request, reply) => {
     try {
       let sql = `
-        SELECT pf.*, p.pig_code AS sow_code
+        SELECT pf.*, p.id AS sow_code
         FROM pig_farrowings pf
         LEFT JOIN pigs p ON pf.sow_id = p.id
       `;
@@ -37,21 +37,17 @@ export const farrowingsController = {
 
       if (alive_piglets > 0) {
         // Lấy thông tin lợn mẹ
-        const [sowData] = await connection.query('SELECT barn_id, pig_code FROM pigs WHERE id = ?', [sow_id]);
+        const [sowData] = await connection.query('SELECT barn_id FROM pigs WHERE id = ?', [sow_id]);
         if (sowData.length > 0) {
           const barn_id = piglet_barn_id || sowData[0].barn_id;
-          const sow_code = sowData[0].pig_code;
           const avg_weight = total_weight > 0 ? (total_weight / alive_piglets).toFixed(2) : 0;
           
           for (let i = 0; i < alive_piglets; i++) {
-            // Mã lợn con ngắn gọn, tránh lặp chữ PIG
-            const cleanSowCode = sow_code.replace(/^PIG-/i, '');
-            const pig_code = `PIG-${cleanSowCode}-F${farrowingId}-${i + 1}`;
             await connection.query(
               `INSERT INTO pigs 
-              (pig_code, name, barn_id, category, lifecycle_status, gender, dob, entry_date, entry_weight, current_weight, farrowing_id, mother_id) 
-              VALUES (?, ?, ?, 'PIGLET', 'ACTIVE', 'male', ?, ?, ?, ?, ?, ?)`,
-              [pig_code, `Lợn con ổ ${farrowingId} - ${i+1}`, barn_id, farrow_date, farrow_date, avg_weight, avg_weight, farrowingId, sow_id]
+              (name, barn_id, category, lifecycle_status, gender, dob, entry_date, entry_weight, current_weight, farrowing_id, mother_id) 
+              VALUES (?, ?, 'PIGLET', 'ACTIVE', 'male', ?, ?, ?, ?, ?, ?)`,
+              [`Lợn con ổ ${farrowingId} - ${i+1}`, barn_id, farrow_date, farrow_date, avg_weight, avg_weight, farrowingId, sow_id]
             );
           }
         }

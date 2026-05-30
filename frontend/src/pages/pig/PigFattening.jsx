@@ -89,7 +89,7 @@ export default function PigFattening() {
   const stats = useMemo(() => {
     const revenue = saleBatches.reduce(
       (s, b) => s + (b.lines?.reduce((x, l) => {
-        const pig = pigs.find(p => p.earTag === l.ear_tag);
+        const pig = pigs.find(p => p.id === l.pig_id);
         const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
         return x + (Number(l.total_amount) || 0) - purchasePrice;
       }, 0) || 0),
@@ -117,7 +117,7 @@ export default function PigFattening() {
         count: b.lines?.length || 0,
         totalKg: b.lines?.reduce((s, l) => s + (Number(l.weight) || 0), 0) || 0,
         total: b.lines?.reduce((s, l) => {
-          const pig = pigs.find(p => p.earTag === l.ear_tag);
+          const pig = pigs.find(p => p.id === l.pig_id);
           const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
           return s + (Number(l.total_amount) || 0) - purchasePrice;
         }, 0) || 0,
@@ -166,7 +166,7 @@ export default function PigFattening() {
         staff_name: user?.full_name || user?.username || 'Hệ thống',
         lines: [
           {
-            ear_tag: values.earTag,
+            pig_id: values.pigId,
             weight: values.weight,
             price: values.price,
             total_amount: values.price * values.weight,
@@ -198,7 +198,7 @@ export default function PigFattening() {
 
     try {
       const lines = values.items.map((i) => ({
-        ear_tag: i.earTag,
+        pig_id: i.pigId,
         weight: i.weight,
         price: i.price,
         total_amount: i.weight * i.price,
@@ -383,16 +383,16 @@ export default function PigFattening() {
               <DatePicker disabledDate={(current) => current && current > dayjs().endOf('day')} format="DD/MM/YYYY" className="w-100" />
             </Form.Item>
 
-            <Form.Item name="earTag" label="Chọn lợn" rules={[{ required: true }]}>
+            <Form.Item name="pigId" label="Chọn lợn" rules={[{ required: true }]}>
               <Select
                 options={fatteningActive.map((p) => ({
-                  value: p.earTag,
-                  label: p.earTag,
+                  value: p.id,
+                  label: `Lợn số ${p.id}`,
                 }))}
                 onChange={(val) => {
-                  const pig = fatteningActive.find(p => p.earTag === val);
-                  if (pig && pig.weightKg) {
-                    form.setFieldsValue({ weight: pig.weightKg });
+                  const pig = fatteningActive.find(p => p.id === val);
+                  if (pig && (pig.weightKg || pig.current_weight || pig.entry_weight)) {
+                    form.setFieldsValue({ weight: pig.weightKg || pig.current_weight || pig.entry_weight });
                   }
                 }}
               />
@@ -445,7 +445,7 @@ export default function PigFattening() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ marginBottom: 8, fontWeight: 500 }}>Chọn lợn xuất bán:</div>
               <Table
-                rowKey="earTag"
+                rowKey="id"
                 rowSelection={{
                   selectedRowKeys: bulkSelectedKeys,
                   onChange: (keys) => {
@@ -453,11 +453,11 @@ export default function PigFattening() {
                     const currentItems = bulkForm.getFieldValue("items") || [];
                     bulkForm.setFieldsValue({
                       items: keys.map((v) => {
-                        const existing = currentItems.find((i) => i && i.earTag === v);
-                        const pigData = fatteningActive.find((p) => p.earTag === v);
+                        const existing = currentItems.find((i) => i && i.pigId === v);
+                        const pigData = fatteningActive.find((p) => p.id === v);
                         return {
-                          earTag: v,
-                          weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.weightKg || null),
+                          pigId: v,
+                          weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.weightKg || pigData?.current_weight || pigData?.entry_weight || null),
                           price: existing && existing.price !== undefined ? existing.price : null,
                         };
                       }),
@@ -467,9 +467,9 @@ export default function PigFattening() {
                 dataSource={fatteningActive}
                 columns={[
                   { title: "STT", width: 60, render: (_, __, i) => i + 1 },
-                  { title: "Số tai", dataIndex: "earTag", render: text => <strong>{text}</strong> },
+                  { title: "Mã lợn", dataIndex: "id", render: text => <strong>Lợn số {text}</strong> },
                   { title: "Chuồng", dataIndex: "barnName" },
-                  { title: "Trọng lượng", dataIndex: "weightKg", render: w => w ? `${w} kg` : '-' },
+                  { title: "Trọng lượng", key: "weightKg", render: (_, r) => (r.weightKg || r.current_weight || r.entry_weight) ? `${r.weightKg || r.current_weight || r.entry_weight} kg` : '-' },
                 ]}
                 pagination={{ pageSize: 5 }}
                 size="small"
@@ -483,7 +483,7 @@ export default function PigFattening() {
                     {fields.length > 0 && (
                       <Row gutter={16} style={{ paddingBottom: 8, marginBottom: 8, borderBottom: '1px solid #f0f0f0', fontWeight: 500 }}>
                         <Col span={2}>STT</Col>
-                        <Col span={5}>Số tai</Col>
+                        <Col span={5}>Mã lợn</Col>
                         <Col span={4}>Cân nặng (Kg)</Col>
                         <Col span={6}>Giá/kg (VNĐ)</Col>
                         <Col span={7}>Thành tiền</Col>
@@ -493,8 +493,8 @@ export default function PigFattening() {
                       <Row gutter={16} key={field.key} align="middle" style={{ marginBottom: 12 }}>
                         <Col span={2}>{index + 1}</Col>
                         <Col span={5}>
-                          <Form.Item name={[field.name, "earTag"]} noStyle>
-                            <Input disabled style={{ color: '#000', fontWeight: 500 }} />
+                          <Form.Item name={[field.name, "pigId"]} noStyle>
+                            <Input addonBefore="Lợn số" disabled style={{ color: '#000', fontWeight: 500 }} />
                           </Form.Item>
                         </Col>
                         <Col span={4}>
@@ -557,11 +557,11 @@ export default function PigFattening() {
             columns={[
               { title: "STT", render: (_, __, i) => i + 1 },
               { title: "Ngày bán", dataIndex: "sold_at", render: (d) => dayjs(d).format("DD/MM/YYYY") },
-              { title: "Số tai", dataIndex: "ear_tag" },
+              { title: "Mã lợn", dataIndex: "pig_id", render: (v) => `Lợn số ${v}` },
               { title: "Kg", dataIndex: "weight" },
               { title: "Giá", dataIndex: "price", render: (v) => v ? Math.round(Number(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-' },
               { title: "Doanh thu (Lãi)", key: "profit", render: (_, r) => {
-                const pig = pigs.find(p => p.earTag === r.ear_tag);
+                const pig = pigs.find(p => p.id === r.pig_id);
                 const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
                 const profit = (Number(r.total_amount) || 0) - purchasePrice;
                 return Math.round(Number(profit)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');

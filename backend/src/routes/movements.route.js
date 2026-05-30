@@ -20,7 +20,6 @@ export default async function movementsRoute(app) {
           SELECT
             m.id,
             m.pig_id AS pigId,
-            p.pig_code AS earTag,
             p.category,
             p.lifecycle_status AS lifecycleStatus,
             m.from_barn_id AS fromBarnId,
@@ -223,7 +222,6 @@ export default async function movementsRoute(app) {
             `
             SELECT
               id,
-              pig_code,
               barn_id,
               lifecycle_status
 

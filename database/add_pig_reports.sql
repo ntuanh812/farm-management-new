@@ -6,18 +6,19 @@
 USE farmpro_pig;
 
 CREATE TABLE IF NOT EXISTS pig_reports (
-  id            INT PRIMARY KEY AUTO_INCREMENT,
-  pig_id        VARCHAR(20)  NOT NULL COMMENT 'Mã lợn',
-  barn_id       INT          NOT NULL COMMENT 'Chuồng',
-  reporter_id   INT          NOT NULL COMMENT 'Nhân viên báo cáo',
+  id            INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  pig_id        INT UNSIGNED NOT NULL COMMENT 'Mã lợn',
+  barn_id       INT UNSIGNED NOT NULL COMMENT 'Chuồng',
+  reporter_id   INT UNSIGNED NOT NULL COMMENT 'Nhân viên báo cáo',
   description   TEXT         NOT NULL COMMENT 'Mô tả triệu chứng',
   images        JSON                  COMMENT 'Danh sách đường dẫn ảnh',
   status        ENUM('cho_xu_ly','dang_xu_ly','da_xu_ly') DEFAULT 'cho_xu_ly',
   vet_note      TEXT                  COMMENT 'Ghi chú phản hồi của bác sĩ',
-  vet_doctor_id INT                   COMMENT 'Bác sĩ xử lý',
+  vet_doctor_id INT UNSIGNED          COMMENT 'Bác sĩ xử lý',
   created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+  FOREIGN KEY (pig_id)        REFERENCES pigs(id)    ON DELETE CASCADE,
   FOREIGN KEY (barn_id)       REFERENCES barns(id)      ON DELETE CASCADE,
   FOREIGN KEY (reporter_id)   REFERENCES staffs(id)  ON DELETE CASCADE,
   FOREIGN KEY (vet_doctor_id) REFERENCES staffs(id)  ON DELETE SET NULL,
@@ -29,5 +30,5 @@ CREATE TABLE IF NOT EXISTS pig_reports (
 
 -- Dữ liệu mẫu
 INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images, status) VALUES
-('PIG001', 1, 2, 'Lợn bỏ ăn từ sáng, đi loạng choạng, da có vết đỏ ở bụng', '[]', 'cho_xu_ly'),
-('PIG005', 2, 3, 'Tiêu chảy nặng, phân lỏng màu vàng, lợn gầy rõ rệt', '[]', 'dang_xu_ly');
+(4, 4, 2, 'Lợn bỏ ăn từ sáng, đi loạng choạng, da có vết đỏ ở bụng', '[]', 'cho_xu_ly'),
+(5, 4, 3, 'Tiêu chảy nặng, phân lỏng màu vàng, lợn gầy rõ rệt', '[]', 'dang_xu_ly');

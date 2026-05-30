@@ -67,7 +67,7 @@ export default function StaffDashboard() {
       const acts = (moveRes.data?.data || []).map(m => ({
         id: `move_${m.id}`,
         icon: "task",
-        content: `Chuyển lợn ${m.ear_tag || m.earTag || m.pig_code || m.pigCode || m.pig_id || m.pigId || ''} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
+        content: `Chuyển lợn số ${m.pig_id || m.pigId} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
         createdAt: m.createdAt || m.created_at || m.movedAt || m.moved_at || new Date()
       }));
 
@@ -84,7 +84,7 @@ export default function StaffDashboard() {
         acts.push({
           id: `report_${r.id}`,
           icon: "medical",
-          content: `Báo cáo lợn bệnh ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
+          content: `Báo cáo lợn bệnh số ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
           createdAt: r.created_at || r.createdAt || new Date()
         });
       });

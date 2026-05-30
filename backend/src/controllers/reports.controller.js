@@ -24,7 +24,7 @@ export const reportsController = {
         SELECT COUNT(sbl.id) as soldPigs, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) as revenue
         FROM sale_batches sb
         LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
-        LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
+        LEFT JOIN pigs p ON sbl.pig_id = p.id
         WHERE 1=1
       `;
       let saleParams = [];
@@ -59,15 +59,13 @@ export const reportsController = {
         SELECT DATE_FORMAT(sb.sold_at, '%d/%m/%Y') AS date, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
         FROM sale_batches sb
         LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
-        LEFT JOIN pigs p ON sbl.ear_tag = p.pig_code
+        LEFT JOIN pigs p ON sbl.pig_id = p.id
         WHERE 1=1
       `;
       let revParams = [];
       if (startDate && endDate) {
         revQuery += " AND sb.sold_at >= ? AND sb.sold_at <= ?";
         revParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
-      } else {
-        revQuery += " AND sb.sold_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
       }
       revQuery += " GROUP BY date ORDER BY MIN(sb.sold_at) ASC";
       const [revenueTrend] = await pool.query(revQuery, revParams);
@@ -95,19 +93,19 @@ export const reportsController = {
       return reply.send({
         success: true,
         data: {
-          activePigs: activePigs,
-          deadPigs: dead[0].total || 0,
-          soldPigs: sales[0].soldPigs || 0,
-          revenue: sales[0].revenue || 0,
+          activePigs: activePigs.map(p => ({ ...p, count: Number(p.count) })),
+          deadPigs: Number(dead[0].total || 0),
+          soldPigs: Number(sales[0].soldPigs || 0),
+          revenue: Number(sales[0].revenue || 0),
           barnStats: {
-            total_barns: barnStats[0].total_barns || 0,
-            total_capacity: barnStats[0].total_capacity || 0
+            total_barns: Number(barnStats[0].total_barns || 0),
+            total_capacity: Number(barnStats[0].total_capacity || 0)
           },
-          feedUsage: feedUsage,
-          pendingReports: pendingReports[0].total || 0,
-          revenueTrend: revenueTrend,
-          vaccineStats: vaccineStats,
-          medicineUsage: medicineUsage
+          feedUsage: feedUsage.map(f => ({ ...f, total_kg: Number(f.total_kg) })),
+          pendingReports: Number(pendingReports[0].total || 0),
+          revenueTrend: revenueTrend.map(r => ({ date: r.date, revenue: Number(r.revenue) })),
+          vaccineStats: vaccineStats.map(v => ({ ...v, total_doses: Number(v.total_doses) })),
+          medicineUsage: medicineUsage.map(m => ({ ...m, total_quantity: Number(m.total_quantity) }))
         }
       });
     } catch (error) {

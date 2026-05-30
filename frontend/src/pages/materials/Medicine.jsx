@@ -86,8 +86,7 @@ export default function Medicine() {
       } else {
         const requests = pig_ids.map(pigId => {
           const pig = pigs.find(p => p.id === pigId);
-          const earTag = pig?.earTag || pig?.pigCode || pig?.pig_code || pigId;
-          const customNote = `[Cá thể: ${earTag}] ${note || ''}`;
+          const customNote = `[Cá thể: Lợn số ${pigId}] ${note || ''}`;
           return axios.post(`${API}/medicine-usages`, { ...basePayload, pig_id: pigId, barn_id: pig?.barnId || pig?.barn_id, note: customNote.trim() }, { headers });
         });
         await Promise.all(requests);
@@ -112,11 +111,9 @@ export default function Medicine() {
     },
     { title: 'Ngày', dataIndex: 'used_at', key: 'used_at', render: (date) => dayjs(date).format('DD/MM/YYYY') },
     { title: 'Đối tượng', key: 'target', render: (_, r) => {
-        if (r.pig_code || r.pigCode || r.earTag || r.pig_id || r.pigId) {
+        if (r.pig_id || r.pigId) {
           const pigId = r.pig_id || r.pigId;
-          const pig = pigs.find(p => p.id === pigId);
-          const displayCode = r.pig_code || r.pigCode || r.earTag || (pig ? (pig.earTag || pig.pigCode || pig.pig_code) : pigId);
-          return <span>Cá thể: <strong>{displayCode}</strong></span>;
+          return <span>Cá thể: <strong>Lợn số {pigId}</strong></span>;
         }
         if (r.note && r.note.startsWith('[Cá thể:')) {
           const match = r.note.match(/^\[Cá thể:\s*(.+?)\]/);
@@ -196,7 +193,7 @@ export default function Medicine() {
             </Form.Item>
           ) : (
             <Form.Item name="pig_ids" label="Chọn cá thể lợn" rules={[{ required: true, message: 'Chọn ít nhất 1 con' }]}>
-              <Select mode="multiple" showSearch optionFilterProp="label" options={pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map(p => ({ label: `${p.earTag || p.pigCode || p.pig_code} - ${p.barnName || p.barn_name || ''}`, value: p.id }))} placeholder="Chọn lợn..." />
+            <Select mode="multiple" showSearch optionFilterProp="label" options={pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map(p => ({ label: `Lợn số ${p.id} - ${p.barnName || p.barn_name || ''}`, value: p.id }))} placeholder="Chọn lợn..." />
             </Form.Item>
           )}
 

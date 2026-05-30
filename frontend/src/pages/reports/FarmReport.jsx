@@ -144,7 +144,7 @@ export default function FarmReport() {
                 <div className="stat-card__icon"><DollarOutlined /></div>
               </div>
               <div className="stat-card__value">
-              {data.revenue ? Math.round(Number(data.revenue)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : 0}
+                {Math.round(Number(data.revenue || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 <span className="stat-card__label"> VNĐ</span>
               </div>
               <div className="stat-card__trend stat-card__trend--up">
@@ -186,8 +186,66 @@ export default function FarmReport() {
             </Card>
           </Col>
         </Row>
+        <Divider/>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={12}>
+            <Card title="Cơ cấu đàn lợn hiện tại" bordered={false} style={{ height: '100%' }}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={activePigsMapped}
+                      cx="50%" cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="categoryName"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {activePigsMapped.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(value) => [`${value} con`, 'Số lượng']} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
 
-        <Divider orientation="left" style={{ borderColor: '#2d5a27', fontSize: 18 }}>1. Báo cáo Tài chính & Tiêu thụ</Divider>
+          <Col xs={24} lg={12}>
+            <Card title="Tỷ lệ trạng thái toàn trại" bordered={false} style={{ height: '100%' }}>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Đang nuôi', count: totalActivePigs },
+                        { name: 'Đã xuất bán', count: data.soldPigs },
+                        { name: 'Đã chết', count: data.deadPigs }
+                      ].filter(item => item.count > 0)}
+                      cx="50%" cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="name"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {[{ name: 'Đang nuôi', count: totalActivePigs }, { name: 'Đã xuất bán', count: data.soldPigs }, { name: 'Đã chết', count: data.deadPigs }].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={['#3f8600', '#1890ff', '#d04444'][index]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip formatter={(value) => [`${value} con`, 'Số lượng']} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+        <Divider />
         <Row gutter={[16, 16]}>
           {/* 2. Biểu đồ Doanh thu (Chi tiết theo ngày) */}
           <Col xs={24} lg={12}>
@@ -266,65 +324,7 @@ export default function FarmReport() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ borderColor: '#2d5a27', fontSize: 18 }}>3. Báo cáo Cơ cấu đàn lợn</Divider>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} lg={12}>
-            <Card title="Cơ cấu đàn lợn hiện tại" bordered={false} style={{ height: '100%' }}>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={activePigsMapped}
-                      cx="50%" cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="count"
-                      nameKey="categoryName"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {activePigsMapped.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip formatter={(value) => [`${value} con`, 'Số lượng']} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-
-          <Col xs={24} lg={12}>
-            <Card title="Tỷ lệ trạng thái toàn trại" bordered={false} style={{ height: '100%' }}>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Đang nuôi', count: totalActivePigs },
-                        { name: 'Đã xuất bán', count: data.soldPigs },
-                        { name: 'Đã chết', count: data.deadPigs }
-                      ].filter(item => item.count > 0)}
-                      cx="50%" cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="count"
-                      nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {[{ name: 'Đang nuôi', count: totalActivePigs }, { name: 'Đã xuất bán', count: data.soldPigs }, { name: 'Đã chết', count: data.deadPigs }].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3f8600', '#1890ff', '#d04444'][index]} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip formatter={(value) => [`${value} con`, 'Số lượng']} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </Col>
-        </Row>
+        
       </Spin>
     </div>
   );

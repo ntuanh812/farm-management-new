@@ -83,9 +83,8 @@ export default function PigManage() {
   // Kết hợp trạng thái từ báo cáo lợn bệnh
   const augmentedPigs = useMemo(() => {
     return pigs.map(p => {
-      const code = p.earTag || p.pig_code || p.pigCode;
       // Kiểm tra có báo cáo lợn bệnh nào chưa xử lý (cho_xu_ly, dang_xu_ly) không
-      const hasActiveReport = reports.some(r => r.pig_id === code && r.status !== 'da_xu_ly');
+      const hasActiveReport = reports.some(r => r.pig_id === p.id && r.status !== 'da_xu_ly');
       
       let status = p.lifecycleStatus || p.lifecycle_status;
       if (status === 'ACTIVE' && hasActiveReport) {
@@ -114,8 +113,7 @@ export default function PigManage() {
   // Lọc dữ liệu hiển thị trên bảng
   const filteredPigs = useMemo(() => {
     const filtered = augmentedPigs.filter(p => {
-      const code = p.earTag || p.pig_code || p.pigCode || '';
-      const matchSearch = !searchText || code.toLowerCase().includes(searchText.toLowerCase());
+      const matchSearch = !searchText || String(p.id).includes(searchText);
       const bId = p.barnId || p.barn_id;
       const matchBarn = !filterBarn || bId === filterBarn;
       const matchCategory = !filterCategory || p.category === filterCategory;
@@ -138,7 +136,6 @@ export default function PigManage() {
     setDetailOpen(true);
     setLoadingHistory(true);
     try {
-      const pigCode = record.earTag || record.pig_code || record.pigCode;
       const bId = record.barnId || record.barn_id;
       const entryDate = record.entryDate || record.entry_date;
       
@@ -150,7 +147,7 @@ export default function PigManage() {
       ]);
 
       const moves = (moveRes.data?.data || []).filter(m => m.pigId === record.id || m.pig_id === record.id);
-      const reps = (repRes.data?.data || []).filter(r => r.pig_id === pigCode);
+      const reps = (repRes.data?.data || []).filter(r => r.pig_id === record.id);
 
       // Sort movements descending by move_date
       const sortedMoves = [...moves].sort((a, b) => dayjs(b.movedAt || b.move_date).valueOf() - dayjs(a.movedAt || a.move_date).valueOf());
@@ -180,7 +177,7 @@ export default function PigManage() {
       const meds = (medRes.data?.data || []).filter(m => {
         const pId = m.pigId || m.pig_id;
         if (pId === record.id) return true;
-        if (m.note && m.note.includes(`[Cá thể: ${pigCode}]`)) return true;
+        if (m.note && (m.note.includes(`[Cá thể: ${record.id}]`) || m.note.includes(`[Cá thể: Lợn số ${record.id}]`))) return true;
         if (m.note && m.note.startsWith('[Cá thể:')) return false;
         
         const barnOnDate = getPigBarnOnDate(m.used_at);
@@ -198,7 +195,6 @@ export default function PigManage() {
   const handleOpenEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
-      pig_code: record.earTag || record.pig_code || record.pigCode,
       name: record.name,
       barn_id: record.barnId || record.barn_id,
       category: record.category,
@@ -259,9 +255,9 @@ export default function PigManage() {
       render: (_, record) => filteredPigs.indexOf(record) + 1,
     },
     {
-      title: 'Số tai',
-      key: 'earTag',
-      render: (_, r) => <strong>{r.earTag || r.pig_code || r.pigCode}</strong>,
+      title: 'Mã lợn',
+      key: 'id',
+      render: (_, r) => <strong>Lợn số {r.id}</strong>,
     },
     {
       title: 'Chuồng',
@@ -430,7 +426,7 @@ export default function PigManage() {
           }}
         >
           <Form.Item name="search">
-            <Input.Search placeholder="Tìm theo số tai..." allowClear style={{ width: 220 }} />
+            <Input.Search placeholder="Tìm theo mã lợn..." allowClear style={{ width: 220 }} />
           </Form.Item>
           <Form.Item name="barn">
             <Select placeholder="Lọc theo chuồng" allowClear options={barns.map(b => ({ label: b.name, value: b.id }))} style={{ width: 180 }} />
@@ -464,29 +460,8 @@ export default function PigManage() {
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item 
-                name="pig_code" 
-                label="Số tai" 
-                rules={[
-                  { required: true, message: 'Nhập mã' },
-                  () => ({
-                    validator(_, value) {
-                      if (!value) return Promise.resolve();
-                      const exists = pigs.find(p => (p.earTag || p.pig_code || p.pigCode) === value);
-                      if (exists && exists.id !== editingId) {
-                        return Promise.reject(new Error('Mã này đã tồn tại!'));
-                      }
-                      return Promise.resolve();
-                    }
-                  })
-                ]}
-              >
-                <Input placeholder="VD: P001" />
-              </Form.Item>
-            </Col>
-            <Col span={8}><Form.Item name="name" label="Tên gọi (nếu có)"><Input placeholder="VD: Nái Mẹ 1" /></Form.Item></Col>
-            <Col span={8}>
+            <Col span={12}><Form.Item name="name" label="Tên gọi (nếu có)"><Input placeholder="VD: Nái Mẹ 1" /></Form.Item></Col>
+            <Col span={12}>
               <Form.Item name="barn_id" label="Chuồng trại" rules={[{ required: true, message: 'Chọn chuồng' }]}>
                 <Select disabled={!!editingId} showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn..." />
               </Form.Item>
@@ -550,7 +525,7 @@ export default function PigManage() {
 
       {/* MODAL XEM CHI TIẾT */}
       <Modal
-        title={`Hồ sơ chi tiết lợn: ${selectedPig?.earTag || selectedPig?.pig_code || selectedPig?.pigCode || ''}`}
+        title={`Hồ sơ chi tiết lợn: Lợn số ${selectedPig?.id || ''}`}
         open={detailOpen}
         onCancel={() => setDetailOpen(false)}
         footer={[
@@ -562,7 +537,7 @@ export default function PigManage() {
           <Spin spinning={loadingHistory}>
             <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: 8 }}>
               <Descriptions bordered size="small" column={{ xxl: 3, xl: 3, lg: 3, md: 2, sm: 2, xs: 1 }} style={{ marginBottom: 20 }}>
-                <Descriptions.Item label="Số tai"><strong>{selectedPig.earTag || selectedPig.pig_code || selectedPig.pigCode}</strong></Descriptions.Item>
+                <Descriptions.Item label="Mã lợn"><strong>Lợn số {selectedPig.id}</strong></Descriptions.Item>
                 <Descriptions.Item label="Phân loại"><Tag color="blue">{CATEGORY_MAP[selectedPig.category] || selectedPig.category}</Tag></Descriptions.Item>
                 <Descriptions.Item label="Giới tính">{GENDER_MAP[selectedPig.gender] || selectedPig.gender}</Descriptions.Item>
                 <Descriptions.Item label="Chuồng hiện tại">{selectedPig.barnName || selectedPig.barn_name}</Descriptions.Item>
@@ -628,7 +603,6 @@ export default function PigManage() {
               />
 
               <Divider orientation="left" style={{ margin: '12px 0' }}>Thuốc đã sử dụng</Divider>
-              <Alert message="Bao gồm các loại thuốc được cấp phát chung cho cả chuồng và thuốc tiêm riêng cho cá thể lợn này." type="info" showIcon style={{ marginBottom: 16 }} />
               <Table 
                 dataSource={pigHistory.medicines} 
                 rowKey="id" 

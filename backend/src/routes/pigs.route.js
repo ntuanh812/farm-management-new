@@ -19,7 +19,6 @@ export default async function pigsRoute(app) {
         let sql = `
           SELECT
             p.id,
-            p.pig_code AS earTag,
             p.name,
             p.barn_id AS barnId,
             b.name AS barnName,
@@ -40,10 +39,10 @@ export default async function pigsRoute(app) {
               CURDATE()
             ) AS ageDays,
             (
-            EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.pig_code AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))
+            EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.id AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))
           ) AS isSick,
           (SELECT MAX(death_date) FROM pig_deaths pd WHERE pd.pig_id = p.id) AS deathDate,
-          (SELECT MAX(sb.sold_at) FROM sale_batch_lines sbl JOIN sale_batches sb ON sb.id = sbl.sale_batch_id WHERE sbl.ear_tag = p.pig_code) AS soldAt
+          (SELECT MAX(sb.sold_at) FROM sale_batch_lines sbl JOIN sale_batches sb ON sb.id = sbl.sale_batch_id WHERE sbl.pig_id = p.id) AS soldAt
           FROM pigs p
           LEFT JOIN barns b
           ON b.id = p.barn_id
@@ -91,7 +90,6 @@ export default async function pigsRoute(app) {
       try {
 
         const {
-          pig_code,
           name,
           barn_id,
           category,
@@ -109,7 +107,6 @@ export default async function pigsRoute(app) {
         // =====================================================
 
         if (
-          !pig_code ||
           !barn_id ||
           !category ||
           !entry_date
@@ -119,29 +116,6 @@ export default async function pigsRoute(app) {
             success: false,
             message:
               "Thiếu dữ liệu bắt buộc",
-          });
-        }
-
-        // =====================================================
-        // CHECK DUPLICATE CODE
-        // =====================================================
-
-        const [exists] =
-          await pool.query(
-            `
-            SELECT id
-            FROM pigs
-            WHERE pig_code = ?
-            `,
-            [pig_code]
-          );
-
-        if (exists.length > 0) {
-
-          return reply.status(400).send({
-            success: false,
-            message:
-              "Mã lợn đã tồn tại",
           });
         }
 
@@ -206,7 +180,6 @@ export default async function pigsRoute(app) {
           `
           INSERT INTO pigs
           (
-            pig_code,
             name,
             barn_id,
             category,
@@ -218,10 +191,9 @@ export default async function pigsRoute(app) {
             purchase_price,
             note
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
-            pig_code,
             name || null,
             barn_id,
             category,
@@ -268,7 +240,6 @@ export default async function pigsRoute(app) {
         const { id } = request.params;
 
         const {
-          pig_code,
           name,
           barn_id,
           category,
@@ -297,7 +268,6 @@ export default async function pigsRoute(app) {
           `
           UPDATE pigs
           SET
-            pig_code = ?,
             name = ?,
             barn_id = ?,
             category = ?,
@@ -311,7 +281,6 @@ export default async function pigsRoute(app) {
           WHERE id = ?
           `,
           [
-            pig_code,
             name,
             barn_id,
             category,

@@ -72,7 +72,7 @@ export default function PigstyHistory() {
       return {
         key: m.id,
         date: m.movedAt ? dayjs(m.movedAt).format("DD/MM/YYYY") : "",
-        earTag: pig?.earTag || m.earTag,
+        pig_id: pig?.id || m.pigId,
         status: pig?.category || m.category,
         fromPen: m.fromBarnName || barns.find(b => b.id === m.fromBarnId)?.name || m.fromBarnId,
         toPen: m.toBarnName || barns.find(b => b.id === m.toBarnId)?.name || m.toBarnId,
@@ -94,10 +94,9 @@ export default function PigstyHistory() {
       key: "date",
     },
     {
-      title: "Số tai",
-      dataIndex: "earTag",
-      key: "earTag",
-      render: text => <strong>{text}</strong>
+      title: "Mã lợn",
+      key: "pig_id", 
+      render: (_, r) => <strong>Lợn số {r.pig_id}</strong>,
     },
     {
       title: "Loại lợn",
@@ -135,9 +134,9 @@ export default function PigstyHistory() {
       render: (_, record) => filteredPigs.indexOf(record) + 1,
     },
     {
-      title: "Số tai",
-      dataIndex: "earTag",
-      key: "earTag",
+      title: "Mã lợn",
+      key: "id", 
+      render: (_, r) => <strong>Lợn số {r.id}</strong>,
     },
     {
       title: "Loại lợn",

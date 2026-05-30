@@ -143,12 +143,10 @@ export default function PigVaccination() {
           return <span>Chuồng: <strong>{r.barnName}</strong> <br/><span className="text-muted" style={{fontSize: 12}}>{typeof r.pigCount === 'number' ? `Tiêm cho ${r.pigCount} cá thể` : 'Tiêm chung toàn chuồng'}</span></span>;
         }
 
-        const pigCode = r.ear_tag || r.earTag || r.pig_id;
-
-        const pig = pigs.find(p => p.id === r.pig_id || p.earTag === pigCode || p.pigCode === pigCode);
+        const pig = pigs.find(p => p.id === r.pig_id);
         const barnName = pig?.barnName || pig?.barn_name;
         
-        return <span>Cá thể: <strong>{pigCode}</strong>{barnName ? ` - Chuồng: ${barnName}` : ''}</span>;
+        return <span>Cá thể: <strong>Lợn số {r.pig_id}</strong>{barnName ? ` - Chuồng: ${barnName}` : ''}</span>;
       }
     },
     { title: "Vaccine", dataIndex: "vaccine_name", key: "vaccine_name" },
@@ -281,7 +279,7 @@ export default function PigVaccination() {
             <Form.Item name="pig_ids" label="Chọn cá thể lợn" rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 con' }]}>
               <Select mode="multiple" showSearch optionFilterProp="children" placeholder="Chọn lợn...">
                 {pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map(p => (
-                  <Option key={p.id} value={p.id}>{p.earTag || p.pigCode || p.pig_code} - {p.barnName || p.barn_name}</Option>
+                  <Option key={p.id} value={p.id}>Lợn số {p.id} - {p.barnName || p.barn_name}</Option>
                 ))}
               </Select>
             </Form.Item>

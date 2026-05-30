@@ -1,115 +1,86 @@
 -- ============================================================
--- DỮ LIỆU MẪU (SEED DATA) CHO FARMPRO PIG - ĐẦY ĐỦ CÁC TRANG
+-- SEED DATA - DỮ LIỆU MẪU CHO FARMPRO PIG
 -- ============================================================
 
 USE farmpro_pig;
 
--- 1. THÊM NHÂN VIÊN VÀ TÀI KHOẢN (role_id 2: FARM_WORKER, 3: VET_DOCTOR)
--- Admin (role 1) đã được thêm mặc định ở cuối file schema.sql
-INSERT INTO staffs (id, full_name, phone, email, role_id) VALUES
-(2, 'Nguyễn Văn Công', '0911222333', 'worker@farmpro.com', 2),
-(3, 'Trần Thị Thúy', '0988777666', 'vet@farmpro.com', 3),
-(4, 'Lê Hoàng Anh', '0933444555', 'worker2@farmpro.com', 2);
+-- Thêm dữ liệu Chuồng trại
+INSERT INTO barns (code, name, capacity, barn_type, status) VALUES
+('B-N01', 'Chuồng Nái 01', 50, 'SOW', 'ACTIVE'),
+('B-B01', 'Chuồng Đực giống 01', 10, 'BOAR', 'ACTIVE'),
+('B-C01', 'Chuồng Lợn con 01', 200, 'PIGLET', 'ACTIVE'),
+('B-F01', 'Chuồng Thịt 01', 100, 'FATTENING', 'ACTIVE'),
+('B-F02', 'Chuồng Thịt 02', 100, 'FATTENING', 'ACTIVE');
 
-INSERT INTO accounts (id, staff_id, username, password_hash, is_active) VALUES
-(2, 2, 'worker', '123456', 1),
-(3, 3, 'vet', '123456', 1),
-(4, 4, 'worker2', '123456', 1);
+-- Thêm Nhân viên mẫu
+INSERT INTO staffs (full_name, phone, email, role_id) VALUES
+('Nguyễn Văn Chăn Nuôi', '0912345678', 'worker1@farmpro.com', 2),
+('Trần Thị Thú Y', '0988888888', 'vet1@farmpro.com', 3);
 
--- 2. THÊM CHUỒNG TRẠI (BARNS)
-INSERT INTO barns (id, code, name, capacity, barn_type, status) VALUES
-(1, 'B01', 'Chuồng Nái Đẻ 1', 20, 'SOW', 'ACTIVE'),
-(2, 'B02', 'Chuồng Đực Giống', 10, 'BOAR', 'ACTIVE'),
-(3, 'B03', 'Chuồng Lợn Thịt A', 100, 'FATTENING', 'ACTIVE'),
-(4, 'B04', 'Chuồng Lợn Con', 50, 'PIGLET', 'ACTIVE'),
-(5, 'B05', 'Chuồng Cách Ly', 20, 'ISOLATION', 'ACTIVE'),
-(6, 'B06', 'Chuồng Lợn Thịt B', 100, 'FATTENING', 'ACTIVE');
+-- Thêm Tài khoản cho nhân viên
+INSERT INTO accounts (staff_id, username, password_hash, is_active) VALUES
+(2, 'worker1', '$2b$10$tZ2E2.H9F8wT5P6c3X1i.eZq/L/5L1c4o8tG0H4U5l4R3q2P1', 1), -- pass: 123456
+(3, 'vet1', '$2b$10$tZ2E2.H9F8wT5P6c3X1i.eZq/L/5L1c4o8tG0H4U5l4R3q2P1', 1);
 
--- Phân công chuồng cho nhân viên
+-- Phân công chuồng cho công nhân
 INSERT INTO staff_barns (staff_id, barn_id) VALUES
-(2, 1), (2, 3), (2, 4), (2, 5),
-(4, 2), (4, 6);
+(2, 1), (2, 3), (2, 4);
 
--- 3. THÊM LỢN (PIGS)
-INSERT INTO pigs (id, pig_code, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight) VALUES
-(1, 'PIG-S001', 1, 'SOW', 'ACTIVE', 'female', '2023-01-10', 80.0, 150.5),
-(2, 'PIG-S002', 1, 'SOW', 'ACTIVE', 'female', '2023-02-15', 75.0, 145.0),
-(3, 'PIG-B001', 2, 'BOAR', 'ACTIVE', 'male', '2023-01-05', 90.0, 180.0),
-(4, 'PIG-F001', 3, 'FATTENING', 'ACTIVE', 'male', '2023-08-01', 15.0, 102.5), -- Đạt chuẩn xuất chuồng (>100kg)
-(5, 'PIG-F002', 3, 'FATTENING', 'ACTIVE', 'female', '2023-08-01', 14.5, 98.0),
-(6, 'PIG-P001', 4, 'PIGLET', 'ACTIVE', 'male', '2023-09-20', 2.5, 6.0),
-(9, 'PIG-P002', 4, 'PIGLET', 'ACTIVE', 'female', '2023-09-20', 2.6, 6.2),
-(7, 'PIG-F003', 3, 'FATTENING', 'SOLD', 'male', '2023-05-01', 15.0, 105.0),
-(8, 'PIG-F004', 5, 'FATTENING', 'DEAD', 'female', '2023-06-01', 15.0, 40.0),
-(10, 'PIG-F005', 6, 'FATTENING', 'ACTIVE', 'male', '2023-08-15', 16.0, 70.0),
-(11, 'PIG-F006', 3, 'FATTENING', 'SOLD', 'male', '2023-10-01', 15.0, 105.0),
-(12, 'PIG-F007', 3, 'FATTENING', 'SOLD', 'female', '2023-11-15', 14.0, 110.0),
-(13, 'PIG-F008', 6, 'FATTENING', 'SOLD', 'male', '2023-12-05', 16.0, 108.0),
-(14, 'PIG-F009', 6, 'FATTENING', 'SOLD', 'female', '2024-01-10', 15.5, 115.0);
+-- Thêm Cám & Thuốc
+INSERT INTO feeds (name, brand, unit, stock) VALUES
+('Cám heo con', 'GreenFeed', 'kg', 1000),
+('Cám heo nái', 'Proconco', 'kg', 500);
 
--- 4. LỊCH SỬ CHUYỂN CHUỒNG (PIG MOVEMENTS)
-INSERT INTO pig_movements (pig_id, from_barn_id, to_barn_id, move_date, staff_name, note) VALUES
-(4, 4, 3, '2023-08-01', 'Nguyễn Văn Công', 'Chuyển lợn con lên chuồng thịt A'),
-(5, 4, 3, '2023-08-01', 'Nguyễn Văn Công', 'Chuyển lợn con lên chuồng thịt A'),
-(8, 3, 5, '2023-10-01', 'Lê Hoàng Anh', 'Cách ly do có dấu hiệu ốm');
+INSERT INTO medicines (name, unit, stock, expiry_date) VALUES
+('Kháng sinh Amox', 'Lọ', 50, '2025-12-31'),
+('Vitamin C', 'Gói', 100, '2026-06-30');
 
--- 5. VẬT TƯ (CÁM & THUỐC)
-INSERT INTO feeds (id, name, brand, unit, stock) VALUES
-(1, 'Cám lợn con tập ăn', 'DeHeus', 'kg', 500),
-(2, 'Cám lợn thịt 30-60kg', 'CP', 'kg', 1000),
-(3, 'Cám nái mang thai', 'GreenFeed', 'kg', 300),
-(4, 'Cám vỗ béo xuất chuồng', 'Dabaco', 'kg', 800);
+-- Thêm Lợn mẫu (Chỉ sử dụng ID tự tăng)
+INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, purchase_price) VALUES
+('Nái York 01', 1, 'SOW', 'ACTIVE', 'female', '2023-01-10', 100, 150, 5000000),
+('Nái Landrace 02', 1, 'SOW', 'ACTIVE', 'female', '2023-02-15', 110, 160, 5500000),
+('Đực Duroc 01', 2, 'BOAR', 'ACTIVE', 'male', '2023-01-05', 120, 180, 8000000),
+('Lợn thịt T1', 4, 'FATTENING', 'ACTIVE', 'male', '2023-10-01', 15, 80, 1500000),
+('Lợn thịt T2', 4, 'FATTENING', 'ACTIVE', 'female', '2023-10-01', 14, 75, 1500000),
+('Lợn thịt T3', 4, 'FATTENING', 'ACTIVE', 'male', '2023-10-01', 16, 85, 1500000),
+('Lợn bán X1', 4, 'FATTENING', 'SOLD', 'male', '2023-05-01', 10, 100, 1000000),
+('Lợn chết C1', 4, 'FATTENING', 'DEAD', 'female', '2023-11-01', 12, 30, 1200000);
 
-INSERT INTO medicines (id, name, unit, stock, expiry_date) VALUES
-(1, 'Vaccine Dịch tả lợn', 'Liều', 200, '2025-12-31'),
-(2, 'Kháng sinh Amoxicillin', 'Chai', 50, '2024-10-15'),
-(3, 'Thuốc sát trùng', 'Lít', 100, '2025-05-20'),
-(4, 'Vaccine Lở mồm long móng', 'Liều', 150, '2024-11-30');
+-- Thêm lịch sử chuyển chuồng
+INSERT INTO pig_movements (pig_id, from_barn_id, to_barn_id, move_date, staff_name) VALUES
+(4, 3, 4, '2023-11-15', 'Nguyễn Văn Chăn Nuôi');
 
--- 6. DỮ LIỆU SINH SẢN (Phối giống & Đẻ con)
+-- Phối giống mẫu
 INSERT INTO pig_breedings (sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_name) VALUES
-(1, 3, DATE_SUB(CURDATE(), INTERVAL 60 DAY), DATE_ADD(CURDATE(), INTERVAL 54 DAY), 'SUCCESS', 'Nguyễn Văn Công'),
-(2, 3, DATE_SUB(CURDATE(), INTERVAL 125 DAY), DATE_SUB(CURDATE(), INTERVAL 11 DAY), 'SUCCESS', 'Nguyễn Văn Công');
+(1, 3, '2023-08-01', '2023-11-24', 'SUCCESS', 'Nguyễn Văn Chăn Nuôi');
 
-INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name, note) VALUES
-(2, DATE_SUB(CURDATE(), INTERVAL 11 DAY), 12, 1, 16.5, 'Nguyễn Văn Công', 'Đẻ lứa 2, nái mẹ khỏe mạnh, con đều');
+-- Lịch sử đẻ (Đẻ ra 2 con lợn con)
+INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_name) VALUES
+(1, '2023-11-25', 2, 0, 3.5, 'Nguyễn Văn Chăn Nuôi');
 
--- 7. LỢN CHẾT & XUẤT BÁN
+INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, farrowing_id, mother_id) VALUES
+('Lợn con ổ 1 - 1', 3, 'PIGLET', 'ACTIVE', 'male', '2023-11-25', 1.75, 5, 1, 1),
+('Lợn con ổ 1 - 2', 3, 'PIGLET', 'ACTIVE', 'female', '2023-11-25', 1.75, 4.5, 1, 1);
+
+-- Dữ liệu lợn chết
 INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, recorded_by) VALUES
-(8, DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'Viêm phổi phức hợp', 'Tiêu hủy sinh học (Đốt)', 'Lê Hoàng Anh');
+(8, '2023-12-10', 'Viêm phổi nặng', 'Tiêu hủy', 'Trần Thị Thú Y');
 
-INSERT INTO sale_batches (id, sold_at, staff_name) VALUES
-(1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'Admin System'),
-(2, '2024-02-15', 'Nguyễn Văn Công'),
-(3, '2024-03-20', 'Nguyễn Văn Công'),
-(4, '2024-04-10', 'Lê Hoàng Anh'),
-(5, '2024-05-12', 'Lê Hoàng Anh');
+-- Dữ liệu xuất bán
+INSERT INTO sale_batches (sold_at, staff_name) VALUES
+('2023-12-15', 'Admin System');
 
-INSERT INTO sale_batch_lines (sale_batch_id, ear_tag, weight, price, total_amount) VALUES
-(1, 'PIG-F003', 105.0, 50000, 5250000),
-(2, 'PIG-F006', 105.0, 52000, 5460000),
-(3, 'PIG-F007', 110.0, 51000, 5610000),
-(4, 'PIG-F008', 108.0, 53000, 5724000),
-(5, 'PIG-F009', 115.0, 55000, 6325000);
+INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount, reason) VALUES
+(1, 7, 100, 55000, 5500000, 'Xuất chuồng chuẩn');
 
--- 8. THÚ Y: BÁO CÁO BỆNH, KHÁM CHỮA BỆNH & TIÊM PHÒNG
-INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, status, vet_note, vet_doctor_id) VALUES
-('PIG-S002', 1, 2, 'Lợn nái bỏ ăn, sốt nhẹ, nằm ì một chỗ', 'cho_xu_ly', NULL, NULL),
-('PIG-F001', 3, 2, 'Ho khạc, thở dốc, chảy nước mũi', 'da_xu_ly', 'Đã xuống khám và chẩn đoán viêm phổi. Cách ly tiêm thuốc.', 3);
+-- Lịch sử tiêm phòng & sử dụng thức ăn
+INSERT INTO vaccinations (pig_id, barn_id, vaccine_name, vaccinated_at) VALUES
+(NULL, 4, 'Tai xanh', '2023-10-15');
 
--- Lịch sử tiêm phòng
-INSERT INTO vaccinations (pig_id, vaccine_name, vaccinated_at, performed_by, note) VALUES
-(6, 'Vaccine Dịch tả lợn', CURDATE(), 3, 'Tiêm phòng lợn con 30 ngày tuổi'),
-(9, 'Vaccine Dịch tả lợn', CURDATE(), 3, 'Tiêm phòng lợn con 30 ngày tuổi'),
-(4, 'Vaccine Lở mồm long móng', DATE_SUB(CURDATE(), INTERVAL 60 DAY), 3, 'Tiêm định kỳ');
-
--- 9. LỊCH SỬ TIÊU THỤ VẬT TƯ (Cám & Thuốc)
 INSERT INTO feed_usages (barn_id, feed_type, quantity_kg, used_at, staff_name) VALUES
-(3, 'Cám lợn thịt 30-60kg', 50, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 'Nguyễn Văn Công'),
-(6, 'Cám lợn thịt 30-60kg', 25, CURDATE(), 'Lê Hoàng Anh'),
-(1, 'Cám nái mang thai', 10, CURDATE(), 'Nguyễn Văn Công'),
-(4, 'Cám lợn con tập ăn', 5, CURDATE(), 'Nguyễn Văn Công');
+(4, 'Cám heo thịt', 50, '2023-12-01', 'Nguyễn Văn Chăn Nuôi');
 
-INSERT INTO medicine_usages (barn_id, medicine_name, quantity, unit, used_at, staff_name, note) VALUES
-(1, 'Thuốc sát trùng', 2.0, 'Lít', DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'Trần Thị Thúy', 'Phun sát trùng định kỳ khu nái đẻ'),
-(3, 'Kháng sinh Amoxicillin', 0.5, 'Chai', CURDATE(), 'Trần Thị Thúy', 'Dùng điều trị lợn ho');
+-- Báo cáo bệnh
+INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images, status) VALUES
+(4, 4, 2, 'Lợn bỏ ăn từ sáng, đi loạng choạng, da có vết đỏ ở bụng', '[]', 'cho_xu_ly'),
+(5, 4, 3, 'Tiêu chảy nặng, phân lỏng màu vàng, lợn gầy rõ rệt', '[]', 'dang_xu_ly');

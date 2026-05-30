@@ -96,9 +96,12 @@ export default function PigDead() {
       render: (_, r) => dayjs(r.death_date || r.deathDate).format('DD/MM/YYYY')
     },
     {
-      title: 'Số tai',
-      key: 'pig_code',
-      render: (_, r) => <strong>{r.pig_code || r.pigCode || r.earTag || r.pig_id || '—'}</strong>
+      title: 'Mã lợn',
+      key: 'pig_id',
+      render: (_, r) => {
+        const pig = pigs.find(p => p.id === r.pig_id);
+        return <strong>Lợn số {pig ? pig.id : (r.pig_id || '—')}</strong>;
+      }
     },
     {
       title: 'Chuồng (Lúc chết)',
@@ -197,12 +200,12 @@ export default function PigDead() {
         footer={canEdit ? undefined : null}
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
-          <Form.Item name="pig_id" label="Chọn số tai" rules={[{ required: true, message: 'Vui lòng chọn lợn' }]}>
+          <Form.Item name="pig_id" label="Chọn mã lợn" rules={[{ required: true, message: 'Vui lòng chọn lợn' }]}>
             <Select 
               showSearch 
               placeholder="Chỉ hiển thị các cá thể lợn đang sống"
               options={activePigs.map(p => ({ 
-                label: `${p.earTag} - Chuồng: ${p.barnName || 'Không rõ'}`, 
+            label: `Lợn số ${p.id} - Chuồng: ${p.barnName || 'Không rõ'}`, 
                 value: p.id 
               }))}
               filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}

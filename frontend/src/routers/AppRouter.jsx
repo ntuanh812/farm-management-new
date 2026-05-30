@@ -29,7 +29,6 @@ import MedicineUsage from '@/pages/materials/Medicine'
 
 // Health
 import PigVaccination from '@/pages/health/PigVaccination'
-import VetDiagnosis from '@/pages/health/VetDiagnosis'
 
 
 // Staff
@@ -153,7 +152,6 @@ export const AppRouter = () => {
         <Route path="/vet/pig/manage"               element={<PigManage />} />
         <Route path="/vet/materials/medicine"       element={<MedicineUsage />} />
         <Route path="/vet/health/vaccine"           element={<PigVaccination />} />
-        <Route path="/vet/health/vet-diagnosis"      element={<VetDiagnosis />} />
         <Route path="/vet/reports/review"            element={<VetReview />} />
       </Route>
 

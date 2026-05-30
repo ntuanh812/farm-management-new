@@ -80,10 +80,10 @@ export default function PigFarrowing() {
       const pig = pigs.find(p => p.id === b.sow_id);
       return {
         id: b.sow_id,
-        earTag: pig ? (pig.pig_code || pig.pigCode || pig.earTag) : b.sow_code,
+        pigLabel: pig ? `Lợn số ${pig.id}` : `Lợn số ${b.sow_code}`,
         expected_farrow_date: b.expected_farrow_date
       };
-    }).filter(s => s.earTag || s.id);
+    }).filter(s => s.pigLabel || s.id);
   }, [breedings, pigs, farrowings]);
 
   const handleDelete = async (id) => {
@@ -152,7 +152,7 @@ export default function PigFarrowing() {
       title: 'Nái mẹ',
       dataIndex: 'sow_code',
       key: 'sow_code',
-      render: (text) => <span className="text-pink fw-500">{text}</span>
+      render: (text) => <span className="text-pink fw-500">Lợn số {text}</span>
     },
     {
       title: 'Số con sống',
@@ -277,7 +277,7 @@ export default function PigFarrowing() {
               ) : (
                 eligibleSows.map(p => (
                   <Select.Option key={p.id} value={p.id}>
-                    {p.earTag} (Dự sinh: {p.expected_farrow_date ? dayjs(p.expected_farrow_date).format('DD/MM/YYYY') : 'Không rõ'})
+                    {p.pigLabel} (Dự sinh: {p.expected_farrow_date ? dayjs(p.expected_farrow_date).format('DD/MM/YYYY') : 'Không rõ'})
                   </Select.Option>
                 ))
               )}
@@ -376,3 +376,4 @@ export default function PigFarrowing() {
     </div>
   );
 }
+      

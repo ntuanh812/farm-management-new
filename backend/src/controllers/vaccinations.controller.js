@@ -7,7 +7,6 @@ export const vaccinationsController = {
       let sql = `
         SELECT 
           v.id, v.pig_id, v.barn_id, v.vaccine_name, v.vaccinated_at, v.note,
-          p.pig_code AS ear_tag, 
           b.name AS barn_name,
           e.full_name AS performed_by_name
         FROM vaccinations v
