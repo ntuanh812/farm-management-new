@@ -75,7 +75,7 @@ export default function VetReview() {
       width: 120,
       render: (_, rec) => (
         <div>
-          <div className="reports-page__pig-id">Lợn số {rec.pig_id}</div>
+          <div className="reports-page__pig-id">PIG{String(rec.pig_id).padStart(3, "0")}</div>
           <div className="reports-page__barn-name">{rec.barn_name}</div>
         </div>
       )
@@ -184,7 +184,7 @@ export default function VetReview() {
       </Card>
 
       <Modal
-        title={selected?.status === 'da_xu_ly' ? `Chi tiết báo cáo bệnh — Lợn số ${selected?.pig_id}` : `Xử lý báo cáo bệnh — Lợn số ${selected?.pig_id}`}
+        title={selected?.status === 'da_xu_ly' ? `Chi tiết báo cáo bệnh — PIG${String(selected?.pig_id).padStart(3, "0")}` : `Xử lý báo cáo bệnh — PIG${String(selected?.pig_id).padStart(3, "0")}`}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         onOk={handleSubmit}
@@ -198,7 +198,7 @@ export default function VetReview() {
         {selected && (
           <div className="reports-page__modal-body">
             <Descriptions bordered size="small" column={2}>
-              <Descriptions.Item label="Mã lợn"><b>Lợn số {selected.pig_id}</b></Descriptions.Item>
+              <Descriptions.Item label="Mã lợn"><b>PIG{String(selected.pig_id).padStart(3, "0")}</b></Descriptions.Item>
               <Descriptions.Item label="Chuồng">{selected.barn_name}</Descriptions.Item>
               <Descriptions.Item label="Người báo">{selected.reporter_name}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái">

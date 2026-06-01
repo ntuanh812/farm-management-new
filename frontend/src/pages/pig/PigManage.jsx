@@ -177,7 +177,7 @@ export default function PigManage() {
       const meds = (medRes.data?.data || []).filter(m => {
         const pId = m.pigId || m.pig_id;
         if (pId === record.id) return true;
-        if (m.note && (m.note.includes(`[Cá thể: ${record.id}]`) || m.note.includes(`[Cá thể: Lợn số ${record.id}]`))) return true;
+        if (m.note && (m.note.includes(`[Cá thể: ${record.id}]`) || m.note.includes(`[Cá thể: PIG${String(record.id).padStart(3, "0")}]`))) return true;
         if (m.note && m.note.startsWith('[Cá thể:')) return false;
         
         const barnOnDate = getPigBarnOnDate(m.used_at);
@@ -257,7 +257,7 @@ export default function PigManage() {
     {
       title: 'Mã lợn',
       key: 'id',
-      render: (_, r) => <strong>Lợn số {r.id}</strong>,
+      render: (_, r) => <strong>PIG{String(r.id).padStart(3, "0")}</strong>,
     },
     {
       title: 'Chuồng',
@@ -525,7 +525,7 @@ export default function PigManage() {
 
       {/* MODAL XEM CHI TIẾT */}
       <Modal
-        title={`Hồ sơ chi tiết lợn: Lợn số ${selectedPig?.id || ''}`}
+        title={`Hồ sơ chi tiết lợn: PIG${String(selectedPig?.id || '').padStart(3, "0")}`}
         open={detailOpen}
         onCancel={() => setDetailOpen(false)}
         footer={[
@@ -537,7 +537,7 @@ export default function PigManage() {
           <Spin spinning={loadingHistory}>
             <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: 8 }}>
               <Descriptions bordered size="small" column={{ xxl: 3, xl: 3, lg: 3, md: 2, sm: 2, xs: 1 }} style={{ marginBottom: 20 }}>
-                <Descriptions.Item label="Mã lợn"><strong>Lợn số {selectedPig.id}</strong></Descriptions.Item>
+                <Descriptions.Item label="Mã lợn"><strong>PIG{String(selectedPig.id).padStart(3, "0")}</strong></Descriptions.Item>
                 <Descriptions.Item label="Phân loại"><Tag color="blue">{CATEGORY_MAP[selectedPig.category] || selectedPig.category}</Tag></Descriptions.Item>
                 <Descriptions.Item label="Giới tính">{GENDER_MAP[selectedPig.gender] || selectedPig.gender}</Descriptions.Item>
                 <Descriptions.Item label="Chuồng hiện tại">{selectedPig.barnName || selectedPig.barn_name}</Descriptions.Item>

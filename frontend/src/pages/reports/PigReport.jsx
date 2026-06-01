@@ -119,7 +119,7 @@ export default function PigReport() {
       width: 130,
       render: (_, rec) => (
         <div>
-          <div className="reports-page__pig-id">Lợn số {rec.pig_id}</div>
+          <div className="reports-page__pig-id">PIG{String(rec.pig_id).padStart(3, "0")}</div>
           <div className="reports-page__barn-name">{rec.barn_name}</div>
         </div>
       )
@@ -225,7 +225,7 @@ export default function PigReport() {
                   }}
                 >
                   {pigs.filter(p => (p.lifecycleStatus || p.lifecycle_status) === 'ACTIVE').map(p => {
-                    return <Option key={p.id} value={p.id}>Lợn số {p.id}</Option>;
+                    return <Option key={p.id} value={p.id}>PIG{String(p.id).padStart(3, "0")}</Option>;
                   })}
                 </Select>
               </Form.Item>

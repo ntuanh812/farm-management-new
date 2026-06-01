@@ -99,7 +99,7 @@ export default function PigDead() {
       key: 'pig_id',
       render: (_, r) => {
         const pig = pigs.find(p => p.id === r.pig_id);
-        return <strong>Lợn số {pig ? pig.id : (r.pig_id || '—')}</strong>;
+        return <strong>PIG{String(pig ? pig.id : (r.pig_id || '—')).padStart(3, "0")}</strong>;
       }
     },
     {
@@ -204,7 +204,7 @@ export default function PigDead() {
               showSearch 
               placeholder="Chỉ hiển thị các cá thể lợn đang sống"
               options={activePigs.map(p => ({ 
-            label: `Lợn số ${p.id} - Chuồng: ${p.barnName || 'Không rõ'}`, 
+            label: `PIG${String(p.id).padStart(3, "0")} - Chuồng: ${p.barnName || 'Không rõ'}`, 
                 value: p.id 
               }))}
               filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}

@@ -121,13 +121,13 @@ export default function PigBreeding() {
       title: 'Nái (Cái)',
       dataIndex: 'sow_code',
       key: 'sow_code',
-      render: (text) => <span className="text-pink fw-500">Lợn số {text}</span>
+      render: (text) => <span className="text-pink fw-500">PIG{String(text).padStart(3, "0")}</span>
     },
     {
       title: 'Đực giống',
       dataIndex: 'boar_code',
       key: 'boar_code',
-      render: (text) => <span className="text-primary fw-500">Lợn số {text}</span>
+      render: (text) => <span className="text-primary fw-500">PIG{String(text).padStart(3, "0")}</span>
     },
     {
       title: 'Dự kiến đẻ',
@@ -283,7 +283,7 @@ export default function PigBreeding() {
           <Space className="flex-baseline mb-8" align="baseline">
             <Form.Item name="sow_id" label="Lợn nái (Cái)" rules={[{ required: true, message: 'Chọn nái' }]} className="w-220">
               <Select showSearch placeholder="Chỉ hiển thị nái trống">
-                {activeSows.map(p => <Select.Option key={p.id} value={p.id}>Lợn số {p.id}</Select.Option>)}
+                {activeSows.map(p => <Select.Option key={p.id} value={p.id}>PIG{String(p.id).padStart(3, "0")}</Select.Option>)}
               </Select>
             </Form.Item>
 
@@ -291,7 +291,7 @@ export default function PigBreeding() {
 
             <Form.Item name="boar_id" label="Lợn đực giống" rules={[{ required: true, message: 'Chọn đực' }]} className="w-220">
               <Select showSearch placeholder="Chọn lợn đực">
-                {activeBoars.map(p => <Select.Option key={p.id} value={p.id}>Lợn số {p.id}</Select.Option>)}
+                {activeBoars.map(p => <Select.Option key={p.id} value={p.id}>PIG{String(p.id).padStart(3, "0")}</Select.Option>)}
               </Select>
             </Form.Item>
           </Space>

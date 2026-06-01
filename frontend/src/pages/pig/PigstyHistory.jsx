@@ -96,7 +96,7 @@ export default function PigstyHistory() {
     {
       title: "Mã lợn",
       key: "pig_id", 
-      render: (_, r) => <strong>Lợn số {r.pig_id}</strong>,
+      render: (_, r) => <strong>PIG{String(r.pig_id).padStart(3, "0")}</strong>,
     },
     {
       title: "Loại lợn",
@@ -136,7 +136,7 @@ export default function PigstyHistory() {
     {
       title: "Mã lợn",
       key: "id", 
-      render: (_, r) => <strong>Lợn số {r.id}</strong>,
+      render: (_, r) => <strong>PIG{String(r.id).padStart(3, "0")}</strong>,
     },
     {
       title: "Loại lợn",

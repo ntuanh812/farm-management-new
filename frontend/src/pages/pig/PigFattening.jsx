@@ -385,7 +385,7 @@ export default function PigFattening() {
               <Select
                 options={fatteningActive.map((p) => ({
                   value: p.id,
-                  label: `Lợn số ${p.id}`,
+                  label: `PIG${String(p.id).padStart(3, "0")}`,
                 }))}
                 onChange={(val) => {
                   const pig = fatteningActive.find(p => p.id === val);
@@ -465,7 +465,7 @@ export default function PigFattening() {
                 dataSource={fatteningActive}
                 columns={[
                   { title: "STT", width: 60, render: (_, __, i) => i + 1 },
-                  { title: "Mã lợn", dataIndex: "id", render: text => <strong>Lợn số {text}</strong> },
+                  { title: "Mã lợn", dataIndex: "id", render: text => <strong>PIG{String(text).padStart(3, "0")}</strong> },
                   { title: "Chuồng", dataIndex: "barnName" },
                   { title: "Trọng lượng", key: "weightKg", render: (_, r) => (r.weightKg || r.current_weight || r.entry_weight) ? `${r.weightKg || r.current_weight || r.entry_weight} kg` : '-' },
                 ]}
@@ -492,7 +492,7 @@ export default function PigFattening() {
                         <Col span={2}>{index + 1}</Col>
                         <Col span={5}>
                           <Form.Item name={[field.name, "pigId"]} noStyle>
-                            <Input addonBefore="Lợn số" disabled style={{ color: '#000', fontWeight: 500 }} />
+                            <Input addonBefore="PIG" disabled style={{ color: '#000', fontWeight: 500 }} />
                           </Form.Item>
                         </Col>
                         <Col span={4}>
@@ -555,7 +555,7 @@ export default function PigFattening() {
             columns={[
               { title: "STT", render: (_, __, i) => i + 1 },
               { title: "Ngày bán", dataIndex: "sold_at", render: (d) => dayjs(d).format("DD/MM/YYYY") },
-              { title: "Mã lợn", dataIndex: "pig_id", render: (v) => `Lợn số ${v}` },
+              { title: "Mã lợn", dataIndex: "pig_id", render: (v) => `PIG${String(v).padStart(3, "0")}` },
               { title: "Kg", dataIndex: "weight" },
               { title: "Giá", dataIndex: "price", render: (v) => v ? Math.round(Number(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-' },
               { title: "Doanh thu (Lãi)", key: "profit", render: (_, r) => {

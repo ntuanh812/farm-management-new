@@ -80,7 +80,7 @@ export default function PigFarrowing() {
       const pig = pigs.find(p => p.id === b.sow_id);
       return {
         id: b.sow_id,
-        pigLabel: pig ? `Lợn số ${pig.id}` : `Lợn số ${b.sow_code}`,
+        pigLabel: pig ? `PIG${String(pig.id).padStart(3, "0")}` : `PIG${String(b.sow_code).padStart(3, "0")}`,
         expected_farrow_date: b.expected_farrow_date
       };
     }).filter(s => s.pigLabel || s.id);
@@ -151,7 +151,7 @@ export default function PigFarrowing() {
       title: 'Nái mẹ',
       dataIndex: 'sow_code',
       key: 'sow_code',
-      render: (text) => <span className="text-pink fw-500">Lợn số {text}</span>
+      render: (text) => <span className="text-pink fw-500">PIG{String(text).padStart(3, "0")}</span>
     },
     {
       title: 'Số con sống',

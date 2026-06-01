@@ -67,7 +67,7 @@ export default function StaffDashboard() {
       const acts = (moveRes.data?.data || []).map(m => ({
         id: `move_${m.id}`,
         icon: "task",
-        content: `Chuyển lợn số ${m.pig_id || m.pigId} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
+        content: `Chuyển PIG${String(m.pig_id || m.pigId).padStart(3, "0")} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
         createdAt: m.createdAt || m.created_at || m.movedAt || m.moved_at || new Date()
       }));
 

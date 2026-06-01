@@ -88,7 +88,7 @@ export default function Medicine() {
       } else {
         const requests = pig_ids.map(pigId => {
           const pig = pigs.find(p => p.id === pigId);
-          const customNote = `[Cá thể: Lợn số ${pigId}] ${note || ''}`;
+          const customNote = `[Cá thể: PIG${String(pigId).padStart(3, "0")}] ${note || ''}`;
           return axios.post(`${API}/medicine-usages`, { ...basePayload, pig_id: pigId, barn_id: pig?.barnId || pig?.barn_id, note: customNote.trim() }, { headers });
         });
         await Promise.all(requests);
@@ -115,7 +115,7 @@ export default function Medicine() {
     { title: 'Đối tượng', key: 'target', render: (_, r) => {
         if (r.pig_id || r.pigId) {
           const pigId = r.pig_id || r.pigId;
-          return <span>Cá thể: <strong>Lợn số {pigId}</strong></span>;
+          return <span>Cá thể: <strong>PIG{String(pigId).padStart(3, "0")}</strong></span>;
         }
         if (r.note && r.note.startsWith('[Cá thể:')) {
           const match = r.note.match(/^\[Cá thể:\s*(.+?)\]/);
@@ -195,7 +195,7 @@ export default function Medicine() {
             </Form.Item>
           ) : (
             <Form.Item name="pig_ids" label="Chọn cá thể lợn" rules={[{ required: true, message: 'Chọn ít nhất 1 con' }]}>
-            <Select mode="multiple" showSearch optionFilterProp="label" options={pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map(p => ({ label: `Lợn số ${p.id} - ${p.barnName || p.barn_name || ''}`, value: p.id }))} placeholder="Chọn lợn..." />
+            <Select mode="multiple" showSearch optionFilterProp="label" options={pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map(p => ({ label: `PIG${String(p.id).padStart(3, "0")} - ${p.barnName || p.barn_name || ''}`, value: p.id }))} placeholder="Chọn lợn..." />
             </Form.Item>
           )}
 

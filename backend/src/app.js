@@ -21,8 +21,6 @@ import authRoute from "./routes/auth.route.js";
 
 import staffRoute from "./routes/staff.route.js";
 
-import vetDiagnosisRoute from "./routes/vetDiagnosis.route.js";
-
 import pigReportsRoute from "./routes/pigReports.route.js";
 
 import barnsRoute from "./routes/barns.route.js";
@@ -112,11 +110,6 @@ app.register(authRoute, {
 // STAFF
 app.register(staffRoute, {
   prefix: "/api/staff",
-});
-
-// VET
-app.register(vetDiagnosisRoute, {
-  prefix: "/api/vet-diagnosis",
 });
 
 // REPORTS
