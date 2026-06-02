@@ -460,7 +460,13 @@ export default function PigManage() {
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Row gutter={16}>
-            <Col span={12}><Form.Item name="name" label="Tên gọi (nếu có)"><Input placeholder="VD: Nái Mẹ 1" /></Form.Item></Col>
+            {editingId && (
+              <Col span={12}>
+                <Form.Item label="Mã lợn">
+                  <Input value={`PIG${String(editingId).padStart(3, '0')}`} disabled style={{ color: '#000', fontWeight: 500 }} />
+                </Form.Item>
+              </Col>
+            )}
             <Col span={12}>
               <Form.Item name="barn_id" label="Chuồng trại" rules={[{ required: true, message: 'Chọn chuồng' }]}>
                 <Select disabled={!!editingId} showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn..." />

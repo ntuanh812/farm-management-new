@@ -120,6 +120,8 @@ export const DashBoard = () => {
           feedRes,
           moveRes,
           pigReportRes,
+          medicineRes,
+          vaccineRes,
         ] = await Promise.all([
 
           axios.get(
@@ -159,6 +161,16 @@ export const DashBoard = () => {
 
           axios.get(
             `${API}/pig-reports`,
+            { headers }
+          ).catch(() => ({ data: { data: [] } })),
+
+          axios.get(
+            `${API}/medicine-usages`,
+            { headers }
+          ).catch(() => ({ data: { data: [] } })),
+
+          axios.get(
+            `${API}/vaccinations`,
             { headers }
           ).catch(() => ({ data: { data: [] } })),
         ]);
@@ -251,10 +263,40 @@ export const DashBoard = () => {
           });
         });
 
-        // Lọc lấy các hoạt động trong vòng 7 ngày qua
-        const sevenDaysAgo = dayjs().subtract(7, 'day');
+        const feedsData = feedRes.data?.data || [];
+        feedsData.forEach(f => {
+          activitiesList.push({
+            id: `feed_${f.id}`,
+            icon: "feeding",
+            content: `Sử dụng ${f.quantity_kg}kg cám ${f.feed_name || ''} tại ${f.barn_name || 'chuồng'}`,
+            createdAt: f.used_at || f.created_at || new Date()
+          });
+        });
+
+        const medsData = medicineRes.data?.data || [];
+        medsData.forEach(m => {
+          activitiesList.push({
+            id: `med_${m.id}`,
+            icon: "medical",
+            content: `Cấp phát ${m.quantity} ${m.unit} thuốc ${m.medicine_name || ''} tại ${m.barn_name || 'chuồng'}`,
+            createdAt: m.used_at || m.created_at || new Date()
+          });
+        });
+
+        const vacsData = vaccineRes.data?.data || [];
+        vacsData.forEach(v => {
+          activitiesList.push({
+            id: `vac_${v.id}`,
+            icon: "medical",
+            content: `Tiêm vaccine ${v.vaccine_name || ''} tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3,"0"))}`,
+            createdAt: v.vaccinated_at || v.created_at || new Date()
+          });
+        });
+
+        // Lọc lấy các hoạt động trong vòng 3 ngày qua
+        const threeDaysAgo = dayjs().subtract(3, 'day');
         const recentActivitiesList = activitiesList
-          .filter(a => dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(sevenDaysAgo))
+          .filter(a => dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(threeDaysAgo))
           .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
 
         if (recentActivitiesList.length > 0) {
@@ -264,7 +306,7 @@ export const DashBoard = () => {
             {
               id: 1,
               icon: "task",
-              content: "Không có hoạt động nào trong 7 ngày qua",
+              content: "Không có hoạt động nào trong 3 ngày qua",
               createdAt: new Date(),
             },
           ]);
@@ -368,7 +410,7 @@ export const DashBoard = () => {
 
     {
       title:
-        "Hoạt động 7 ngày gần đây",
+        "Hoạt động 3 ngày gần đây",
 
       value:
         activities.length,
@@ -600,7 +642,7 @@ export const DashBoard = () => {
                 <div className="activity-card__header">
 
                   <h3>
-                    Hoạt động 7 ngày gần đây
+                    Hoạt động 3 ngày gần đây
                   </h3>
                 </div>
 

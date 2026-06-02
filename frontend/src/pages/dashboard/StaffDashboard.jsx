@@ -51,13 +51,15 @@ export default function StaffDashboard() {
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const [barnRes, pigRes, feedRes, moveRes, saleRes, reportRes] = await Promise.all([
+      const [barnRes, pigRes, feedRes, moveRes, saleRes, reportRes, medicineRes, vaccineRes] = await Promise.all([
         axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/feed-usages`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/sale-batches`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
       ]);
 
       setBarns(barnRes.data?.data || []);
@@ -86,6 +88,33 @@ export default function StaffDashboard() {
           icon: "medical",
           content: `Báo cáo lợn bệnh số ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
           createdAt: r.created_at || r.createdAt || new Date()
+        });
+      });
+
+      (feedRes.data?.data || []).forEach(f => {
+        acts.push({
+          id: `feed_${f.id}`,
+          icon: "feeding",
+          content: `Sử dụng ${f.quantity_kg}kg cám ${f.feed_name || ''} tại ${f.barn_name || 'chuồng'}`,
+          createdAt: f.used_at || f.created_at || new Date()
+        });
+      });
+
+      (medicineRes.data?.data || []).forEach(m => {
+        acts.push({
+          id: `med_${m.id}`,
+          icon: "medical",
+          content: `Cấp phát ${m.quantity} ${m.unit} thuốc ${m.medicine_name || ''} tại ${m.barn_name || 'chuồng'}`,
+          createdAt: m.used_at || m.created_at || new Date()
+        });
+      });
+
+      (vaccineRes.data?.data || []).forEach(v => {
+        acts.push({
+          id: `vac_${v.id}`,
+          icon: "medical",
+          content: `Tiêm vaccine ${v.vaccine_name || ''} tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3,"0"))}`,
+          createdAt: v.vaccinated_at || v.created_at || new Date()
         });
       });
 

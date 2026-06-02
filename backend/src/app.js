@@ -47,7 +47,9 @@ import farrowingsRoute from "./routes/farrowings.route.js";
 
 import reportsRoute from "./routes/reports.route.js";
 
-import vaccinationsRoute from "./routes/vaccinations.route.js";
+import vaccinesUsageRoute from "./routes/vaccinesUsage.route.js";
+
+import vaccinesRoute from "./routes/vaccines.route.js";
 
 // =========================================================
 // APP
@@ -177,9 +179,14 @@ app.register(reportsRoute, {
   prefix: "/api/reports",
 });
 
-// VACCINATIONS
-app.register(vaccinationsRoute, {
+// VACCINE USAGES
+app.register(vaccinesUsageRoute, {
   prefix: "/api/vaccinations",
+});
+
+// VACCINES
+app.register(vaccinesRoute, {
+  prefix: "/api/vaccines",
 });
 
 // =========================================================

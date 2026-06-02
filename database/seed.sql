@@ -4,6 +4,19 @@
 
 USE farmpro_pig;
 
+-- Thêm dữ liệu Vai trò (Roles)
+INSERT IGNORE INTO roles (id, code, name) VALUES
+(1, 'ADMIN', 'Quản trị viên'),
+(2, 'FARM_WORKER', 'Nhân viên chăn nuôi'),
+(3, 'VET_DOCTOR', 'Bác sĩ thú y');
+
+-- Thêm Admin mặc định (Mật khẩu: 123456)
+INSERT IGNORE INTO staffs (id, full_name, phone, email, role_id) VALUES
+(1, 'Admin System', '0987654321', 'admin@farmpro.com', 1);
+
+INSERT IGNORE INTO accounts (staff_id, username, password_hash, is_active) VALUES
+(1, 'admin', '$2b$10$tZ2E2.H9F8wT5P6c3X1i.eZq/L/5L1c4o8tG0H4U5l4R3q2P1', 1);
+
 -- Thêm dữ liệu Chuồng trại
 INSERT INTO barns (code, name, capacity, barn_type, status) VALUES
 ('B-N01', 'Chuồng Nái 01', 50, 'SOW', 'ACTIVE'),
@@ -26,14 +39,18 @@ INSERT INTO accounts (staff_id, username, password_hash, is_active) VALUES
 INSERT INTO staff_barns (staff_id, barn_id) VALUES
 (2, 1), (2, 3), (2, 4);
 
--- Thêm Cám & Thuốc
-INSERT INTO feeds (name, brand, unit, stock) VALUES
-('Cám heo con', 'GreenFeed', 'kg', 1000),
-('Cám heo nái', 'Proconco', 'kg', 500);
+-- Thêm Cám, Thuốc & Vaccine
+INSERT INTO feeds (name, stock) VALUES
+('Cám lợn con tập ăn (GreenFeed)', 1000),
+('Cám nái mang thai (Proconco)', 500);
 
-INSERT INTO medicines (name, unit, stock, expiry_date) VALUES
-('Kháng sinh Amox', 'Lọ', 50, '2025-12-31'),
-('Vitamin C', 'Gói', 100, '2026-06-30');
+INSERT INTO medicines (name, unit, stock) VALUES
+('Kháng sinh Amox', 'lọ', 50),
+('Vitamin C', 'gói', 100);
+
+INSERT INTO vaccines (name, unit, stock) VALUES
+('Tai xanh', 'liều', 200),
+('Lở mồm long móng', 'liều', 150);
 
 -- Thêm Lợn mẫu (Chỉ sử dụng ID tự tăng)
 INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, purchase_price) VALUES
@@ -74,11 +91,14 @@ INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount
 (1, 7, 100, 55000, 5500000, 'Xuất chuồng chuẩn');
 
 -- Lịch sử tiêm phòng & sử dụng thức ăn
-INSERT INTO vaccinations (pig_id, barn_id, vaccine_name, vaccinated_at) VALUES
-(NULL, 4, 'Tai xanh', '2023-10-15');
+INSERT INTO vaccine_usages (pig_id, barn_id, vaccine_id, quantity, unit, vaccinated_at, performed_by) VALUES
+(NULL, 4, 1, 100, 'liều', '2023-10-15', 3);
 
 INSERT INTO feed_usages (barn_id, feed_id, quantity_kg, used_at, staff_id) VALUES
 (4, 1, 50, '2023-12-01', 2);
+
+INSERT INTO medicine_usages (barn_id, pig_id, medicine_id, quantity, unit, used_at, staff_id) VALUES
+(4, 4, 1, 2, 'lọ', '2023-12-05', 3);
 
 -- Báo cáo bệnh
 INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images, status) VALUES

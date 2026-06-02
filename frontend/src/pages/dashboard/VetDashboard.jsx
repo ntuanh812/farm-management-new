@@ -36,19 +36,22 @@ export default function VetDashboard() {
   const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState([]);
   const [vaccinations, setVaccinations] = useState([]);
+  const [medicineUsages, setMedicineUsages] = useState([]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [reportsRes, vaccinesRes] = await Promise.all([
+      const [reportsRes, vaccinesRes, medicineRes] = await Promise.all([
         axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
         axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } })),
       ]);
 
       setReports(reportsRes.data?.data || []);
       setVaccinations(vaccinesRes.data?.data || []);
+      setMedicineUsages(medicineRes.data?.data || []);
 
     } catch (err) {
       console.error(err);
@@ -77,14 +80,30 @@ export default function VetDashboard() {
       ...reports.map(r => ({
         id: `report_${r.id}`,
         type: 'report',
-        title: `Báo cáo: ${r.pig_id}`,
+        title: `Báo cáo: PIG${String(r.pig_id).padStart(3, "0")}`,
         content: r.description,
         createdAt: r.created_at,
         icon: <WarningOutlined />
+      })),
+      ...vaccinations.map(v => ({
+        id: `vac_${v.id}`,
+        type: 'vaccine',
+        title: `Tiêm vaccine: ${v.vaccine_name || ''}`,
+        content: `Tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3, "0"))}`,
+        createdAt: v.vaccinated_at || v.created_at,
+        icon: <MedicineBoxOutlined />
+      })),
+      ...medicineUsages.map(m => ({
+        id: `med_${m.id}`,
+        type: 'medicine',
+        title: `Dùng thuốc: ${m.medicine_name || ''}`,
+        content: `Sử dụng tại ${m.barn_name || 'chuồng'}`,
+        createdAt: m.used_at || m.created_at,
+        icon: <MedicineBoxOutlined />
       }))
     ];
-    return combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-  }, [reports]);
+    return combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+  }, [reports, vaccinations, medicineUsages]);
 
 
   const statsData = [

@@ -1,21 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space, Radio } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space, Radio, Row, Col } from 'antd';
+import { PlusOutlined, DeleteOutlined, ImportOutlined, AppstoreOutlined, DatabaseOutlined, LineChartOutlined, WarningOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const MEDICINE_TYPES = [
-  'Kháng sinh (Amoxicillin)',
-  'Kháng sinh (Penicillin)',
-  'Thuốc bổ (Vitamin C)',
-  'Thuốc sát trùng (Iodine)',
-  'Thuốc tẩy giun',
-  'Khác'
-];
 
 const UNIT_TYPES = ['ml', 'mg', 'lọ', 'gói', 'viên'];
 
@@ -31,6 +22,11 @@ export default function Medicine() {
   const [open, setOpen] = useState(false);
   const [applyType, setApplyType] = useState('barn');
   const [form] = Form.useForm();
+  const [addMedicineForm] = Form.useForm();
+  const [importForm] = Form.useForm();
+  
+  const [isAddMedicineModalOpen, setIsAddMedicineModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Phân quyền
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VET_DOCTOR';
@@ -59,6 +55,41 @@ export default function Medicine() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleAddMedicine = async () => {
+    try {
+      const values = await addMedicineForm.validateFields();
+      await axios.post(`${API}/medicines`, values, { headers });
+      message.success('Thêm loại thuốc thành công');
+      setIsAddMedicineModalOpen(false);
+      addMedicineForm.resetFields();
+      fetchData(); 
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể thêm thuốc');
+    }
+  };
+
+  const handleImportSubmit = async () => {
+    try {
+      const values = await importForm.validateFields();
+      await axios.put(`${API}/medicines/${values.medicine_id}/stock`, { quantity: values.quantity }, { headers });
+      message.success('Nhập thêm thuốc vào kho thành công');
+      setIsImportModalOpen(false);
+      importForm.resetFields();
+      fetchData();
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Không thể nhập kho');
+    }
+  };
+
+  const stats = useMemo(() => {
+    const totalMedicineTypes = medicines.length;
+    const totalStock = medicines.reduce((sum, m) => sum + (Number(m.stock) || 0), 0);
+    const totalUsed = medicineUsages.reduce((sum, u) => sum + (Number(u.quantity) || 0), 0);
+    const lowStock = medicines.filter(m => (Number(m.stock) || 0) < 20).length;
+
+    return { totalMedicineTypes, totalStock, totalUsed, lowStock };
+  }, [medicines, medicineUsages]);
 
   const handleDelete = async (id) => {
     try {
@@ -144,25 +175,80 @@ export default function Medicine() {
   ];
 
   return (
-    <div className="medicine-page">
+    <div className="dashboard medicine-page">
       <PageHeader
         title="Sử dụng Thuốc & Vật tư thú y"
         subtitle="Ghi nhận và theo dõi lịch sử cấp phát thuốc tại các chuồng"
         actions={canEdit && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-            form.resetFields();
-            form.setFieldsValue({ used_at: dayjs(), apply_type: 'barn' });
-            setApplyType('barn');
-            setOpen(true);
-          }}>
-            Ghi nhận thuốc
-          </Button>
+          <Space>
+            <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho thuốc</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              form.resetFields();
+              form.setFieldsValue({ used_at: dayjs(), apply_type: 'barn' });
+              setApplyType('barn');
+              setOpen(true);
+            }}>
+              Ghi nhận thuốc
+            </Button>
+          </Space>
         )}
       />
 
-      <Card className="table-card">
-        <Table columns={columns} dataSource={medicineUsages} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
-      </Card>
+      <div className="dashboard__maincontent">
+        <Row gutter={[20, 20]} className="dashboard-stats">
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--barn">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Tổng loại thuốc</span>
+                <div className="stat-card__icon"><AppstoreOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {stats.totalMedicineTypes}
+                <span className="stat-card__label"> loại</span>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--pigs">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Tổng tồn kho</span>
+                <div className="stat-card__icon"><DatabaseOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {Math.round(stats.totalStock).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                <span className="stat-card__label"> đv</span>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--daily-tasks">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Tổng đã sử dụng</span>
+                <div className="stat-card__icon"><LineChartOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {Math.round(stats.totalUsed).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                <span className="stat-card__label"> đv</span>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="stat-card stat-card--staff">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Sắp hết (Dưới 20)</span>
+                <div className="stat-card__icon"><WarningOutlined /></div>
+              </div>
+              <div className="stat-card__value text-danger" style={{ color: stats.lowStock > 0 ? '#ff4d4f' : 'inherit' }}>
+                {stats.lowStock}
+                <span className="stat-card__label"> loại</span>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+
+        <Card className="table-card" style={{ marginTop: 24 }}>
+          <Table columns={columns} dataSource={medicineUsages} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
+        </Card>
 
       <Modal 
         title="Ghi nhận sử dụng thuốc/vật tư" 
@@ -199,8 +285,13 @@ export default function Medicine() {
             </Form.Item>
           )}
 
-      <Form.Item name="medicine_id" label="Tên thuốc/Vật tư" rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
-        <Select showSearch options={medicines.length > 0 ? medicines.map(m => ({ label: m.name, value: m.id })) : MEDICINE_TYPES.map(t => ({ label: t, value: t }))} placeholder="VD: Kháng sinh, Vitamin..." />
+          <Form.Item label="Tên thuốc/Vật tư" required>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
+                <Select showSearch options={medicines.map(m => ({ label: `${m.name} (Tồn: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} placeholder="VD: Kháng sinh, Vitamin..." style={{ flex: 1 }} />
+              </Form.Item>
+              <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddMedicineModalOpen(true)} title="Thêm loại thuốc mới" />
+            </div>
           </Form.Item>
           <Space align="baseline">
             <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
@@ -215,6 +306,44 @@ export default function Medicine() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Modal 
+        title="Thêm loại thuốc/vật tư mới" 
+        open={isAddMedicineModalOpen} 
+        onCancel={() => setIsAddMedicineModalOpen(false)}
+        onOk={handleAddMedicine}
+        okText="Thêm mới"
+        cancelText="Hủy"
+      >
+        <Form form={addMedicineForm} layout="vertical">
+          <Form.Item name="name" label="Tên thuốc/vật tư" rules={[{ required: true, message: 'Vui lòng nhập tên thuốc' }]}>
+            <Input placeholder="Ví dụ: Kháng sinh Amoxicillin..." />
+          </Form.Item>
+          <Form.Item name="unit" label="Đơn vị tính" rules={[{ required: true, message: 'Vui lòng chọn đơn vị' }]}>
+            <Select options={UNIT_TYPES.map(u => ({ label: u, value: u }))} placeholder="VD: ml, lọ..." />
+          </Form.Item>
+          <Form.Item name="stock" label="Số lượng tồn ban đầu">
+            <InputNumber min={0} className="w-100" placeholder="0" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title="Nhập thêm thuốc vào kho" open={isImportModalOpen} onCancel={() => setIsImportModalOpen(false)} onOk={handleImportSubmit} okText="Xác nhận" cancelText="Hủy">
+        <Form form={importForm} layout="vertical">
+          <Form.Item label="Tên thuốc/vật tư" required>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Chọn thuốc để nhập' }]}>
+                <Select showSearch options={medicines.map(m => ({ label: `${m.name} (Tồn hiện tại: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} placeholder="Chọn thuốc..." style={{ flex: 1 }} />
+              </Form.Item>
+              <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddMedicineModalOpen(true)} title="Thêm loại thuốc mới" />
+            </div>
+          </Form.Item>
+          <Form.Item name="quantity" label="Số lượng nhập thêm" rules={[{ required: true, message: 'Nhập số lượng' }]}>
+            <InputNumber min={0.1} step={0.1} className="w-100" placeholder="Ví dụ: 100" />
+          </Form.Item>
+        </Form>
+      </Modal>
+      </div>
     </div>
   );
 }

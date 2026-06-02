@@ -270,7 +270,7 @@ export default function PigFarrowing() {
       >
         <Form form={form} layout="vertical" disabled={!canEdit}>
           <Form.Item name="sow_id" label="Lợn nái mẹ" rules={[{ required: true, message: 'Chọn nái' }]}>
-            <Select disabled={!!editingRecord} showSearch placeholder="Chỉ hiển thị nái đậu thai và cách dự sinh <= 14 ngày">
+            <Select disabled={!!editingRecord} showSearch >
               {editingRecord ? (
                 <Select.Option value={editingRecord.sow_id}>{editingRecord.sow_code}</Select.Option>
               ) : (

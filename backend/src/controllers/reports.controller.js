@@ -71,13 +71,13 @@ export const reportsController = {
       const [revenueTrend] = await pool.query(revQuery, revParams);
 
       // 8. Thống kê mũi tiêm vaccine
-      let vacQuery = "SELECT vaccine_name, COUNT(*) as total_doses FROM vaccinations WHERE 1=1";
+      let vacQuery = "SELECT vc.name AS vaccine_name, COUNT(*) as total_doses FROM vaccine_usages v JOIN vaccines vc ON v.vaccine_id = vc.id WHERE 1=1";
       let vacParams = [];
       if (startDate && endDate) {
-        vacQuery += " AND vaccinated_at >= ? AND vaccinated_at <= ?";
+        vacQuery += " AND v.vaccinated_at >= ? AND v.vaccinated_at <= ?";
         vacParams.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
       }
-      vacQuery += " GROUP BY vaccine_name ORDER BY total_doses DESC";
+      vacQuery += " GROUP BY vc.name ORDER BY total_doses DESC";
       const [vaccineStats] = await pool.query(vacQuery, vacParams);
 
       // 9. Thống kê sử dụng thuốc
