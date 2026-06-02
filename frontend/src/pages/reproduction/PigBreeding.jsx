@@ -49,7 +49,7 @@ export default function PigBreeding() {
   }, [fetchData]);
 
   const activeSows = useMemo(() => {
-    const sows = pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'SOW');
+    const sows = pigs.filter(p => p.lifecycle_status === 'ACTIVE' && p.category === 'SOW');
     return sows.filter(sow => {
       const sowBreedings = breedings.filter(b => b.sow_id === sow.id);
       if (sowBreedings.length === 0) return true; // Chưa từng phối giống
@@ -62,7 +62,7 @@ export default function PigBreeding() {
       return latestBreeding.status !== 'PENDING' && latestBreeding.status !== 'SUCCESS';
     });
   }, [pigs, breedings]);
-  const activeBoars = useMemo(() => pigs.filter(p => (p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE') && p.category === 'BOAR'), [pigs]);
+  const activeBoars = useMemo(() => pigs.filter(p => p.lifecycle_status === 'ACTIVE' && p.category === 'BOAR'), [pigs]);
 
   const handleDelete = async (id) => {
     try {

@@ -86,7 +86,7 @@ export default function PigManage() {
       // Kiểm tra có báo cáo lợn bệnh nào chưa xử lý (cho_xu_ly, dang_xu_ly) không
       const hasActiveReport = reports.some(r => r.pig_id === p.id && r.status !== 'da_xu_ly');
       
-      let status = p.lifecycleStatus || p.lifecycle_status;
+      let status = p.lifecycle_status;
       if (status === 'ACTIVE' && hasActiveReport) {
         status = 'SICK';
       }
@@ -101,7 +101,7 @@ export default function PigManage() {
 
   // Tính toán thống kê từ danh sách lợn
   const stats = useMemo(() => {
-    const activePigs = augmentedPigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE');
+    const activePigs = augmentedPigs.filter(p => p.lifecycle_status === 'ACTIVE');
     return {
       total: activePigs.length,
       fattening: activePigs.filter(p => p.category === 'FATTENING').length,
@@ -114,7 +114,7 @@ export default function PigManage() {
   const filteredPigs = useMemo(() => {
     const filtered = augmentedPigs.filter(p => {
       const matchSearch = !searchText || String(p.id).includes(searchText);
-      const bId = p.barnId || p.barn_id;
+      const bId = p.barn_id;
       const matchBarn = !filterBarn || bId === filterBarn;
       const matchCategory = !filterCategory || p.category === filterCategory;
       const matchStatus = !filterStatus || p.computedStatus === filterStatus;
@@ -136,8 +136,8 @@ export default function PigManage() {
     setDetailOpen(true);
     setLoadingHistory(true);
     try {
-      const bId = record.barnId || record.barn_id;
-      const entryDate = record.entryDate || record.entry_date;
+      const bId = record.barn_id;
+      const entryDate = record.entry_date;
       
       const [moveRes, vacRes, repRes, medRes] = await Promise.all([
         axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
@@ -146,18 +146,18 @@ export default function PigManage() {
         axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } }))
       ]);
 
-      const moves = (moveRes.data?.data || []).filter(m => m.pigId === record.id || m.pig_id === record.id);
+      const moves = (moveRes.data?.data || []).filter(m => m.pig_id === record.id);
       const reps = (repRes.data?.data || []).filter(r => r.pig_id === record.id);
 
       // Sort movements descending by move_date
-      const sortedMoves = [...moves].sort((a, b) => dayjs(b.movedAt || b.move_date).valueOf() - dayjs(a.movedAt || a.move_date).valueOf());
+      const sortedMoves = [...moves].sort((a, b) => dayjs(b.move_date).valueOf() - dayjs(a.move_date).valueOf());
 
       const getPigBarnOnDate = (targetDate) => {
         if (entryDate && dayjs(targetDate).isBefore(dayjs(entryDate), 'day')) return null;
         let currentBarn = bId;
         for (let m of sortedMoves) {
-          if (dayjs(m.movedAt || m.move_date).isAfter(dayjs(targetDate), 'day')) {
-            currentBarn = m.fromBarnId || m.from_barn_id;
+          if (dayjs(m.move_date).isAfter(dayjs(targetDate), 'day')) {
+            currentBarn = m.from_barn_id;
           } else {
             break;
           }
@@ -166,7 +166,7 @@ export default function PigManage() {
       };
 
       const vacs = (vacRes.data?.data || []).filter(v => {
-        if (v.pig_id === record.id || v.pigId === record.id) return true;
+        if (v.pig_id === record.id) return true;
         if (v.barn_id) {
           const barnOnDate = getPigBarnOnDate(v.vaccinated_at);
           return barnOnDate === v.barn_id;
@@ -175,13 +175,13 @@ export default function PigManage() {
       });
 
       const meds = (medRes.data?.data || []).filter(m => {
-        const pId = m.pigId || m.pig_id;
+        const pId = m.pig_id;
         if (pId === record.id) return true;
         if (m.note && (m.note.includes(`[Cá thể: ${record.id}]`) || m.note.includes(`[Cá thể: PIG${String(record.id).padStart(3, "0")}]`))) return true;
         if (m.note && m.note.startsWith('[Cá thể:')) return false;
         
         const barnOnDate = getPigBarnOnDate(m.used_at);
-        return barnOnDate === (m.barn_id || m.barnId);
+        return barnOnDate === m.barn_id;
       });
 
       setPigHistory({ movements: moves, vaccinations: vacs, reports: reps, medicines: meds });
@@ -196,15 +196,15 @@ export default function PigManage() {
     setEditingId(record.id);
     form.setFieldsValue({
       name: record.name,
-      barn_id: record.barnId || record.barn_id,
+      barn_id: record.barn_id,
       category: record.category,
-      lifecycle_status: record.lifecycleStatus || record.lifecycle_status,
+      lifecycle_status: record.lifecycle_status,
       gender: record.gender,
       dob: record.dob ? dayjs(record.dob) : null,
-      entry_date: (record.arrivedAt || record.entry_date) ? dayjs(record.arrivedAt || record.entry_date) : null,
+      entry_date: record.entry_date ? dayjs(record.entry_date) : null,
       entry_weight: record.entry_weight,
-      current_weight: record.weightKg || record.current_weight,
-      purchase_price: record.purchasePrice || record.purchase_price,
+      current_weight: record.current_weight,
+      purchase_price: record.purchase_price,
       note: record.note
     });
     setOpen(true);
@@ -261,8 +261,8 @@ export default function PigManage() {
     },
     {
       title: 'Chuồng',
-      key: 'barnName',
-      render: (_, r) => <span>{r.barnName || r.barn_name}</span>,
+      key: 'barn_name',
+      render: (_, r) => <span>{r.barn_name}</span>,
     },
     {
       title: 'Phân loại',
@@ -278,34 +278,31 @@ export default function PigManage() {
     },
     {
       title: 'Ngày nhập',
-      key: 'arrivedAt',
+      key: 'entry_date',
       render: (_, r) => {
-        const date = r.arrivedAt || r.entry_date;
-        return date ? dayjs(date).format('DD/MM/YYYY') : '-';
+        return r.entry_date ? dayjs(r.entry_date).format('DD/MM/YYYY') : '-';
       },
     },
     {
       title: 'Tuổi',
-      key: 'ageDays',
+      key: 'age',
       render: (_, r) => {
-        const days = r.ageDays;
-        if (days != null) return `${days} ngày`;
         if (r.dob) return `${dayjs().diff(dayjs(r.dob), 'day')} ngày`;
         return '-';
       },
     },
     {
       title: 'Trọng lượng',
-      key: 'weightKg',
+      key: 'current_weight',
       render: (_, r) => {
-        const w = r.weightKg ?? r.current_weight ?? r.entry_weight;
+        const w = r.current_weight ?? r.entry_weight;
         // Chỉ hiển thị số kg nếu có giá trị và giá trị đó lớn hơn 0
         return (w !== null && w !== undefined && Number(w) > 0) ? `${w} kg` : '-';
       },
     },
     {
       title: 'Trạng thái',
-      key: 'lifecycleStatus',
+      key: 'lifecycle_status',
       render: (_, r) => {
         const status = r.computedStatus;
         const cfg = STATUS_MAP[status];
@@ -546,28 +543,28 @@ export default function PigManage() {
                 <Descriptions.Item label="Mã lợn"><strong>PIG{String(selectedPig.id).padStart(3, "0")}</strong></Descriptions.Item>
                 <Descriptions.Item label="Phân loại"><Tag color="blue">{CATEGORY_MAP[selectedPig.category] || selectedPig.category}</Tag></Descriptions.Item>
                 <Descriptions.Item label="Giới tính">{GENDER_MAP[selectedPig.gender] || selectedPig.gender}</Descriptions.Item>
-                <Descriptions.Item label="Chuồng hiện tại">{selectedPig.barnName || selectedPig.barn_name}</Descriptions.Item>
-                <Descriptions.Item label="Trọng lượng">{(selectedPig.weightKg ?? selectedPig.current_weight ?? selectedPig.entry_weight) ? `${selectedPig.weightKg ?? selectedPig.current_weight ?? selectedPig.entry_weight} kg` : '-'}</Descriptions.Item>
+                <Descriptions.Item label="Chuồng hiện tại">{selectedPig.barn_name}</Descriptions.Item>
+                <Descriptions.Item label="Trọng lượng">{(selectedPig.current_weight ?? selectedPig.entry_weight) ? `${selectedPig.current_weight ?? selectedPig.entry_weight} kg` : '-'}</Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
                   <Tag color={STATUS_MAP[selectedPig.computedStatus]?.color}>{STATUS_MAP[selectedPig.computedStatus]?.text || selectedPig.computedStatus}</Tag>
-                  {selectedPig.computedStatus === 'DEAD' && selectedPig.deathDate && (
-                    <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>({dayjs(selectedPig.deathDate).format('DD/MM/YYYY')})</span>
+                  {selectedPig.computedStatus === 'DEAD' && selectedPig.death_date && (
+                    <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>({dayjs(selectedPig.death_date).format('DD/MM/YYYY')})</span>
                   )}
-                  {selectedPig.computedStatus === 'SOLD' && selectedPig.soldAt && (
-                    <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>({dayjs(selectedPig.soldAt).format('DD/MM/YYYY')})</span>
+                  {selectedPig.computedStatus === 'SOLD' && selectedPig.sold_at && (
+                    <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>({dayjs(selectedPig.sold_at).format('DD/MM/YYYY')})</span>
                   )}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày sinh (đẻ)">
                   {selectedPig.dob ? dayjs(selectedPig.dob).format('DD/MM/YYYY') : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày nhập">
-                  {selectedPig.arrivedAt || selectedPig.entry_date ? dayjs(selectedPig.arrivedAt || selectedPig.entry_date).format('DD/MM/YYYY') : '-'}
+                  {selectedPig.entry_date ? dayjs(selectedPig.entry_date).format('DD/MM/YYYY') : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Tuổi">
-                  {selectedPig.ageDays != null ? `${selectedPig.ageDays} ngày` : (selectedPig.dob ? `${dayjs().diff(dayjs(selectedPig.dob), 'day')} ngày` : '-')}
+                  {selectedPig.dob ? `${dayjs().diff(dayjs(selectedPig.dob), 'day')} ngày` : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Lưu chuồng">
-                  {selectedPig.arrivedAt || selectedPig.entry_date ? `${dayjs().diff(dayjs(selectedPig.arrivedAt || selectedPig.entry_date), 'day')} ngày` : '-'}
+                  {selectedPig.entry_date ? `${dayjs().diff(dayjs(selectedPig.entry_date), 'day')} ngày` : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ghi chú" span={3}>{selectedPig.note || 'Không có'}</Descriptions.Item>
               </Descriptions>
@@ -579,7 +576,7 @@ export default function PigManage() {
                 pagination={{ pageSize: 5 }} 
                 size="small"
                 columns={[
-                  { title: 'Ngày báo cáo', render: (_, r) => dayjs(r.createdAt || r.created_at).format('DD/MM/YYYY HH:mm') },
+                  { title: 'Ngày báo cáo', render: (_, r) => dayjs(r.created_at).format('DD/MM/YYYY HH:mm') },
                   { title: 'Triệu chứng', dataIndex: 'description' },
                   { title: 'Trạng thái', dataIndex: 'status', render: s => s === 'da_xu_ly' ? <Tag color="green">Đã xử lý</Tag> : <Tag color="orange">Chờ xử lý</Tag> },
                   { title: 'Bác sĩ phản hồi', dataIndex: 'vet_note', render: t => t || '-' }
@@ -594,10 +591,10 @@ export default function PigManage() {
                 pagination={{ pageSize: 5 }} 
                 size="small"
                 columns={[
-                  { title: 'Ngày tiêm', render: (_, r) => dayjs(r.vaccinatedAt || r.vaccinated_at).format('DD/MM/YYYY') },
-                  { title: 'Tên Vaccine', dataIndex: ['vaccineName', 'vaccine_name'], render: (_, r) => r.vaccineName || r.vaccine_name },
+                  { title: 'Ngày tiêm', render: (_, r) => dayjs(r.vaccinated_at).format('DD/MM/YYYY') },
+                  { title: 'Tên Vaccine', dataIndex: 'vaccine_name' },
                   { title: 'Hình thức', render: (_, r) => r.barn_id || (r.note && r.note.startsWith('[Chuồng:')) ? <Tag>Cả chuồng</Tag> : <Tag color="blue">Tiêm riêng</Tag> },
-                  { title: 'Người tiêm', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name || 'Hệ thống' },
+                  { title: 'Người tiêm', dataIndex: 'staff_name', render: (_, r) => r.staff_name || 'Hệ thống' },
                   { title: 'Ghi chú', dataIndex: 'note', render: text => {
                       if (text && text.startsWith('[Chuồng:')) {
                         return text.replace(/^\[Chuồng:\s*[^\]]+\]\s*/, '') || '-';
@@ -615,11 +612,11 @@ export default function PigManage() {
                 pagination={{ pageSize: 5 }} 
                 size="small"
                 columns={[
-                  { title: 'Ngày dùng', render: (_, r) => dayjs(r.usedAt || r.used_at).format('DD/MM/YYYY') },
-                  { title: 'Tên thuốc', dataIndex: ['medicineName', 'medicine_name'], render: (_, r) => r.medicineName || r.medicine_name },
+                  { title: 'Ngày dùng', render: (_, r) => dayjs(r.used_at).format('DD/MM/YYYY') },
+                  { title: 'Tên thuốc', dataIndex: 'medicine_name' },
                   { title: 'Liều lượng', render: (_, r) => `${r.quantity} ${r.unit}` },
                   { title: 'Hình thức', render: (_, r) => r.note && r.note.includes('[Cá thể:') ? <Tag color="blue">Dùng riêng</Tag> : <Tag>Cả chuồng</Tag> },
-                  { title: 'Người thực hiện', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name }
+                  { title: 'Người thực hiện', dataIndex: 'staff_name' }
                 ]} 
                 locale={{ emptyText: 'Chưa có dữ liệu sử dụng thuốc' }}
               />
@@ -631,10 +628,10 @@ export default function PigManage() {
                 pagination={{ pageSize: 5 }} 
                 size="small"
                 columns={[
-                  { title: 'Ngày chuyển', render: (_, r) => dayjs(r.movedAt || r.move_date || r.createdAt || r.created_at).format('DD/MM/YYYY') },
-                  { title: 'Từ chuồng', dataIndex: ['fromBarnName', 'from_barn_name'], render: (_, r) => r.fromBarnName || r.from_barn_name || 'Không rõ' },
-                  { title: 'Đến chuồng', dataIndex: ['toBarnName', 'to_barn_name'], render: (_, r) => r.toBarnName || r.to_barn_name },
-                  { title: 'Người thực hiện', dataIndex: ['staffName', 'staff_name'], render: (_, r) => r.staffName || r.staff_name || 'Hệ thống' },
+                  { title: 'Ngày chuyển', render: (_, r) => dayjs(r.move_date || r.created_at).format('DD/MM/YYYY') },
+                  { title: 'Từ chuồng', dataIndex: 'from_barn_name', render: (_, r) => r.from_barn_name || 'Không rõ' },
+                  { title: 'Đến chuồng', dataIndex: 'to_barn_name' },
+                  { title: 'Người thực hiện', dataIndex: 'staff_name', render: (_, r) => r.staff_name || 'Hệ thống' },
                 ]} 
                 locale={{ emptyText: 'Chưa có lịch sử chuyển chuồng' }}
               />

@@ -84,7 +84,7 @@ export default function PigVaccination() {
         grouped.push({
           ...v,
           isGroup: true,
-          barnName: v.barn_name,
+          barn_name: v.barn_name,
           pigCount: 'Toàn bộ',
           recordIds: [v.id]
         });
@@ -97,7 +97,7 @@ export default function PigVaccination() {
             barnGroups[key] = {
               ...v,
               isGroup: true,
-              barnName: barnName,
+            barn_name: barnName,
               pigCount: 1,
               recordIds: [v.id]
             };
@@ -186,11 +186,11 @@ export default function PigVaccination() {
       key: "target",
       render: (_, r) => {
         if (r.isGroup) {
-          return <span>Chuồng: <strong>{r.barnName}</strong> <br/><span className="text-muted" style={{fontSize: 12}}>{typeof r.pigCount === 'number' ? `Tiêm cho ${r.pigCount} cá thể` : 'Tiêm chung toàn chuồng'}</span></span>;
+          return <span>Chuồng: <strong>{r.barn_name}</strong> <br/><span className="text-muted" style={{fontSize: 12}}>{typeof r.pigCount === 'number' ? `Tiêm cho ${r.pigCount} cá thể` : 'Tiêm chung toàn chuồng'}</span></span>;
         }
 
         const pig = pigs.find(p => p.id === r.pig_id);
-        const barnName = pig?.barnName || pig?.barn_name;
+        const barnName = pig?.barn_name;
         
         return <span>Cá thể: <strong>PIG{String(r.pig_id).padStart(3, "0")}</strong>{barnName ? ` - Chuồng: ${barnName}` : ''}</span>;
       }
@@ -382,8 +382,8 @@ export default function PigVaccination() {
           ) : (
             <Form.Item name="pig_ids" label="Chọn cá thể lợn" rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 con' }]}>
               <Select mode="multiple" showSearch optionFilterProp="children" placeholder="Chọn lợn...">
-                {pigs.filter(p => p.lifecycleStatus === 'ACTIVE' || p.lifecycle_status === 'ACTIVE').map(p => (
-                  <Option key={p.id} value={p.id}>PIG{String(p.id).padStart(3, "0")} - {p.barnName || p.barn_name}</Option>
+                {pigs.filter(p => p.lifecycle_status === 'ACTIVE').map(p => (
+                  <Option key={p.id} value={p.id}>PIG{String(p.id).padStart(3, "0")} - {p.barn_name}</Option>
                 ))}
               </Select>
             </Form.Item>

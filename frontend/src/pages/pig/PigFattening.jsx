@@ -80,7 +80,7 @@ export default function PigFattening() {
   const fatteningActive = useMemo(() => {
     return pigs.filter(
       (p) =>
-        p.lifecycleStatus === "ACTIVE" &&
+        p.lifecycle_status === "ACTIVE" &&
         p.category === "FATTENING"
     );
   }, [pigs]);
@@ -90,7 +90,7 @@ export default function PigFattening() {
     const revenue = saleBatches.reduce(
       (s, b) => s + (b.lines?.reduce((x, l) => {
         const pig = pigs.find(p => p.id === l.pig_id);
-        const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
+        const purchasePrice = pig ? (Number(pig.purchase_price) || 0) : 0;
         return x + (Number(l.total_amount) || 0) - purchasePrice;
       }, 0) || 0),
       0
@@ -118,7 +118,7 @@ export default function PigFattening() {
         totalKg: b.lines?.reduce((s, l) => s + (Number(l.weight) || 0), 0) || 0,
         total: b.lines?.reduce((s, l) => {
           const pig = pigs.find(p => p.id === l.pig_id);
-          const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
+        const purchasePrice = pig ? (Number(pig.purchase_price) || 0) : 0;
           return s + (Number(l.total_amount) || 0) - purchasePrice;
         }, 0) || 0,
         raw: b,
@@ -165,7 +165,7 @@ export default function PigFattening() {
         sold_at: values.sold_at.format("YYYY-MM-DD"),
         lines: [
           {
-            pig_id: values.pigId,
+            pig_id: values.pig_id,
             weight: values.weight,
             price: values.price,
             total_amount: values.price * values.weight,
@@ -197,7 +197,7 @@ export default function PigFattening() {
 
     try {
       const lines = values.items.map((i) => ({
-        pig_id: i.pigId,
+        pig_id: i.pig_id,
         weight: i.weight,
         price: i.price,
         total_amount: i.weight * i.price,
@@ -381,7 +381,7 @@ export default function PigFattening() {
               <DatePicker disabledDate={(current) => current && current > dayjs().endOf('day')} format="DD/MM/YYYY" className="w-100" />
             </Form.Item>
 
-            <Form.Item name="pigId" label="Chọn lợn" rules={[{ required: true }]}>
+            <Form.Item name="pig_id" label="Chọn lợn" rules={[{ required: true }]}>
               <Select
                 options={fatteningActive.map((p) => ({
                   value: p.id,
@@ -389,8 +389,8 @@ export default function PigFattening() {
                 }))}
                 onChange={(val) => {
                   const pig = fatteningActive.find(p => p.id === val);
-                  if (pig && (pig.weightKg || pig.current_weight || pig.entry_weight)) {
-                    form.setFieldsValue({ weight: pig.weightKg || pig.current_weight || pig.entry_weight });
+                  if (pig && (pig.current_weight || pig.entry_weight)) {
+                    form.setFieldsValue({ weight: pig.current_weight || pig.entry_weight });
                   }
                 }}
               />
@@ -451,11 +451,11 @@ export default function PigFattening() {
                     const currentItems = bulkForm.getFieldValue("items") || [];
                     bulkForm.setFieldsValue({
                       items: keys.map((v) => {
-                        const existing = currentItems.find((i) => i && i.pigId === v);
+                        const existing = currentItems.find((i) => i && i.pig_id === v);
                         const pigData = fatteningActive.find((p) => p.id === v);
                         return {
-                          pigId: v,
-                          weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.weightKg || pigData?.current_weight || pigData?.entry_weight || null),
+                  pig_id: v,
+                          weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.current_weight || pigData?.entry_weight || null),
                           price: existing && existing.price !== undefined ? existing.price : null,
                         };
                       }),
@@ -466,8 +466,8 @@ export default function PigFattening() {
                 columns={[
                   { title: "STT", width: 60, render: (_, __, i) => i + 1 },
                   { title: "Mã lợn", dataIndex: "id", render: text => <strong>PIG{String(text).padStart(3, "0")}</strong> },
-                  { title: "Chuồng", dataIndex: "barnName" },
-                  { title: "Trọng lượng", key: "weightKg", render: (_, r) => (r.weightKg || r.current_weight || r.entry_weight) ? `${r.weightKg || r.current_weight || r.entry_weight} kg` : '-' },
+                  { title: "Chuồng", dataIndex: "barn_name" },
+                  { title: "Trọng lượng", key: "current_weight", render: (_, r) => (r.current_weight || r.entry_weight) ? `${r.current_weight || r.entry_weight} kg` : '-' },
                 ]}
                 pagination={{ pageSize: 5 }}
                 size="small"
@@ -491,7 +491,7 @@ export default function PigFattening() {
                       <Row gutter={16} key={field.key} align="middle" style={{ marginBottom: 12 }}>
                         <Col span={2}>{index + 1}</Col>
                         <Col span={5}>
-                          <Form.Item name={[field.name, "pigId"]} noStyle>
+                        <Form.Item name={[field.name, "pig_id"]} noStyle>
                             <Input addonBefore="PIG" disabled style={{ color: '#000', fontWeight: 500 }} />
                           </Form.Item>
                         </Col>
@@ -560,7 +560,7 @@ export default function PigFattening() {
               { title: "Giá", dataIndex: "price", render: (v) => v ? Math.round(Number(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-' },
               { title: "Doanh thu (Lãi)", key: "profit", render: (_, r) => {
                 const pig = pigs.find(p => p.id === r.pig_id);
-                const purchasePrice = pig ? (Number(pig.purchasePrice) || 0) : 0;
+                const purchasePrice = pig ? (Number(pig.purchase_price) || 0) : 0;
                 const profit = (Number(r.total_amount) || 0) - purchasePrice;
                 return Math.round(Number(profit)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
               } },

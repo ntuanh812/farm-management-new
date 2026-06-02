@@ -51,7 +51,7 @@ export default function PigDead() {
 
   // Lọc ra lợn đang còn sống (ACTIVE) để đưa vào dropdown
   const activePigs = useMemo(() => {
-    return pigs.filter(p => p.lifecycleStatus === 'ACTIVE');
+    return pigs.filter(p => p.lifecycle_status === 'ACTIVE');
   }, [pigs]);
 
   const handleDelete = async (id) => {
@@ -92,7 +92,7 @@ export default function PigDead() {
     {
       title: 'Ngày ghi nhận',
       key: 'death_date',
-      render: (_, r) => dayjs(r.death_date || r.deathDate).format('DD/MM/YYYY')
+      render: (_, r) => dayjs(r.death_date).format('DD/MM/YYYY')
     },
     {
       title: 'Mã lợn',
@@ -105,7 +105,7 @@ export default function PigDead() {
     {
       title: 'Chuồng (Lúc chết)',
       key: 'barn_name',
-      render: (_, r) => <span>{r.barn_name || r.barnName || '—'}</span>
+      render: (_, r) => <span>{r.barn_name || '—'}</span>
     },
     {
       title: 'Nguyên nhân chết',
@@ -115,12 +115,12 @@ export default function PigDead() {
     {
       title: 'Phương pháp xử lý xác',
       key: 'disposal_method',
-      render: (_, r) => <Tag color="orange">{r.disposal_method || r.disposalMethod || '—'}</Tag>
+      render: (_, r) => <Tag color="orange">{r.disposal_method || '—'}</Tag>
     },
     {
       title: 'Người ghi nhận',
       key: 'recorded_by',
-      render: (_, r) => <span>{r.recorded_by_name || r.recorded_by || '—'}</span>
+      render: (_, r) => <span>{r.recorded_by_name || '—'}</span>
     },
     {
       title: 'Ghi chú',
@@ -204,7 +204,7 @@ export default function PigDead() {
               showSearch 
               placeholder="Chỉ hiển thị các cá thể lợn đang sống"
               options={activePigs.map(p => ({ 
-            label: `PIG${String(p.id).padStart(3, "0")} - Chuồng: ${p.barnName || 'Không rõ'}`, 
+            label: `PIG${String(p.id).padStart(3, "0")} - Chuồng: ${p.barn_name || 'Không rõ'}`, 
                 value: p.id 
               }))}
               filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
@@ -215,7 +215,7 @@ export default function PigDead() {
             {({ getFieldValue }) => {
               const pid = getFieldValue('pig_id');
               const pig = activePigs.find(p => p.id === pid);
-              const minDate = pig?.arrivedAt;
+              const minDate = pig?.entry_date;
               return (
                 <Form.Item name="death_date" label="Ngày chết" rules={[{ required: true, message: 'Chọn ngày' }]}>
                   <DatePicker className="w-100" format="DD/MM/YYYY" disabledDate={(current) => current && ((minDate && current < dayjs(minDate).startOf('day')) || current > dayjs().endOf('day'))} />

@@ -72,7 +72,7 @@ export default function VetDashboard() {
   }, [reports]);
 
   const vaccineToday = useMemo(() => {
-    return vaccinations.filter(v => dayjs(v.scheduled_date || v.vaccination_date).format("YYYY-MM-DD") === todayStr).length;
+    return vaccinations.filter(v => dayjs(v.vaccinated_at).format("YYYY-MM-DD") === todayStr).length;
   }, [vaccinations, todayStr]);
 
   const recentActivities = useMemo(() => {
@@ -82,7 +82,8 @@ export default function VetDashboard() {
         type: 'report',
         title: `Báo cáo: PIG${String(r.pig_id).padStart(3, "0")}`,
         content: r.description,
-        createdAt: r.createdAt || r.created_at,
+        created_at: r.created_at,
+        action_date: r.created_at,
         icon: <WarningOutlined />
       })),
       ...vaccinations.map(v => ({
@@ -90,7 +91,8 @@ export default function VetDashboard() {
         type: 'vaccine',
         title: `Tiêm vaccine: ${v.vaccine_name || ''}`,
         content: `Tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3, "0"))}`,
-        createdAt: v.vaccinatedAt || v.vaccinated_at || v.createdAt || v.created_at,
+        created_at: v.created_at,
+        action_date: v.vaccinated_at,
         icon: <MedicineBoxOutlined />
       })),
       ...medicineUsages.map(m => ({
@@ -98,15 +100,16 @@ export default function VetDashboard() {
         type: 'medicine',
         title: `Dùng thuốc: ${m.medicine_name || ''}`,
         content: `Sử dụng tại ${m.barn_name || 'chuồng'}`,
-        createdAt: m.usedAt || m.used_at || m.createdAt || m.created_at,
+        created_at: m.created_at,
+        action_date: m.used_at,
         icon: <MedicineBoxOutlined />
       }))
     ];
     
     const threeDaysAgo = dayjs().subtract(3, 'day');
     return combined
-      .filter(item => dayjs(item.createdAt).isValid() && dayjs(item.createdAt).isAfter(threeDaysAgo))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+      .filter(item => item.action_date && dayjs(item.action_date).isValid() && dayjs(item.action_date).isAfter(threeDaysAgo))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 8);
   }, [reports, vaccinations, medicineUsages]);
 
 
@@ -180,7 +183,7 @@ export default function VetDashboard() {
                         </div>
                         <div className="activity-card__content">
                           <p><strong>{item.title}</strong>: {item.content}</p>
-                          <span>{formatRelativeTime(item.createdAt)}</span>
+                          <span>{formatRelativeTime(item.created_at)}</span>
                         </div>
                       </div>
                     )}

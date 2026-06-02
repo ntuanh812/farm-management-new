@@ -58,7 +58,7 @@ export default function PigstyHistory() {
   }, [fetchData]);
 
   const activePigs = useMemo(() => {
-    return pigs.filter((p) => p.lifecycleStatus === "ACTIVE");
+    return pigs.filter((p) => p.lifecycle_status === "ACTIVE");
   }, [pigs]);
 
   const filteredPigs = useMemo(() => {
@@ -68,15 +68,15 @@ export default function PigstyHistory() {
 
   const historyRows = useMemo(() => {
     return movements.map((m) => {
-      const pig = pigs.find((p) => p.id === m.pigId);
+      const pig = pigs.find((p) => p.id === m.pig_id);
       return {
         key: m.id,
-        date: m.movedAt ? dayjs(m.movedAt).format("DD/MM/YYYY") : "",
-        pig_id: pig?.id || m.pigId,
+        date: m.move_date ? dayjs(m.move_date).format("DD/MM/YYYY") : "",
+        pig_id: pig?.id || m.pig_id,
         status: pig?.category || m.category,
-        fromPen: m.fromBarnName || barns.find(b => b.id === m.fromBarnId)?.name || m.fromBarnId,
-        toPen: m.toBarnName || barns.find(b => b.id === m.toBarnId)?.name || m.toBarnId,
-        person: m.staffName,
+        fromPen: m.from_barn_name || barns.find(b => b.id === m.from_barn_id)?.name || m.from_barn_id,
+        toPen: m.to_barn_name || barns.find(b => b.id === m.to_barn_id)?.name || m.to_barn_id,
+        person: m.staff_name,
         note: m.note,
       };
     });
@@ -146,9 +146,9 @@ export default function PigstyHistory() {
     },
     {
       title: "Chuồng hiện tại",
-      dataIndex: "barnName",
-      key: "barnName",
-      render: (text, record) => text || barns.find(b => b.id === record.barnId)?.name || record.barnId,
+      dataIndex: "barn_name",
+      key: "barn_name",
+      render: (text, record) => text || barns.find(b => b.id === record.barn_id)?.name || record.barn_id,
     },
   ];
 
@@ -160,16 +160,16 @@ export default function PigstyHistory() {
     try {
       const values = await form.validateFields();
       const selected = activePigs.filter((p) => selectedRowKeys.includes(p.id));
-      const invalid = selected.some((p) => p.barnId === values.toBarnId);
+      const invalid = selected.some((p) => p.barn_id === values.to_barn_id);
       if (invalid) {
         message.error("Có cá thể lợn đang chọn đã nằm ở chuồng đích này");
         return;
       }
       
       const payload = {
-        pigIds: selectedRowKeys,
-        toBarnId: values.toBarnId,
-        movedAt: dayjs().format("YYYY-MM-DD"),
+        pig_ids: selectedRowKeys,
+        to_barn_id: values.to_barn_id,
+        move_date: dayjs().format("YYYY-MM-DD"),
         note: values.note,
       };
 
@@ -282,7 +282,7 @@ export default function PigstyHistory() {
 
         <Form form={form} layout="vertical" className="mt-24" disabled={!canEdit}>
           <Form.Item
-            name="toBarnId"
+            name="to_barn_id"
             label="Chuyển sang chuồng"
             rules={[{ required: true, message: "Chọn chuồng" }]}
           >

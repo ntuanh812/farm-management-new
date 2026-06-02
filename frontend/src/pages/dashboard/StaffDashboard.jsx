@@ -69,8 +69,9 @@ export default function StaffDashboard() {
       const acts = (moveRes.data?.data || []).map(m => ({
         id: `move_${m.id}`,
         icon: "task",
-        content: `Chuyển PIG${String(m.pig_id || m.pigId).padStart(3, "0")} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
-        createdAt: m.moveDate || m.move_date || m.movedAt || m.moved_at || m.createdAt || m.created_at
+        content: `Chuyển PIG${String(m.pig_id).padStart(3, "0")} từ ${m.from_barn_name || 'chuồng cũ'} sang ${m.to_barn_name || 'chuồng mới'}`,
+        created_at: m.created_at,
+        action_date: m.move_date
       }));
 
       (saleRes.data?.data || []).forEach(s => {
@@ -78,7 +79,8 @@ export default function StaffDashboard() {
           id: `sale_${s.id}`,
           icon: "feeding",
           content: `Xuất bán ${s.lines?.length || 0} con lợn thịt`,
-          createdAt: s.soldAt || s.sold_at || s.createdAt || s.created_at
+          created_at: s.created_at,
+          action_date: s.sold_at
         });
       });
 
@@ -86,8 +88,9 @@ export default function StaffDashboard() {
         acts.push({
           id: `report_${r.id}`,
           icon: "medical",
-          content: `Báo cáo lợn bệnh số ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
-          createdAt: r.createdAt || r.created_at
+          content: `Báo cáo lợn bệnh số ${r.pig_id}: ${r.description || ''}`,
+          created_at: r.created_at,
+          action_date: r.created_at
         });
       });
 
@@ -96,7 +99,8 @@ export default function StaffDashboard() {
           id: `feed_${f.id}`,
           icon: "feeding",
           content: `Sử dụng ${f.quantity_kg}kg cám ${f.feed_name || ''} tại ${f.barn_name || 'chuồng'}`,
-          createdAt: f.usedAt || f.used_at || f.createdAt || f.created_at
+          created_at: f.created_at,
+          action_date: f.used_at
         });
       });
 
@@ -105,7 +109,8 @@ export default function StaffDashboard() {
           id: `med_${m.id}`,
           icon: "medical",
           content: `Cấp phát ${m.quantity} ${m.unit} thuốc ${m.medicine_name || ''} tại ${m.barn_name || 'chuồng'}`,
-          createdAt: m.usedAt || m.used_at || m.createdAt || m.created_at
+          created_at: m.created_at,
+          action_date: m.used_at
         });
       });
 
@@ -114,14 +119,15 @@ export default function StaffDashboard() {
           id: `vac_${v.id}`,
           icon: "medical",
           content: `Tiêm vaccine ${v.vaccine_name || ''} tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3,"0"))}`,
-          createdAt: v.vaccinatedAt || v.vaccinated_at || v.createdAt || v.created_at
+          created_at: v.created_at,
+          action_date: v.vaccinated_at
         });
       });
 
       const threeDaysAgo = dayjs().subtract(3, 'day');
       const recentActs = acts
-        .filter(a => a.createdAt && dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(threeDaysAgo))
-        .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
+        .filter(a => a.action_date && dayjs(a.action_date).isValid() && dayjs(a.action_date).isAfter(threeDaysAgo))
+        .sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf());
 
       setActivities(recentActs.slice(0, 6));
 
@@ -138,7 +144,7 @@ export default function StaffDashboard() {
   }, [fetchDashboard]);
 
   const activePigs = useMemo(() => {
-    return pigs.filter(p => p.lifecycleStatus === "ACTIVE" || p.lifecycle_status === "ACTIVE");
+    return pigs.filter(p => p.lifecycle_status === "ACTIVE");
   }, [pigs]);
 
   const totalBarns = barns.length;
@@ -323,7 +329,7 @@ export default function StaffDashboard() {
                         </div>
                         <div className="activity-card__content">
                           <p>{item.content}</p>
-                          <span>{formatRelativeTime(item.createdAt)}</span>
+                          <span>{formatRelativeTime(item.created_at)}</span>
                         </div>
                       </div>
                     ))

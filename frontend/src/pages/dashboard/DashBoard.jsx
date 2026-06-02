@@ -187,8 +187,8 @@ export const DashBoard = () => {
           staffRes.data?.data || []
         );
 
-        let revenueChart = reportRes.data?.data?.revenueTrend || [];
-        let feedChart = reportRes.data?.data?.feedUsage?.map(f => ({ name: f.feed_type, value: Number(f.total_kg) })) || [];
+        let revenueChart = reportRes.data?.data?.revenue_trend || [];
+        let feedChart = reportRes.data?.data?.feed_usage?.map(f => ({ name: f.feed_type, value: Number(f.total_kg) })) || [];
 
         // Tự động tính toán nếu API overview gặp lỗi (không trả về data)
         if (!reportRes.data) {
@@ -196,10 +196,10 @@ export const DashBoard = () => {
           const allPigs = pigRes.data?.data || [];
           const revMap = {};
           sales.forEach(s => {
-            const date = dayjs(s.sold_at || s.createdAt).format('DD/MM/YYYY');
+            const date = dayjs(s.sold_at || s.created_at).format('DD/MM/YYYY');
             const amount = s.lines?.reduce((sum, l) => {
               const pig = allPigs.find(p => p.id === l.pig_id);
-              const pp = pig ? Number(pig.purchasePrice || pig.purchase_price || 0) : 0;
+              const pp = pig ? Number(pig.purchase_price || 0) : 0;
               return sum + (Number(l.total_amount || 0) - pp);
             }, 0) || 0;
             revMap[date] = (revMap[date] || 0) + amount;
@@ -239,8 +239,9 @@ export const DashBoard = () => {
         const activitiesList = moves.map(m => ({
           id: `move_${m.id}`,
           icon: "task",
-          content: `Chuyển PIG${String(m.pig_id || m.pigId).padStart(3, "0")} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
-          createdAt: m.moveDate || m.move_date || m.movedAt || m.moved_at || m.createdAt || m.created_at
+          content: `Chuyển PIG${String(m.pig_id).padStart(3, "0")} từ ${m.from_barn_name || 'chuồng cũ'} sang ${m.to_barn_name || 'chuồng mới'}`,
+          created_at: m.created_at,
+          action_date: m.move_date
         }));
 
         const salesData = saleRes.data?.data || [];
@@ -249,7 +250,8 @@ export const DashBoard = () => {
             id: `sale_${s.id}`,
             icon: "feeding",
             content: `Xuất bán ${s.lines?.length || 0} con lợn thịt`,
-            createdAt: s.soldAt || s.sold_at || s.createdAt || s.created_at
+            created_at: s.created_at,
+            action_date: s.sold_at
           });
         });
 
@@ -258,8 +260,9 @@ export const DashBoard = () => {
           activitiesList.push({
             id: `report_${r.id}`,
             icon: "medical",
-            content: `Báo cáo lợn bệnh số ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
-            createdAt: r.createdAt || r.created_at
+            content: `Báo cáo lợn bệnh số ${r.pig_id}: ${r.description || ''}`,
+            created_at: r.created_at,
+            action_date: r.created_at
           });
         });
 
@@ -269,7 +272,8 @@ export const DashBoard = () => {
             id: `feed_${f.id}`,
             icon: "feeding",
             content: `Sử dụng ${f.quantity_kg}kg cám ${f.feed_name || ''} tại ${f.barn_name || 'chuồng'}`,
-            createdAt: f.usedAt || f.used_at || f.createdAt || f.created_at
+            created_at: f.created_at,
+            action_date: f.used_at
           });
         });
 
@@ -279,7 +283,8 @@ export const DashBoard = () => {
             id: `med_${m.id}`,
             icon: "medical",
             content: `Cấp phát ${m.quantity} ${m.unit} thuốc ${m.medicine_name || ''} tại ${m.barn_name || 'chuồng'}`,
-            createdAt: m.usedAt || m.used_at || m.createdAt || m.created_at
+            created_at: m.created_at,
+            action_date: m.used_at
           });
         });
 
@@ -289,15 +294,16 @@ export const DashBoard = () => {
             id: `vac_${v.id}`,
             icon: "medical",
             content: `Tiêm vaccine ${v.vaccine_name || ''} tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3,"0"))}`,
-            createdAt: v.vaccinatedAt || v.vaccinated_at || v.createdAt || v.created_at
+            created_at: v.created_at,
+            action_date: v.vaccinated_at
           });
         });
 
         // Lọc lấy các hoạt động trong vòng 3 ngày qua
         const threeDaysAgo = dayjs().subtract(3, 'day');
         const recentActivitiesList = activitiesList
-          .filter(a => a.createdAt && dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(threeDaysAgo))
-          .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
+          .filter(a => a.action_date && dayjs(a.action_date).isValid() && dayjs(a.action_date).isAfter(threeDaysAgo))
+          .sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf());
 
         if (recentActivitiesList.length > 0) {
           setActivities(recentActivitiesList.slice(0, 6));
@@ -307,7 +313,7 @@ export const DashBoard = () => {
               id: 1,
               icon: "task",
               content: "Không có hoạt động nào trong 3 ngày qua",
-              createdAt: new Date(),
+              created_at: new Date(),
             },
           ]);
         }
@@ -341,8 +347,6 @@ export const DashBoard = () => {
 
       return pigs.filter(
         (p) =>
-          p.lifecycleStatus ===
-            "ACTIVE" ||
           p.lifecycle_status ===
             "ACTIVE"
       );
@@ -687,10 +691,7 @@ export const DashBoard = () => {
                           </p>
 
                           <span>
-                            {formatRelativeTime(
-                              item.createdAt ||
-                              item.created_at
-                            )}
+                            {formatRelativeTime(item.created_at)}
                           </span>
                         </div>
                       </div>

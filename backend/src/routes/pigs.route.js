@@ -20,29 +20,23 @@ export default async function pigsRoute(app) {
           SELECT
             p.id,
             p.name,
-            p.barn_id AS barnId,
-            b.name AS barnName,
+            p.barn_id,
+            b.name AS barn_name,
             p.category,
-            p.lifecycle_status AS lifecycleStatus,
+            p.lifecycle_status,
             p.gender,
             p.dob,
-            p.entry_date AS arrivedAt,
+            p.entry_date,
             p.entry_weight,
-            p.current_weight AS weightKg,
-            p.purchase_price AS purchasePrice,
+            p.current_weight,
+            p.purchase_price,
             p.note,
             p.created_at,
             p.updated_at,
-            TIMESTAMPDIFF(
-              DAY,
-              p.dob,
-              CURDATE()
-            ) AS ageDays,
-            (
-            EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.id AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))
-          ) AS isSick,
-          (SELECT MAX(death_date) FROM pig_deaths pd WHERE pd.pig_id = p.id) AS deathDate,
-          (SELECT MAX(sb.sold_at) FROM sale_batch_lines sbl JOIN sale_batches sb ON sb.id = sbl.sale_batch_id WHERE sbl.pig_id = p.id) AS soldAt
+            TIMESTAMPDIFF(DAY, p.dob, CURDATE()) AS age,
+            (EXISTS(SELECT 1 FROM pig_reports pr WHERE pr.pig_id = p.id AND pr.status IN ('cho_xu_ly', 'dang_xu_ly'))) AS is_sick,
+            (SELECT MAX(death_date) FROM pig_deaths pd WHERE pd.pig_id = p.id) AS death_date,
+            (SELECT MAX(sb.sold_at) FROM sale_batch_lines sbl JOIN sale_batches sb ON sb.id = sbl.sale_batch_id WHERE sbl.pig_id = p.id) AS sold_at
           FROM pigs p
           LEFT JOIN barns b
           ON b.id = p.barn_id

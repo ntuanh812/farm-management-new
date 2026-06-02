@@ -19,18 +19,18 @@ export default async function movementsRoute(app) {
         let sql = `
           SELECT
             m.id,
-            m.pig_id AS pigId,
+            m.pig_id,
             p.category,
-            p.lifecycle_status AS lifecycleStatus,
-            m.from_barn_id AS fromBarnId,
-            m.to_barn_id AS toBarnId,
-            b1.name AS fromBarnName,
-            b2.name AS toBarnName,
-            m.move_date AS movedAt,
-            m.staff_id AS staffId,
-            s.full_name AS staffName,
+            p.lifecycle_status,
+            m.from_barn_id,
+            m.to_barn_id,
+            b1.name AS from_barn_name,
+            b2.name AS to_barn_name,
+            m.move_date,
+            m.staff_id,
+            s.full_name AS staff_name,
             m.note,
-            m.created_at AS createdAt
+            m.created_at
           FROM pig_movements m
           LEFT JOIN pigs p
           ON p.id = m.pig_id
@@ -90,9 +90,9 @@ export default async function movementsRoute(app) {
         await connection.beginTransaction();
 
         const {
-          pigIds,
-          toBarnId,
-          movedAt,
+          pig_ids,
+          to_barn_id,
+          move_date,
           note,
         } = request.body;
 
@@ -103,9 +103,9 @@ export default async function movementsRoute(app) {
         // =====================================================
 
         if (
-          !pigIds ||
-          !Array.isArray(pigIds) ||
-          pigIds.length === 0
+          !pig_ids ||
+          !Array.isArray(pig_ids) ||
+          pig_ids.length === 0
         ) {
 
           return reply.status(400).send({
@@ -115,7 +115,7 @@ export default async function movementsRoute(app) {
           });
         }
 
-        if (!toBarnId) {
+        if (!to_barn_id) {
 
           return reply.status(400).send({
             success: false,
@@ -124,7 +124,7 @@ export default async function movementsRoute(app) {
           });
         }
 
-        if (!movedAt) {
+        if (!move_date) {
 
           return reply.status(400).send({
             success: false,
@@ -200,7 +200,7 @@ export default async function movementsRoute(app) {
               b.id,
               b.capacity
             `,
-            [toBarnId]
+            [to_barn_id]
           );
 
         if (!barnRows.length) {
@@ -219,7 +219,7 @@ export default async function movementsRoute(app) {
         // =====================================================
 
         const placeholders =
-          pigIds.map(() => "?").join(",");
+          pig_ids.map(() => "?").join(",");
 
         const [pigs] =
           await connection.query(
@@ -233,7 +233,7 @@ export default async function movementsRoute(app) {
 
             WHERE id IN (${placeholders})
             `,
-            pigIds
+            pig_ids
           );
 
         if (!pigs.length) {
@@ -258,7 +258,7 @@ export default async function movementsRoute(app) {
                 pig.barn_id
               ) !==
                 Number(
-                  toBarnId
+                to_barn_id
                 )
           );
 
@@ -317,8 +317,8 @@ export default async function movementsRoute(app) {
             [
               pig.id,
               pig.barn_id,
-              toBarnId,
-              movedAt,
+              to_barn_id,
+              move_date,
             staffId,
               note || null,
             ]
@@ -336,7 +336,7 @@ export default async function movementsRoute(app) {
             WHERE id = ?
             `,
             [
-              toBarnId,
+              to_barn_id,
               pig.id,
             ]
           );
@@ -351,7 +351,7 @@ export default async function movementsRoute(app) {
         return reply.send({
           success: true,
 
-          movedCount:
+          moved_count:
             validPigs.length,
 
           message:
