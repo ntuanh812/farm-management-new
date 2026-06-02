@@ -15,7 +15,7 @@ INSERT IGNORE INTO staffs (id, full_name, phone, email, role_id) VALUES
 (1, 'Admin System', '0987654321', 'admin@farmpro.com', 1);
 
 INSERT IGNORE INTO accounts (staff_id, username, password_hash, is_active) VALUES
-(1, 'admin', '$2b$10$tZ2E2.H9F8wT5P6c3X1i.eZq/L/5L1c4o8tG0H4U5l4R3q2P1', 1);
+(1, 'admin', '$2b$10$5/ecEQfzImreCqsfj8nMLu2VJvMyeE0oMkUnsa1aznEKdEw6EBnLm', 1);
 
 -- Thêm dữ liệu Chuồng trại
 INSERT INTO barns (code, name, capacity, barn_type, status) VALUES
@@ -32,8 +32,8 @@ INSERT INTO staffs (full_name, phone, email, role_id) VALUES
 
 -- Thêm Tài khoản cho nhân viên
 INSERT INTO accounts (staff_id, username, password_hash, is_active) VALUES
-(2, 'worker1', '$2b$10$tZ2E2.H9F8wT5P6c3X1i.eZq/L/5L1c4o8tG0H4U5l4R3q2P1', 1), -- pass: 123456
-(3, 'vet1', '$2b$10$tZ2E2.H9F8wT5P6c3X1i.eZq/L/5L1c4o8tG0H4U5l4R3q2P1', 1);
+(2, 'worker1', '$2b$10$5/ecEQfzImreCqsfj8nMLu2VJvMyeE0oMkUnsa1aznEKdEw6EBnLm', 1), -- pass: 123456
+(3, 'vet1', '$2b$10$5/ecEQfzImreCqsfj8nMLu2VJvMyeE0oMkUnsa1aznEKdEw6EBnLm', 1);
 
 -- Phân công chuồng cho công nhân
 INSERT INTO staff_barns (staff_id, barn_id) VALUES
@@ -41,16 +41,29 @@ INSERT INTO staff_barns (staff_id, barn_id) VALUES
 
 -- Thêm Cám, Thuốc & Vaccine
 INSERT INTO feeds (name, stock) VALUES
-('Cám lợn con tập ăn (GreenFeed)', 1000),
-('Cám nái mang thai (Proconco)', 500);
+('Cám lợn con tập ăn ', 1000),
+('Cám lợn thịt 30–60kg ', 1100),
+('Cám lợn vỗ béo ', 1000),
+('Cám lợn nái cho con bú ', 800),
+('Cám lợn cai sữa ', 900),
+('Cám nái mang thai ', 500);
 
 INSERT INTO medicines (name, unit, stock) VALUES
 ('Kháng sinh Amox', 'lọ', 50),
+('Enrofloxacin', 'ml', 200),
+('Colistin', 'lọ', 50),
+('Tylosin', 'gói', 50),
+('Doxycycline', 'gói', 120),
 ('Vitamin C', 'gói', 100);
 
 INSERT INTO vaccines (name, unit, stock) VALUES
 ('Tai xanh', 'liều', 200),
-('Lở mồm long móng', 'liều', 150);
+('Lở mồm long móng', 'liều', 150),
+('Dịch tả lợn (CSF)', 'liều', 50),
+('Tụ huyết trùng', 'liều', 100),
+('Phó thương hàn', 'liều', 150),
+('E.coli', 'liều', 100),
+('Mycoplasma', 'liều', 120);
 
 -- Thêm Lợn mẫu (Chỉ sử dụng ID tự tăng)
 INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, purchase_price) VALUES

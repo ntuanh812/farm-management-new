@@ -240,7 +240,7 @@ export const DashBoard = () => {
           id: `move_${m.id}`,
           icon: "task",
           content: `Chuyển PIG${String(m.pig_id || m.pigId).padStart(3, "0")} từ ${m.from_barn_name || m.fromBarnName || 'chuồng cũ'} sang ${m.to_barn_name || m.toBarnName || 'chuồng mới'}`,
-          createdAt: m.createdAt || m.created_at || m.movedAt || m.moved_at || new Date()
+          createdAt: m.moveDate || m.move_date || m.movedAt || m.moved_at || m.createdAt || m.created_at
         }));
 
         const salesData = saleRes.data?.data || [];
@@ -249,7 +249,7 @@ export const DashBoard = () => {
             id: `sale_${s.id}`,
             icon: "feeding",
             content: `Xuất bán ${s.lines?.length || 0} con lợn thịt`,
-            createdAt: s.createdAt || s.created_at || s.soldAt || s.sold_at || new Date()
+            createdAt: s.soldAt || s.sold_at || s.createdAt || s.created_at
           });
         });
 
@@ -259,7 +259,7 @@ export const DashBoard = () => {
             id: `report_${r.id}`,
             icon: "medical",
             content: `Báo cáo lợn bệnh số ${r.pig_id || r.pigId || ''}: ${r.description || ''}`,
-            createdAt: r.created_at || r.createdAt || new Date()
+            createdAt: r.createdAt || r.created_at
           });
         });
 
@@ -269,7 +269,7 @@ export const DashBoard = () => {
             id: `feed_${f.id}`,
             icon: "feeding",
             content: `Sử dụng ${f.quantity_kg}kg cám ${f.feed_name || ''} tại ${f.barn_name || 'chuồng'}`,
-            createdAt: f.used_at || f.created_at || new Date()
+            createdAt: f.usedAt || f.used_at || f.createdAt || f.created_at
           });
         });
 
@@ -279,7 +279,7 @@ export const DashBoard = () => {
             id: `med_${m.id}`,
             icon: "medical",
             content: `Cấp phát ${m.quantity} ${m.unit} thuốc ${m.medicine_name || ''} tại ${m.barn_name || 'chuồng'}`,
-            createdAt: m.used_at || m.created_at || new Date()
+            createdAt: m.usedAt || m.used_at || m.createdAt || m.created_at
           });
         });
 
@@ -289,14 +289,14 @@ export const DashBoard = () => {
             id: `vac_${v.id}`,
             icon: "medical",
             content: `Tiêm vaccine ${v.vaccine_name || ''} tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3,"0"))}`,
-            createdAt: v.vaccinated_at || v.created_at || new Date()
+            createdAt: v.vaccinatedAt || v.vaccinated_at || v.createdAt || v.created_at
           });
         });
 
         // Lọc lấy các hoạt động trong vòng 3 ngày qua
         const threeDaysAgo = dayjs().subtract(3, 'day');
         const recentActivitiesList = activitiesList
-          .filter(a => dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(threeDaysAgo))
+          .filter(a => a.createdAt && dayjs(a.createdAt).isValid() && dayjs(a.createdAt).isAfter(threeDaysAgo))
           .sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
 
         if (recentActivitiesList.length > 0) {

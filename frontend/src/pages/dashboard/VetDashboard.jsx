@@ -82,7 +82,7 @@ export default function VetDashboard() {
         type: 'report',
         title: `Báo cáo: PIG${String(r.pig_id).padStart(3, "0")}`,
         content: r.description,
-        createdAt: r.created_at,
+        createdAt: r.createdAt || r.created_at,
         icon: <WarningOutlined />
       })),
       ...vaccinations.map(v => ({
@@ -90,7 +90,7 @@ export default function VetDashboard() {
         type: 'vaccine',
         title: `Tiêm vaccine: ${v.vaccine_name || ''}`,
         content: `Tại ${v.barn_name || ('PIG'+String(v.pig_id).padStart(3, "0"))}`,
-        createdAt: v.vaccinated_at || v.created_at,
+        createdAt: v.vaccinatedAt || v.vaccinated_at || v.createdAt || v.created_at,
         icon: <MedicineBoxOutlined />
       })),
       ...medicineUsages.map(m => ({
@@ -98,11 +98,15 @@ export default function VetDashboard() {
         type: 'medicine',
         title: `Dùng thuốc: ${m.medicine_name || ''}`,
         content: `Sử dụng tại ${m.barn_name || 'chuồng'}`,
-        createdAt: m.used_at || m.created_at,
+        createdAt: m.usedAt || m.used_at || m.createdAt || m.created_at,
         icon: <MedicineBoxOutlined />
       }))
     ];
-    return combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+    
+    const threeDaysAgo = dayjs().subtract(3, 'day');
+    return combined
+      .filter(item => dayjs(item.createdAt).isValid() && dayjs(item.createdAt).isAfter(threeDaysAgo))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
   }, [reports, vaccinations, medicineUsages]);
 
 
@@ -163,7 +167,7 @@ export default function VetDashboard() {
             <Col span={24}>
               <Card className="activity-card">
                 <div className="activity-card__header">
-                  <h3>Hoạt động & Báo cáo gần đây</h3>
+                <h3>Hoạt động & Báo cáo 3 ngày gần đây</h3>
                 </div>
                 <div className="activity-card__list">
                   <List

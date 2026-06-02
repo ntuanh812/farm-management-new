@@ -25,17 +25,8 @@ export default async function authRoute(app) {
       return reply.code(401).send({ success: false, message: 'Tài khoản không tồn tại hoặc đã bị khóa' })
     }
 
-    let valid = false
-    // Tự động nâng cấp mã hóa: Nếu DB lưu chuỗi thường (từ file seed), kiểm tra và mã hóa lại ngay sau khi đăng nhập!
-    if (!account.password_hash.startsWith('$2')) {
-      if (password === account.password_hash) {
-        valid = true
-        const newHash = await bcrypt.hash(password, 10)
-        await pool.query('UPDATE accounts SET password_hash = ? WHERE id = ?', [newHash, account.id])
-      }
-    } else {
-      valid = await bcrypt.compare(password, account.password_hash)
-    }
+    // BẢO MẬT: Chỉ so sánh bằng bcrypt, không chấp nhận plain text
+    const valid = await bcrypt.compare(password, account.password_hash)
 
     if (!valid) {
       return reply.code(401).send({ success: false, message: 'Sai mật khẩu' })

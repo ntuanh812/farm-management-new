@@ -270,7 +270,7 @@ export const staffController = {
   // 6. Reset mật khẩu về mặc định (123456)
   resetPassword: async (request, reply) => {
     const { id } = request.params;
-    const defaultPassword = 'password123'; // Hoặc '123456' tùy policy
+    const defaultPassword = '123456'; 
 
     try {
       const password_hash = await bcrypt.hash(defaultPassword, 10);

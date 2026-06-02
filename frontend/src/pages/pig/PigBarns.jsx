@@ -39,8 +39,9 @@ export default function PigBarns() {
   const [filterType, setFilterType] = useState(null);
   const [filterStatus, setFilterStatus] = useState(null);
 
-  // Phân quyền: Admin và Nhân viên có quyền thao tác
+  const canAdd = user?.role === 'ADMIN';
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
+  const canDelete = user?.role === 'ADMIN';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -196,22 +197,26 @@ export default function PigBarns() {
       title: 'Thao tác',
       key: 'actions',
       width: 100,
-      render: (_, record) => canEdit && (
+      render: (_, record) => (
         <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            className="text-primary"
-            onClick={() => handleOpenEdit(record)}
-            title="Sửa"
-          />
-          <Popconfirm
-            title="Chắc chắn xóa chuồng này?"
-            description="Chỉ xóa được nếu chuồng không còn lợn."
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
-          </Popconfirm>
+          {canEdit && (
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              className="text-primary"
+              onClick={() => handleOpenEdit(record)}
+              title="Sửa"
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Chắc chắn xóa chuồng này?"
+              description="Chỉ xóa được nếu chuồng không còn lợn."
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} title="Xóa" />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -223,7 +228,7 @@ export default function PigBarns() {
         title="Quản lý Chuồng trại"
         subtitle="Theo dõi sức chứa, loại chuồng và trạng thái hoạt động"
         actions={
-          canEdit && (
+          canAdd && (
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenAdd}>
               Thêm chuồng mới
             </Button>
