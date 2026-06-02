@@ -27,6 +27,10 @@ export const medicineUsagesController = {
   create: async (request, reply) => {
     const { barn_id, pig_id, medicine_id, quantity, unit, used_at, note } = request.body;
     const staff_id = request.user.staff_id;
+
+    if (quantity === undefined || isNaN(quantity) || Number(quantity) <= 0) {
+      return reply.code(400).send({ success: false, message: 'Số lượng sử dụng phải lớn hơn 0' });
+    }
     
     // Extract value if it is passed as an array due to "tags" mode in Antd Select
     const medId = Array.isArray(medicine_id) ? medicine_id[0] : medicine_id;

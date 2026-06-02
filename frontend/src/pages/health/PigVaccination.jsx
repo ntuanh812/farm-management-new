@@ -47,6 +47,7 @@ export default function PigVaccination() {
 
   // Phân quyền: Chỉ Admin và Bác sĩ thú y được thao tác
   const canEdit = user?.role === "ADMIN" || user?.role === "VET_DOCTOR";
+  const canImport = user?.role === "ADMIN";
 
   // Lấy dữ liệu từ Backend
   const fetchData = useCallback(async () => {
@@ -272,9 +273,9 @@ export default function PigVaccination() {
         title="Tiêm phòng"
         subtitle="Gắn mũi tiêm với cá thể lợn"
         actions={
-          canEdit && (
-            <Space>
-              <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho vaccine</Button>
+          <Space>
+            {canImport && <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho vaccine</Button>}
+            {canEdit && (
               <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                 form.resetFields();
                 form.setFieldsValue({ vaccinated_at: dayjs() });
@@ -284,8 +285,8 @@ export default function PigVaccination() {
               }}>
                 Ghi nhận tiêm
               </Button>
-            </Space>
-          )
+            )}
+          </Space>
         }
       />
 
@@ -394,7 +395,7 @@ export default function PigVaccination() {
               <Form.Item name="vaccine_id" noStyle rules={[{ required: true, message: 'Nhập hoặc chọn tên vaccine' }]}>
                 <Select showSearch options={vaccines.map(v => ({ label: `${v.name} (Tồn: ${v.stock || 0} ${v.unit || ''})`, value: v.id }))} placeholder="VD: LMLM, Tai xanh..." style={{ flex: 1 }} />
               </Form.Item>
-              <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddVaccineModalOpen(true)} title="Thêm loại vaccine mới" />
+              {canImport && <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddVaccineModalOpen(true)} title="Thêm loại vaccine mới" />}
             </div>
           </Form.Item>
 

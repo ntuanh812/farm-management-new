@@ -113,6 +113,10 @@ export default async function pigsRoute(app) {
           });
         }
 
+        if (Number(entry_weight || 0) < 0 || Number(current_weight || 0) < 0 || Number(purchase_price || 0) < 0) {
+          return reply.status(400).send({ success: false, message: "Trọng lượng hoặc giá tiền không hợp lệ" });
+        }
+
         // =====================================================
         // CHECK BARN
         // =====================================================
@@ -257,6 +261,10 @@ export default async function pigsRoute(app) {
             message: "Hồ sơ đã bị khóa. Không thể chỉnh sửa thông tin của lợn đã chết hoặc đã xuất bán."
           });
         }
+
+      if (Number(entry_weight || 0) < 0 || Number(current_weight || 0) < 0 || Number(purchase_price || 0) < 0) {
+        return reply.status(400).send({ success: false, message: "Trọng lượng hoặc giá tiền không hợp lệ" });
+      }
 
         await pool.query(
           `

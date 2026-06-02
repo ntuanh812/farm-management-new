@@ -187,37 +187,42 @@ export const DashBoard = () => {
           staffRes.data?.data || []
         );
 
-        let revenueChart = reportRes.data?.data?.revenue_trend || [];
-        let feedChart = reportRes.data?.data?.feed_usage?.map(f => ({ name: f.feed_type, value: Number(f.total_kg) })) || [];
+        const currentYear = dayjs().year();
+        const currentMonth = dayjs().month() + 1;
 
-        // Tự động tính toán nếu API overview gặp lỗi (không trả về data)
-        if (!reportRes.data) {
-          const sales = saleRes.data?.data || [];
-          const allPigs = pigRes.data?.data || [];
-          const revMap = {};
-          sales.forEach(s => {
-            const date = dayjs(s.sold_at || s.created_at).format('DD/MM/YYYY');
+        const sales = saleRes.data?.data || [];
+        const allPigs = pigRes.data?.data || [];
+        const revMap = {};
+        
+        for (let i = 1; i <= currentMonth; i++) {
+          revMap[`Tháng ${i}`] = 0;
+        }
+
+        sales.forEach(s => {
+          const date = dayjs(s.sold_at || s.created_at);
+          if (date.year() === currentYear && date.month() + 1 <= currentMonth) {
+            const monthKey = `Tháng ${date.month() + 1}`;
             const amount = s.lines?.reduce((sum, l) => {
               const pig = allPigs.find(p => p.id === l.pig_id);
               const pp = pig ? Number(pig.purchase_price || 0) : 0;
               return sum + (Number(l.total_amount || 0) - pp);
             }, 0) || 0;
-            revMap[date] = (revMap[date] || 0) + amount;
-          });
-          revenueChart = Object.keys(revMap).map(k => ({ date: k, revenue: revMap[k] })).sort((a, b) => {
-            const [dA, mA, yA] = a.date.split('/');
-            const [dB, mB, yB] = b.date.split('/');
-            return new Date(yA, mA - 1, dA) - new Date(yB, mB - 1, dB);
-          });
+            revMap[monthKey] += amount;
+          }
+        });
 
-          const feeds = feedRes.data?.data || [];
-          const feedMap = {};
-          feeds.forEach(f => {
+        const revenueChart = Object.keys(revMap).map(k => ({ date: k, revenue: revMap[k] }));
+
+        const feeds = feedRes.data?.data || [];
+        const feedMap = {};
+        feeds.forEach(f => {
+          const date = dayjs(f.used_at || f.created_at);
+          if (date.year() === currentYear && date.month() + 1 <= currentMonth) {
             const key = f.feed_name || f.feed_type || 'Không rõ';
             feedMap[key] = (feedMap[key] || 0) + Number(f.quantity_kg || 0);
-          });
-          feedChart = Object.keys(feedMap).map(k => ({ name: k, value: feedMap[k] }));
-        }
+          }
+        });
+        const feedChart = Object.keys(feedMap).map(k => ({ name: k, value: feedMap[k] }));
 
         setChartData({
           revenue: revenueChart,

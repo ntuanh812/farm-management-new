@@ -35,6 +35,10 @@ export const vaccinesUsageController = {
   create: async (request, reply) => {
     const { pig_id, barn_id, vaccine_id, quantity, unit, vaccinated_at, note } = request.body;
     const performed_by = request.user.staff_id;
+
+    if (quantity === undefined || isNaN(quantity) || Number(quantity) <= 0) {
+      return reply.code(400).send({ success: false, message: 'Số lượng sử dụng phải lớn hơn 0' });
+    }
     
     const conn = await pool.getConnection();
     try {

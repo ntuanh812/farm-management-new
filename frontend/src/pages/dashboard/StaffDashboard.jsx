@@ -169,9 +169,15 @@ export default function StaffDashboard() {
   }, [activePigs]);
 
   const feedChartData = useMemo(() => {
+    const currentYear = dayjs().year();
+    const currentMonth = dayjs().month() + 1;
+
     const counts = feedUsages.reduce((acc, feed) => {
-      const key = feed.feed_name || feed.feed_type || 'Không rõ';
-      acc[key] = (acc[key] || 0) + Number(feed.quantity_kg || 0);
+      const date = dayjs(feed.used_at || feed.created_at);
+      if (date.year() === currentYear && date.month() + 1 <= currentMonth) {
+        const key = feed.feed_name || feed.feed_type || 'Không rõ';
+        acc[key] = (acc[key] || 0) + Number(feed.quantity_kg || 0);
+      }
       return acc;
     }, {});
     return Object.keys(counts).map(key => ({

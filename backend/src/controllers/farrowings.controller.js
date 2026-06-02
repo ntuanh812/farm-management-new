@@ -26,6 +26,11 @@ export const farrowingsController = {
   create: async (request, reply) => {
     const { sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, note, piglet_barn_id } = request.body;
     const staff_id = request.user.staff_id;
+
+    if (alive_piglets < 0 || dead_piglets < 0 || total_weight < 0) {
+      return reply.code(400).send({ success: false, message: 'Số lượng hoặc cân nặng không được là số âm' });
+    }
+
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -68,6 +73,11 @@ export const farrowingsController = {
   update: async (request, reply) => {
     const { farrow_date, dead_piglets, total_weight, note } = request.body;
     const farrowingId = request.params.id;
+
+    if (dead_piglets < 0 || total_weight < 0) {
+      return reply.code(400).send({ success: false, message: 'Số lượng hoặc cân nặng không được là số âm' });
+    }
+
     const connection = await pool.getConnection();
 
     try {

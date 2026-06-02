@@ -448,7 +448,7 @@ export default function PigManage() {
       <Modal
         title={editingId ? 'Cập nhật cá thể lợn' : 'Thêm lợn mới'}
         open={open}
-        onCancel={() => setOpen(false)}
+        onCancel={() => { setOpen(false); setEditingId(null); form.resetFields(); }}
         onOk={handleSubmit}
         okText="Lưu thông tin"
         cancelText="Hủy"
@@ -530,9 +530,9 @@ export default function PigManage() {
       <Modal
         title={`Hồ sơ chi tiết lợn: PIG${String(selectedPig?.id || '').padStart(3, "0")}`}
         open={detailOpen}
-        onCancel={() => setDetailOpen(false)}
+        onCancel={() => { setDetailOpen(false); setSelectedPig(null); setPigHistory({ movements: [], vaccinations: [], reports: [], medicines: [] }); }}
         footer={[
-          <Button key="close" type="primary" onClick={() => setDetailOpen(false)}>Đóng</Button>
+          <Button key="close" type="primary" onClick={() => { setDetailOpen(false); setSelectedPig(null); setPigHistory({ movements: [], vaccinations: [], reports: [], medicines: [] }); }}>Đóng</Button>
         ]}
         width={850}
       >

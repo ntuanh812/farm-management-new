@@ -83,9 +83,22 @@ export const staffController = {
   createstaff: async (request, reply) => {
     const { full_name, phone, email, gender, dob, address, role_id, barn_ids, avatar } = request.body;
     
-    // Basic validation
-    if (!full_name) {
-      return reply.code(400).send({ success: false, message: 'Vui lòng nhập tên nhân viên' });
+    // Validate dữ liệu chặt chẽ (chống sửa F12 hoặc gửi bằng Postman)
+    if (!full_name || typeof full_name !== 'string' || full_name.trim().length === 0 || full_name.length > 100) {
+      return reply.code(400).send({ success: false, message: 'Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)' });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return reply.code(400).send({ success: false, message: 'Email không đúng định dạng' });
+    }
+
+    if (phone && !/^[0-9]{10,11}$/.test(phone)) {
+      return reply.code(400).send({ success: false, message: 'Số điện thoại không hợp lệ' });
+    }
+
+    const validGenders = ['male', 'female', 'other'];
+    if (gender && !validGenders.includes(gender)) {
+      return reply.code(400).send({ success: false, message: 'Giới tính không hợp lệ' });
     }
 
     const conn = await pool.getConnection();
@@ -140,8 +153,21 @@ export const staffController = {
     const { id } = request.params;
     const { full_name, phone, email, gender, dob, address, role_id, barn_ids, avatar } = request.body;
 
-    if (!full_name) {
-      return reply.code(400).send({ success: false, message: 'Vui lòng nhập tên nhân viên' });
+    if (!full_name || typeof full_name !== 'string' || full_name.trim().length === 0 || full_name.length > 100) {
+      return reply.code(400).send({ success: false, message: 'Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)' });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return reply.code(400).send({ success: false, message: 'Email không đúng định dạng' });
+    }
+
+    if (phone && !/^[0-9]{10,11}$/.test(phone)) {
+      return reply.code(400).send({ success: false, message: 'Số điện thoại không hợp lệ' });
+    }
+
+    const validGenders = ['male', 'female', 'other'];
+    if (gender && !validGenders.includes(gender)) {
+      return reply.code(400).send({ success: false, message: 'Giới tính không hợp lệ' });
     }
 
     const conn = await pool.getConnection();
@@ -204,6 +230,11 @@ export const staffController = {
 
     if (!staff_id || !username || !password) {
       return reply.code(400).send({ success: false, message: 'Vui lòng nhập đầy đủ thông tin' });
+    }
+
+    // Tránh bị DoS khi cố tình gửi password siêu dài qua API
+    if (password.length < 6 || password.length > 50) {
+      return reply.code(400).send({ success: false, message: 'Mật khẩu phải từ 6 đến 50 ký tự' });
     }
 
     try {

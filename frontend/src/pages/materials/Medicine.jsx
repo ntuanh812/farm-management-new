@@ -31,6 +31,7 @@ export default function Medicine() {
   // Phân quyền
   const canEdit = user?.role === 'ADMIN' || user?.role === 'VET_DOCTOR';
   const canDelete = user?.role === 'ADMIN';
+  const canImport = user?.role === 'ADMIN';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -179,19 +180,21 @@ export default function Medicine() {
       <PageHeader
         title="Sử dụng Thuốc & Vật tư thú y"
         subtitle="Ghi nhận và theo dõi lịch sử cấp phát thuốc tại các chuồng"
-        actions={canEdit && (
+        actions={
           <Space>
-            <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho thuốc</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              form.resetFields();
-              form.setFieldsValue({ used_at: dayjs(), apply_type: 'barn' });
-              setApplyType('barn');
-              setOpen(true);
-            }}>
-              Ghi nhận thuốc
-            </Button>
+            {canImport && <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho thuốc</Button>}
+            {canEdit && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                form.resetFields();
+                form.setFieldsValue({ used_at: dayjs(), apply_type: 'barn' });
+                setApplyType('barn');
+                setOpen(true);
+              }}>
+                Ghi nhận thuốc
+              </Button>
+            )}
           </Space>
-        )}
+        }
       />
 
       <div className="dashboard__maincontent">
@@ -290,7 +293,7 @@ export default function Medicine() {
               <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
                 <Select showSearch options={medicines.map(m => ({ label: `${m.name} (Tồn: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} placeholder="VD: Kháng sinh, Vitamin..." style={{ flex: 1 }} />
               </Form.Item>
-              <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddMedicineModalOpen(true)} title="Thêm loại thuốc mới" />
+              {canImport && <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddMedicineModalOpen(true)} title="Thêm loại thuốc mới" />}
             </div>
           </Form.Item>
           <Space align="baseline">
@@ -310,7 +313,7 @@ export default function Medicine() {
       <Modal 
         title="Thêm loại thuốc/vật tư mới" 
         open={isAddMedicineModalOpen} 
-        onCancel={() => setIsAddMedicineModalOpen(false)}
+        onCancel={() => { setIsAddMedicineModalOpen(false); addMedicineForm.resetFields(); }}
         onOk={handleAddMedicine}
         okText="Thêm mới"
         cancelText="Hủy"
@@ -328,7 +331,14 @@ export default function Medicine() {
         </Form>
       </Modal>
 
-      <Modal title="Nhập thêm thuốc vào kho" open={isImportModalOpen} onCancel={() => setIsImportModalOpen(false)} onOk={handleImportSubmit} okText="Xác nhận" cancelText="Hủy">
+      <Modal 
+        title="Nhập thêm thuốc vào kho" 
+        open={isImportModalOpen} 
+        onCancel={() => { setIsImportModalOpen(false); importForm.resetFields(); }} 
+        onOk={handleImportSubmit} 
+        okText="Xác nhận" 
+        cancelText="Hủy"
+      >
         <Form form={importForm} layout="vertical">
           <Form.Item label="Tên thuốc/vật tư" required>
             <div style={{ display: 'flex', gap: '8px' }}>

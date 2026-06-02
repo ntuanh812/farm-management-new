@@ -191,7 +191,7 @@ export default function PigDead() {
       <Modal 
         title={<span className="text-danger">Ghi nhận cá thể lợn chết</span>}
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => { setOpen(false); form.resetFields(); }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"

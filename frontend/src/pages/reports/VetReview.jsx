@@ -186,13 +186,13 @@ export default function VetReview() {
       <Modal
         title={selected?.status === 'da_xu_ly' ? `Chi tiết báo cáo bệnh — PIG${String(selected?.pig_id).padStart(3, "0")}` : `Xử lý báo cáo bệnh — PIG${String(selected?.pig_id).padStart(3, "0")}`}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => { setIsModalOpen(false); form.resetFields(); setSelected(null); }}
         onOk={handleSubmit}
         okText="Lưu phản hồi"
         cancelText="Hủy"
         width={700}
         footer={selected?.status === 'da_xu_ly' ? [
-          <Button key="close" onClick={() => setIsModalOpen(false)}>Đóng</Button>
+          <Button key="close" onClick={() => { setIsModalOpen(false); form.resetFields(); setSelected(null); }}>Đóng</Button>
         ] : undefined}
       >
         {selected && (

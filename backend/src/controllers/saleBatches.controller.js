@@ -60,6 +60,10 @@ export const saleBatchesController = {
     const { sold_at, lines } = request.body;
     const staff_id = request.user.staff_id;
     
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return reply.code(400).send({ success: false, message: 'Danh sách lợn xuất bán trống' });
+    }
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -71,18 +75,34 @@ export const saleBatchesController = {
       );
       const batchId = batchResult.insertId;
 
-      if (lines && lines.length > 0) {
-        // 2. Lưu chi tiết từng con xuất bán
-        const lineValues = lines.map(l => [batchId, l.pig_id, l.weight, l.price, l.total_amount, l.reason || null, l.note || null]);
-        await conn.query(
-          'INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount, reason, note) VALUES ?',
-          [lineValues]
-        );
+      // Lấy thông tin trọng lượng chuẩn xác từ DB (chống F12 sửa cân nặng / tổng tiền)
+      const pigIds = lines.map(l => l.pig_id);
+      const [pigs] = await conn.query('SELECT id, current_weight, entry_weight, lifecycle_status FROM pigs WHERE id IN (?)', [pigIds]);
 
-        // 3. Cập nhật trạng thái những con lợn này thành SOLD
-        const pigIds = lines.map(l => l.pig_id);
-        await conn.query('UPDATE pigs SET lifecycle_status = "SOLD" WHERE id IN (?)', [pigIds]);
+      const lineValues = [];
+      for (const l of lines) {
+        const pig = pigs.find(p => p.id === l.pig_id);
+        if (!pig) throw new Error(`Không tìm thấy cá thể lợn PIG${String(l.pig_id).padStart(3, "0")}`);
+        if (pig.lifecycle_status === 'SOLD' || pig.lifecycle_status === 'DEAD') {
+          throw new Error(`Cá thể PIG${String(l.pig_id).padStart(3, "0")} đã chết hoặc đã xuất bán`);
+        }
+
+        const actualWeight = Number(pig.current_weight || pig.entry_weight || 0);
+        const price = Number(l.price || 0);
+        if (price < 0) throw new Error('Đơn giá không hợp lệ (nhỏ hơn 0)');
+        
+        const totalAmount = actualWeight * price;
+        lineValues.push([batchId, l.pig_id, actualWeight, price, totalAmount, l.reason || null, l.note || null]);
       }
+
+      // 2. Lưu chi tiết từng con xuất bán
+      await conn.query(
+        'INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount, reason, note) VALUES ?',
+        [lineValues]
+      );
+
+      // 3. Cập nhật trạng thái những con lợn này thành SOLD
+      await conn.query('UPDATE pigs SET lifecycle_status = "SOLD" WHERE id IN (?)', [pigIds]);
 
       await conn.commit();
       return reply.code(201).send({ success: true, message: 'Ghi nhận xuất bán thành công' });

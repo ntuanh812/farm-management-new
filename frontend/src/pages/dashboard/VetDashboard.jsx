@@ -65,15 +65,13 @@ export default function VetDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const todayStr = dayjs().format("YYYY-MM-DD");
-
   const treatingCases = useMemo(() => {
     return reports.filter(r => r.status === "cho_xu_ly" || r.status === "dang_xu_ly").length;
   }, [reports]);
 
-  const vaccineToday = useMemo(() => {
-    return vaccinations.filter(v => dayjs(v.vaccinated_at).format("YYYY-MM-DD") === todayStr).length;
-  }, [vaccinations, todayStr]);
+  const totalVaccinations = useMemo(() => {
+    return vaccinations.length;
+  }, [vaccinations]);
 
   const recentActivities = useMemo(() => {
     const combined = [
@@ -124,12 +122,12 @@ export default function VetDashboard() {
       trendUp: true,
     },
     {
-      title: "Tiêm phòng",
-      value: vaccineToday,
-      unit: "mũi",
-      icon: <CalendarOutlined />,
+      title: "Tổng lượt tiêm phòng",
+      value: totalVaccinations,
+      unit: "lượt",
+      icon: <MedicineBoxOutlined />,
       type: "barn",
-      trend: "Đã thực hiện",
+      trend: "Đã ghi nhận",
       trendUp: true,
     },
   ];

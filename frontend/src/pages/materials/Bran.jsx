@@ -27,6 +27,7 @@ export default function Bran() {
   // Phân quyền
   const canEdit = user?.role === 'ADMIN' || user?.role === 'FARM_WORKER';
   const canDelete = user?.role === 'ADMIN';
+  const canImport = user?.role === 'ADMIN';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -142,14 +143,16 @@ export default function Bran() {
       <PageHeader
         title="Sử dụng Thức ăn (Cám)"
         subtitle="Ghi nhận và theo dõi lịch sử tiêu thụ cám của các chuồng"
-        actions={canEdit && (
+        actions={
           <Space>
-            <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho cám</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-              Ghi nhận cho ăn
-            </Button>
+            {canImport && <Button icon={<ImportOutlined />} onClick={() => setIsImportModalOpen(true)}>Nhập kho cám</Button>}
+            {canEdit && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+                Ghi nhận cho ăn
+              </Button>
+            )}
           </Space>
-        )}
+        }
       />
 
       <div className="dashboard__maincontent">
@@ -229,7 +232,7 @@ export default function Bran() {
               <Form.Item name="feed_id" noStyle rules={[{ required: true, message: 'Chọn loại cám' }]}>
                 <Select showSearch options={feeds.map(f => ({ label: `${f.name} (Tồn: ${f.stock || 0} kg)`, value: f.id }))} placeholder="Chọn loại cám..." style={{ flex: 1 }} />
               </Form.Item>
-              <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddFeedModalOpen(true)} title="Thêm loại cám mới" />
+              {canImport && <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddFeedModalOpen(true)} title="Thêm loại cám mới" />}
             </div>
           </Form.Item>
           <Form.Item name="quantity_kg" label="Số lượng (kg)" rules={[{ required: true, message: 'Nhập số lượng kg' }]}>

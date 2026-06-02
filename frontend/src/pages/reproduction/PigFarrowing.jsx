@@ -261,7 +261,7 @@ export default function PigFarrowing() {
       <Modal 
         title={editingRecord ? "Cập nhật thông tin đẻ" : "Ghi nhận nái đẻ"}
         open={open} 
-        onCancel={() => { setOpen(false); setEditingRecord(null); }} 
+        onCancel={() => { setOpen(false); setEditingRecord(null); form.resetFields(); }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy"

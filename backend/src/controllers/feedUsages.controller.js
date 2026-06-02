@@ -27,6 +27,11 @@ export const feedUsagesController = {
   create: async (request, reply) => {
     const { barn_id, feed_id, quantity_kg, used_at, note } = request.body;
     const staff_id = request.user.staff_id;
+
+    if (quantity_kg === undefined || isNaN(quantity_kg) || Number(quantity_kg) <= 0) {
+      return reply.code(400).send({ success: false, message: 'Số lượng tiêu thụ phải lớn hơn 0' });
+    }
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();

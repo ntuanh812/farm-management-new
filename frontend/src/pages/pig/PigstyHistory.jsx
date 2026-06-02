@@ -246,7 +246,7 @@ export default function PigstyHistory() {
       <Modal
         title="Chuyển chuồng"
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => { setIsModalOpen(false); form.resetFields(); setSelectedRowKeys([]); }}
         onOk={handleAdd}
         width={800}
         okText="Chuyển chuồng"

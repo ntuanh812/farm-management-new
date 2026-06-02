@@ -38,16 +38,16 @@ export default function FarmReport() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
-    activePigs: [],
-    deadPigs: 0,
-    soldPigs: 0,
+    active_pigs: [],
+    dead_pigs: 0,
+    sold_pigs: 0,
     revenue: 0,
-    barnStats: { total_barns: 0, total_capacity: 0 },
-    feedUsage: [],
-    pendingReports: 0,
-    revenueTrend: [],
-    vaccineStats: [],
-    medicineUsage: []
+    barn_stats: { total_barns: 0, total_capacity: 0 },
+    feed_usage: [],
+    pending_reports: 0,
+    revenue_trend: [],
+    vaccine_stats: [],
+    medicine_usage: []
   });
 
   const fetchReportData = useCallback(async (values = {}) => {
@@ -75,7 +75,7 @@ export default function FarmReport() {
   }, [fetchReportData]);
 
   // Map dữ liệu loại lợn sang tiếng Việt
-  const activePigsMapped = data.activePigs.map(p => ({
+  const activePigsMapped = (data.active_pigs || []).map(p => ({
     ...p,
     categoryName: CATEGORY_MAP[p.category] || p.category
   }));
@@ -149,7 +149,7 @@ export default function FarmReport() {
               </div>
               <div className="stat-card__trend stat-card__trend--up">
                 <RiseOutlined />
-                <span>Đã xuất bán {data.soldPigs} con lợn thịt</span>
+                <span>Đã xuất bán {data.sold_pigs} con lợn thịt</span>
               </div>
             </Card>
           </Col>
@@ -160,7 +160,7 @@ export default function FarmReport() {
                 <div className="stat-card__icon"><FallOutlined /></div>
               </div>
               <div className="stat-card__value">
-                {data.deadPigs}
+                {data.dead_pigs}
                 <span className="stat-card__label"> con</span>
               </div>
               <div className="stat-card__trend stat-card__trend--down">
@@ -176,7 +176,7 @@ export default function FarmReport() {
                 <div className="stat-card__icon"><WarningOutlined /></div>
               </div>
               <div className="stat-card__value">
-                {data.pendingReports}
+                {data.pending_reports}
                 <span className="stat-card__label"> báo cáo</span>
               </div>
               <div className="stat-card__trend stat-card__trend--down">
@@ -222,8 +222,8 @@ export default function FarmReport() {
                     <Pie
                       data={[
                         { name: 'Đang nuôi', count: totalActivePigs },
-                        { name: 'Đã xuất bán', count: data.soldPigs },
-                        { name: 'Đã chết', count: data.deadPigs }
+                        { name: 'Đã xuất bán', count: data.sold_pigs },
+                        { name: 'Đã chết', count: data.dead_pigs }
                       ].filter(item => item.count > 0)}
                       cx="50%" cy="50%"
                       innerRadius={60}
@@ -233,7 +233,7 @@ export default function FarmReport() {
                       nameKey="name"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
-                      {[{ name: 'Đang nuôi', count: totalActivePigs }, { name: 'Đã xuất bán', count: data.soldPigs }, { name: 'Đã chết', count: data.deadPigs }].map((entry, index) => (
+                      {[{ name: 'Đang nuôi', count: totalActivePigs }, { name: 'Đã xuất bán', count: data.sold_pigs }, { name: 'Đã chết', count: data.dead_pigs }].map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#3f8600', '#1890ff', '#d04444'][index]} />
                       ))}
                     </Pie>
@@ -252,7 +252,7 @@ export default function FarmReport() {
             <Card title="Doanh thu xuất bán (Chi tiết theo ngày)" bordered={false} style={{ height: '100%' }}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.revenueTrend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <LineChart data={data.revenue_trend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
@@ -269,7 +269,7 @@ export default function FarmReport() {
             <Card title="Tiêu thụ thức ăn / cám" bordered={false} style={{ height: '100%' }}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.feedUsage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart data={data.feed_usage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="feed_type" />
                     <YAxis />
@@ -290,7 +290,7 @@ export default function FarmReport() {
           <Col xs={24} lg={12}>
             <Card title="Thống kê sử dụng thuốc & vật tư thú y" bordered={false} style={{ height: '100%' }}>
               <Table 
-                dataSource={data.medicineUsage} 
+                dataSource={data.medicine_usage} 
                 columns={[
                   {
                     title: 'STT',
@@ -314,7 +314,7 @@ export default function FarmReport() {
           <Col xs={24} lg={12}>
             <Card title="Chiến dịch tiêm phòng" bordered={false} style={{ height: '100%' }}>
               <Table 
-                dataSource={data.vaccineStats} 
+                dataSource={data.vaccine_stats} 
                 columns={vaccineColumns} 
                 pagination={{ pageSize: 5 }}
                 rowKey="vaccine_name"

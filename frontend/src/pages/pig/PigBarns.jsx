@@ -320,7 +320,7 @@ export default function PigBarns() {
       <Modal
         title={editingId ? 'Cập nhật thông tin chuồng' : 'Thêm chuồng mới'}
         open={open}
-        onCancel={() => setOpen(false)}
+        onCancel={() => { setOpen(false); setEditingId(null); form.resetFields(); }}
         onOk={handleSubmit}
         okText="Lưu thông tin"
         cancelText="Hủy"
