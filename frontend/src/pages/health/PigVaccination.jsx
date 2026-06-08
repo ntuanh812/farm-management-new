@@ -403,8 +403,8 @@ export default function PigVaccination() {
             <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
               <InputNumber min={0.1} step={0.1} className="w-100" />
             </Form.Item>
-            <Form.Item name="unit" label="Đơn vị" initialValue="liều" rules={[{ required: true, message: 'Chọn đơn vị' }]}>
-              <Select options={[{label:'liều', value:'liều'}, {label:'lọ', value:'lọ'}, {label:'ml', value:'ml'}]} className="w-120" />
+          <Form.Item name="unit" label="Đơn vị" initialValue="liều">
+            <Input disabled className="w-120" style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
             </Form.Item>
           </Space>
 
@@ -439,8 +439,8 @@ export default function PigVaccination() {
           <Form.Item name="name" label="Tên vaccine" rules={[{ required: true, message: 'Vui lòng nhập tên vaccine' }]}>
             <Input placeholder="Ví dụ: Vaccine Tai xanh..." />
           </Form.Item>
-          <Form.Item name="unit" label="Đơn vị tính" initialValue="liều" rules={[{ required: true, message: 'Vui lòng chọn đơn vị' }]}>
-            <Select options={[{label:'liều', value:'liều'}, {label:'lọ', value:'lọ'}, {label:'ml', value:'ml'}]} placeholder="VD: liều, lọ..." />
+          <Form.Item name="unit" label="Đơn vị tính" initialValue="liều">
+            <Input disabled style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
           </Form.Item>
           <Form.Item name="stock" label="Số lượng tồn ban đầu">
             <InputNumber min={0} className="w-100" placeholder="0" />

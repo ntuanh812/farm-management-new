@@ -50,7 +50,7 @@ INSERT INTO feeds (name, stock) VALUES
 
 INSERT INTO medicines (name, unit, stock) VALUES
 ('Kháng sinh Amox', 'lọ', 50),
-('Enrofloxacin', 'ml', 200),
+('Enrofloxacin', 'gói', 200),
 ('Colistin', 'lọ', 50),
 ('Tylosin', 'gói', 50),
 ('Doxycycline', 'gói', 120),
@@ -105,7 +105,7 @@ INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount
 
 -- Lịch sử tiêm phòng & sử dụng thức ăn
 INSERT INTO vaccine_usages (pig_id, barn_id, vaccine_id, quantity, unit, vaccinated_at, performed_by) VALUES
-(NULL, 4, 1, 100, 'liều', '2026-10-15', 3);
+(NULL, 4, 1, 100, 'liều', '2026-5-15', 3);
 
 INSERT INTO feed_usages (barn_id, feed_id, quantity_kg, used_at, staff_id) VALUES
 (4, 1, 50, '2026-1-01', 2);

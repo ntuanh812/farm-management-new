@@ -291,7 +291,16 @@ export default function Medicine() {
           <Form.Item label="Tên thuốc/Vật tư" required>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
-                <Select showSearch options={medicines.map(m => ({ label: `${m.name} (Tồn: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} placeholder="VD: Kháng sinh, Vitamin..." style={{ flex: 1 }} />
+                <Select 
+                  showSearch 
+                  options={medicines.map(m => ({ label: `${m.name} (Tồn: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} 
+                  placeholder="VD: Kháng sinh, Vitamin..." 
+                  style={{ flex: 1 }} 
+                  onChange={(val) => {
+                    const med = medicines.find(m => m.id === val);
+                    if (med) form.setFieldsValue({ unit: med.unit });
+                  }}
+                />
               </Form.Item>
               {canImport && <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddMedicineModalOpen(true)} title="Thêm loại thuốc mới" />}
             </div>
@@ -301,7 +310,7 @@ export default function Medicine() {
               <InputNumber min={0.1} step={0.1} className="w-100" />
             </Form.Item>
             <Form.Item name="unit" label="Đơn vị" rules={[{ required: true, message: 'Chọn đơn vị' }]}>
-              <Select options={UNIT_TYPES.map(u => ({ label: u, value: u }))} placeholder="VD: ml" className="w-120" />
+              <Input disabled className="w-120" style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
             </Form.Item>
           </Space>
           <Form.Item name="note" label="Ghi chú">
@@ -343,14 +352,28 @@ export default function Medicine() {
           <Form.Item label="Tên thuốc/vật tư" required>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Chọn thuốc để nhập' }]}>
-                <Select showSearch options={medicines.map(m => ({ label: `${m.name} (Tồn hiện tại: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} placeholder="Chọn thuốc..." style={{ flex: 1 }} />
+                <Select 
+                  showSearch 
+                  options={medicines.map(m => ({ label: `${m.name} (Tồn hiện tại: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} 
+                  placeholder="Chọn thuốc..." 
+                  style={{ flex: 1 }} 
+                  onChange={(val) => {
+                    const med = medicines.find(m => m.id === val);
+                    if (med) importForm.setFieldsValue({ unit: med.unit });
+                  }}
+                />
               </Form.Item>
               <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddMedicineModalOpen(true)} title="Thêm loại thuốc mới" />
             </div>
           </Form.Item>
-          <Form.Item name="quantity" label="Số lượng nhập thêm" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-            <InputNumber min={0.1} step={0.1} className="w-100" placeholder="Ví dụ: 100" />
-          </Form.Item>
+          <Space align="baseline">
+            <Form.Item name="quantity" label="Số lượng nhập thêm" rules={[{ required: true, message: 'Nhập số lượng' }]}>
+              <InputNumber min={0.1} step={0.1} className="w-100" placeholder="Ví dụ: 100" />
+            </Form.Item>
+            <Form.Item name="unit" label="Đơn vị">
+              <Input disabled className="w-120" style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
+            </Form.Item>
+          </Space>
         </Form>
       </Modal>
       </div>
