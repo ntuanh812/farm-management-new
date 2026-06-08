@@ -1,115 +1,155 @@
-import pool from '../config/db.js';
+import prisma from '../config/prisma.js';
 
 export const reportsController = {
   getOverview: async (request, reply) => {
     try {
       const { start_date, end_date } = request.query;
 
-      // 1. Lợn đang nuôi (Cơ cấu đàn) - Thường lấy số liệu hiện tại nên không bọc filter ngày
-      const [activePigs] = await pool.query(
-        "SELECT category, COUNT(*) as count FROM pigs WHERE lifecycle_status = 'ACTIVE' GROUP BY category"
-      );
+      // Chuẩn bị điều kiện lọc theo ngày chung
+      let dateFilter = {};
+      if (start_date && end_date) {
+        dateFilter = {
+          gte: new Date(`${start_date}T00:00:00.000Z`),
+          lte: new Date(`${end_date}T23:59:59.999Z`)
+        };
+      }
+
+      // 1. Lợn đang nuôi (Cơ cấu đàn)
+      const activePigsAgg = await prisma.pigs.groupBy({
+        by: ['category'],
+        _count: { _all: true },
+        where: { lifecycle_status: 'ACTIVE' }
+      });
+      const activePigs = activePigsAgg.map(p => ({
+        category: p.category,
+        count: p._count._all
+      }));
 
       // 2. Lợn chết
-      let deadQuery = "SELECT COUNT(*) as total FROM pig_deaths WHERE 1=1";
-      let deadParams = [];
-      if (start_date && end_date) {
-        deadQuery += " AND death_date >= ? AND death_date <= ?";
-        deadParams.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
-      }
-      const [dead] = await pool.query(deadQuery, deadParams);
+      const dead_pigs = await prisma.pig_deaths.count({
+        where: start_date && end_date ? { death_date: dateFilter } : {}
+      });
 
-      // 3. Xuất bán & Doanh thu
-      let saleQuery = `
-        SELECT COUNT(sbl.id) as sold_pigs, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) as revenue
-        FROM sale_batches sb
-        LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
-        LEFT JOIN pigs p ON sbl.pig_id = p.id
-        WHERE 1=1
-      `;
-      let saleParams = [];
-      if (start_date && end_date) {
-        saleQuery += " AND sb.sold_at >= ? AND sb.sold_at <= ?";
-        saleParams.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
-      }
-      const [sales] = await pool.query(saleQuery, saleParams);
+      // 3. Xuất bán, Doanh thu & 7. Xu hướng doanh thu theo ngày
+      const saleBatches = await prisma.sale_batches.findMany({
+        where: start_date && end_date ? { sold_at: dateFilter } : {},
+        include: {
+          sale_batch_lines: {
+            include: { pigs: true }
+          }
+        },
+        orderBy: { sold_at: 'asc' }
+      });
+
+      let sold_pigs = 0;
+      let revenue = 0;
+      const revenueTrendMap = {};
+
+      saleBatches.forEach(batch => {
+        const soldAt = batch.sold_at;
+        // Format ngày: DD/MM/YYYY
+        const dateStr = [
+          String(soldAt.getDate()).padStart(2, '0'),
+          String(soldAt.getMonth() + 1).padStart(2, '0'),
+          soldAt.getFullYear()
+        ].join('/');
+
+        if (!revenueTrendMap[dateStr]) {
+          revenueTrendMap[dateStr] = { date: dateStr, revenue: 0, time: soldAt.getTime() };
+        }
+
+        batch.sale_batch_lines.forEach(line => {
+          sold_pigs += 1;
+          const purchasePrice = line.pigs?.purchase_price || 0;
+          const profit = Number(line.total_amount || 0) - Number(purchasePrice);
+          revenue += profit;
+          revenueTrendMap[dateStr].revenue += profit;
+        });
+      });
+
+      const revenue_trend = Object.values(revenueTrendMap)
+        .sort((a, b) => a.time - b.time)
+        .map(r => ({ date: r.date, revenue: r.revenue }));
 
       // 4. Chuồng trại (hiện tại)
-      const [barnStats] = await pool.query(
-        "SELECT COUNT(*) as total_barns, COALESCE(SUM(capacity), 0) as total_capacity FROM barns WHERE status != 'MAINTENANCE'"
-      );
+      const barnAgg = await prisma.barns.aggregate({
+        _count: { _all: true },
+        _sum: { capacity: true },
+        where: { status: { not: 'MAINTENANCE' } }
+      });
+      const barn_stats = {
+        total_barns: barnAgg._count._all || 0,
+        total_capacity: Number(barnAgg._sum.capacity || 0)
+      };
 
       // 5. Tiêu thụ thức ăn
-      let feedQuery = "SELECT fd.name AS feed_type, COALESCE(SUM(fu.quantity_kg), 0) as total_kg FROM feed_usages fu JOIN feeds fd ON fu.feed_id = fd.id WHERE 1=1";
-      let feedParams = [];
-      if (start_date && end_date) {
-        feedQuery += " AND fu.used_at >= ? AND fu.used_at <= ?";
-        feedParams.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
-      }
-      feedQuery += " GROUP BY fd.name";
-      const [feedUsage] = await pool.query(feedQuery, feedParams);
+      const feedAgg = await prisma.feed_usages.groupBy({
+        by: ['feed_id'],
+        _sum: { quantity_kg: true },
+        where: start_date && end_date ? { used_at: dateFilter } : {}
+      });
+      const feedIds = feedAgg.map(f => f.feed_id).filter(Boolean);
+      const feedsInfo = await prisma.feeds.findMany({ where: { id: { in: feedIds } } });
+      const feedMap = Object.fromEntries(feedsInfo.map(f => [f.id, f.name]));
+      
+      const feed_usage = feedAgg.map(f => ({
+        feed_type: feedMap[f.feed_id] || 'Không xác định',
+        total_kg: Number(f._sum.quantity_kg || 0)
+      }));
 
       // 6. Báo cáo bệnh chờ xử lý (hiện tại)
-      const [pendingReports] = await pool.query(
-        "SELECT COUNT(*) as total FROM pig_reports WHERE status = 'cho_xu_ly'"
-      );
-
-      // 7. Xu hướng doanh thu chi tiết theo ngày
-      let revQuery = `
-        SELECT DATE_FORMAT(sb.sold_at, '%d/%m/%Y') AS date, COALESCE(SUM(sbl.total_amount - COALESCE(p.purchase_price, 0)), 0) AS revenue
-        FROM sale_batches sb
-        LEFT JOIN sale_batch_lines sbl ON sb.id = sbl.sale_batch_id
-        LEFT JOIN pigs p ON sbl.pig_id = p.id
-        WHERE 1=1
-      `;
-      let revParams = [];
-      if (start_date && end_date) {
-        revQuery += " AND sb.sold_at >= ? AND sb.sold_at <= ?";
-        revParams.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
-      }
-      revQuery += " GROUP BY date ORDER BY MIN(sb.sold_at) ASC";
-      const [revenueTrend] = await pool.query(revQuery, revParams);
+      const pending_reports = await prisma.pig_reports.count({
+        where: { status: 'cho_xu_ly' }
+      });
 
       // 8. Thống kê mũi tiêm vaccine
-      let vacQuery = "SELECT vc.name AS vaccine_name, COUNT(*) as total_doses FROM vaccine_usages v JOIN vaccines vc ON v.vaccine_id = vc.id WHERE 1=1";
-      let vacParams = [];
-      if (start_date && end_date) {
-        vacQuery += " AND v.vaccinated_at >= ? AND v.vaccinated_at <= ?";
-        vacParams.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
-      }
-      vacQuery += " GROUP BY vc.name ORDER BY total_doses DESC";
-      const [vaccineStats] = await pool.query(vacQuery, vacParams);
+      const vacAgg = await prisma.vaccine_usages.groupBy({
+        by: ['vaccine_id'],
+        _count: { _all: true },
+        where: start_date && end_date ? { vaccinated_at: dateFilter } : {}
+      });
+      const vacIds = vacAgg.map(v => v.vaccine_id).filter(Boolean);
+      const vaccinesInfo = await prisma.vaccines.findMany({ where: { id: { in: vacIds } } });
+      const vacMap = Object.fromEntries(vaccinesInfo.map(v => [v.id, v.name]));
+      
+      const vaccine_stats = vacAgg.map(v => ({
+        vaccine_name: vacMap[v.vaccine_id] || 'Không xác định',
+        total_doses: v._count._all
+      })).sort((a, b) => b.total_doses - a.total_doses);
 
       // 9. Thống kê sử dụng thuốc
-      let medQuery = "SELECT m.name AS medicine_name, SUM(mu.quantity) as total_quantity, MAX(mu.unit) as unit FROM medicine_usages mu JOIN medicines m ON mu.medicine_id = m.id WHERE 1=1";
-      let medParams = [];
-      if (start_date && end_date) {
-        medQuery += " AND mu.used_at >= ? AND mu.used_at <= ?";
-        medParams.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
-      }
-      medQuery += " GROUP BY m.name ORDER BY total_quantity DESC";
-      const [medicineUsage] = await pool.query(medQuery, medParams);
+      const medAgg = await prisma.medicine_usages.groupBy({
+        by: ['medicine_id', 'unit'],
+        _sum: { quantity: true },
+        where: start_date && end_date ? { used_at: dateFilter } : {}
+      });
+      const medIds = medAgg.map(m => m.medicine_id).filter(Boolean);
+      const medicinesInfo = await prisma.medicines.findMany({ where: { id: { in: medIds } } });
+      const medMap = Object.fromEntries(medicinesInfo.map(m => [m.id, m.name]));
+      
+      const medicine_usage = medAgg.map(m => ({
+        medicine_name: medMap[m.medicine_id] || 'Không xác định',
+        total_quantity: Number(m._sum.quantity || 0),
+        unit: m.unit || ''
+      })).sort((a, b) => b.total_quantity - a.total_quantity);
 
       return reply.send({
         success: true,
         data: {
-          active_pigs: activePigs.map(p => ({ ...p, count: Number(p.count) })),
-          dead_pigs: Number(dead[0].total || 0),
-          sold_pigs: Number(sales[0].sold_pigs || 0),
-          revenue: Number(sales[0].revenue || 0),
-          barn_stats: {
-            total_barns: Number(barnStats[0].total_barns || 0),
-            total_capacity: Number(barnStats[0].total_capacity || 0)
-          },
-          feed_usage: feedUsage.map(f => ({ ...f, total_kg: Number(f.total_kg) })),
-          pending_reports: Number(pendingReports[0].total || 0),
-          revenue_trend: revenueTrend.map(r => ({ date: r.date, revenue: Number(r.revenue) })),
-          vaccine_stats: vaccineStats.map(v => ({ ...v, total_doses: Number(v.total_doses) })),
-          medicine_usage: medicineUsage.map(m => ({ ...m, total_quantity: Number(m.total_quantity) }))
+          active_pigs: activePigs,
+          dead_pigs: dead_pigs,
+          sold_pigs: sold_pigs,
+          revenue: revenue,
+          barn_stats: barn_stats,
+          feed_usage: feed_usage,
+          pending_reports: pending_reports,
+          revenue_trend: revenue_trend,
+          vaccine_stats: vaccine_stats,
+          medicine_usage: medicine_usage
         }
       });
     } catch (error) {
-      request.log.error(error);
+      request.log?.error?.(error) || console.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi tải báo cáo tổng quan' });
     }
   }

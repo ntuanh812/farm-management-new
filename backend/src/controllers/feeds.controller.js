@@ -1,9 +1,9 @@
-import pool from '../config/db.js';
+import prisma from '../config/prisma.js';
 
 export const feedsController = {
   getAll: async (request, reply) => {
     try {
-      const [rows] = await pool.query('SELECT * FROM feeds ORDER BY created_at DESC');
+      const rows = await prisma.feeds.findMany({ orderBy: { created_at: 'desc' } });
       return reply.send({ success: true, data: rows });
     } catch (error) {
       request.log.error(error);
@@ -18,11 +18,11 @@ export const feedsController = {
     }
     
     try {
-      const [result] = await pool.query('INSERT INTO feeds (name, stock) VALUES (?, ?)', [name, stock || 0]);
+      const result = await prisma.feeds.create({ data: { name, stock: stock ? Number(stock) : 0 } });
       return reply.code(201).send({ 
         success: true, 
         message: 'Thêm loại cám thành công',
-        data: { id: result.insertId, name, stock: stock || 0 }
+        data: result
       });
     } catch (error) {
       request.log?.error?.(error) || console.error(error);
@@ -35,7 +35,10 @@ export const feedsController = {
     const { quantity } = request.body;
     if (!quantity || quantity <= 0) return reply.code(400).send({ success: false, message: 'Số lượng nhập phải lớn hơn 0' });
     try {
-      await pool.query('UPDATE feeds SET stock = COALESCE(stock, 0) + ? WHERE id = ?', [quantity, id]);
+      await prisma.feeds.update({
+        where: { id: Number(id) },
+        data: { stock: { increment: Number(quantity) } }
+      });
       return reply.send({ success: true, message: 'Nhập thêm cám thành công' });
     } catch (error) {
       request.log?.error?.(error) || console.error(error);

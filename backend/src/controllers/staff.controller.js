@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import prisma from '../config/prisma.js';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from 'path';
@@ -11,46 +11,35 @@ export const staffController = {
   // 1. Lấy danh sách nhân sự tổng hợp
   getAllStaff: async (request, reply) => {
     try {
-      // NOTE: staffs has role_id, not role.
-      // e.role is used in previous query, I need to check schema.
-      // staffs: role_id.
-      const [rows] = await pool.query(`
-        SELECT 
-          e.id, e.full_name, e.phone, e.email, e.gender, e.dob, e.address, e.avatar_url AS avatar, e.role_id, e.created_at,
-          r.name AS role_name, r.code as role_code,
-          a.id AS account_id, a.username, a.is_active,
-          b.id AS barn_id, b.name AS barn_name
-        FROM staffs e
-        LEFT JOIN roles r ON e.role_id = r.id
-        LEFT JOIN accounts a ON e.id = a.staff_id
-        LEFT JOIN staff_barns eb ON e.id = eb.staff_id
-        LEFT JOIN barns b ON eb.barn_id = b.id
-        ORDER BY 
-          CASE WHEN r.code = 'ADMIN' THEN 0 ELSE 1 END,
-          e.created_at DESC
-      `);
-
-      const staffMap = new Map();
-      rows.forEach(row => {
-        if (!staffMap.has(row.id)) {
-          staffMap.set(row.id, {
-            id: row.id, full_name: row.full_name, phone: row.phone, email: row.email,
-            gender: row.gender, dob: row.dob, address: row.address, avatar: row.avatar,
-            role_id: row.role_id, role_name: row.role_name, role_code: row.role_code,
-            created_at: row.created_at, account_id: row.account_id,
-            username: row.username, is_active: row.is_active, barns: []
-          });
-        }
-        if (row.barn_id) {
-          const currentStaff = staffMap.get(row.id);
-          const exists = currentStaff.barns.find(b => b.id === row.barn_id);
-          if (!exists) {
-            currentStaff.barns.push({ id: row.barn_id, name: row.barn_name });
+      const staffsList = await prisma.staffs.findMany({
+        include: {
+          roles: true,
+          accounts: true,
+          staff_barns: {
+            include: { barns: true }
           }
-        }
+        },
+        orderBy: { created_at: 'desc' }
       });
 
-      const data = Array.from(staffMap.values());
+      const data = staffsList.map(staff => {
+        const account = staff.accounts; // Quan hệ 1-1 với Account (Không phải mảng)
+        return {
+          id: staff.id, full_name: staff.full_name, phone: staff.phone, email: staff.email,
+          gender: staff.gender, dob: staff.dob, address: staff.address, avatar: staff.avatar_url,
+          role_id: staff.role_id, role_name: staff.roles?.name, role_code: staff.roles?.code,
+          created_at: staff.created_at, account_id: account?.id,
+          username: account?.username, is_active: account?.is_active,
+          barns: staff.staff_barns.map(sb => ({ id: sb.barns?.id, name: sb.barns?.name }))
+        };
+      });
+
+      // Đưa ADMIN lên đầu danh sách
+      data.sort((a, b) => {
+        const aIsAdmin = a.role_code === 'ADMIN' ? 0 : 1;
+        const bIsAdmin = b.role_code === 'ADMIN' ? 0 : 1;
+        return aIsAdmin - bIsAdmin;
+      });
 
       return reply.send({ success: true, data });
     } catch (error) {
@@ -63,15 +52,20 @@ export const staffController = {
   // 2. Lấy danh sách NV chưa có tài khoản
   getstaffsNoAccount: async (request, reply) => {
     try {
-      const [rows] = await pool.query(`
-        SELECT e.id, e.full_name, e.role_id, r.name as role_name 
-        FROM staffs e
-        LEFT JOIN roles r ON e.role_id = r.id
-        LEFT JOIN accounts a ON e.id = a.staff_id
-        WHERE a.id IS NULL
-        ORDER BY e.full_name
-      `);
-      return reply.send({ success: true, data: rows });
+      const staffs = await prisma.staffs.findMany({
+        where: {
+          accounts: null
+        },
+        include: { roles: true },
+        orderBy: { full_name: 'asc' }
+      });
+      const data = staffs.map(e => ({
+        id: e.id,
+        full_name: e.full_name,
+        role_id: e.role_id,
+        role_name: e.roles?.name
+      }));
+      return reply.send({ success: true, data });
     } catch (error) {
       if (request.log) request.log.error(error);
       else console.error(error);
@@ -101,50 +95,49 @@ export const staffController = {
       return reply.code(400).send({ success: false, message: 'Giới tính không hợp lệ' });
     }
 
-    const conn = await pool.getConnection();
     try {
-      await conn.beginTransaction();
-
-      // Insert nhân viên
-      const [empResult] = await conn.query(
-        `INSERT INTO staffs (full_name, phone, email, gender, dob, address, avatar_url, role_id) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, avatar || null, role_id || null]
-      );
-      
-      const staffId = empResult.insertId;
-
-      // Nếu có phân công chuồng, Insert vào staff_barns
-      if (Array.isArray(barn_ids) && barn_ids.length > 0) {
-        // Lọc trùng barn_ids
-        const uniqueBarnIds = [...new Set(barn_ids)];
-        const barnValues = uniqueBarnIds.map(barnId => [staffId, barnId]);
+      const staffId = await prisma.$transaction(async (tx) => {
+        // Insert nhân viên
+        const empResult = await tx.staffs.create({
+          data: {
+            full_name,
+            phone: phone || null,
+            email: email || null,
+            gender: gender || 'male',
+            dob: dob ? new Date(dob) : null,
+            address: address || null,
+            avatar_url: avatar || null,
+            role_id: role_id ? Number(role_id) : null
+          }
+        });
         
-        await conn.query(
-          `INSERT INTO staff_barns (staff_id, barn_id) VALUES ?`,
-          [barnValues]
-        );
-      }
+        const newStaffId = empResult.id;
 
-      await conn.commit();
+        // Nếu có phân công chuồng, Insert vào staff_barns
+        if (Array.isArray(barn_ids) && barn_ids.length > 0) {
+          const uniqueBarnIds = [...new Set(barn_ids)];
+          await tx.staff_barns.createMany({
+            data: uniqueBarnIds.map(barnId => ({ staff_id: newStaffId, barn_id: Number(barnId) }))
+          });
+        }
+        return newStaffId;
+      });
+
       return reply.code(201).send({ success: true, message: 'Thêm nhân viên thành công', data: { id: staffId } });
     } catch (error) {
-      await conn.rollback();
       if (request.log) request.log.error(error);
       else console.error(error);
       
-      if (error.code === 'ER_DUP_ENTRY') {
-        if (error.message.includes('phone')) {
+      if (error.code === 'P2002') {
+        if (error.meta?.target?.includes('phone')) {
           return reply.code(400).send({ success: false, message: 'Số điện thoại đã tồn tại' });
         }
-        if (error.message.includes('email')) {
+        if (error.meta?.target?.includes('email')) {
           return reply.code(400).send({ success: false, message: 'Email đã tồn tại' });
         }
       }
       
       return reply.code(500).send({ success: false, message: 'Lỗi khi tạo nhân viên' });
-    } finally {
-      conn.release();
     }
   },
 
@@ -170,36 +163,37 @@ export const staffController = {
       return reply.code(400).send({ success: false, message: 'Giới tính không hợp lệ' });
     }
 
-    const conn = await pool.getConnection();
     try {
-      await conn.beginTransaction();
+      const oldAvatar = await prisma.$transaction(async (tx) => {
+        // Lấy thông tin avatar cũ
+        const oldStaff = await tx.staffs.findUnique({
+          where: { id: Number(id) },
+          select: { avatar_url: true }
+        });
+        const oldAvatarUrl = oldStaff?.avatar_url;
 
-      // Lấy thông tin avatar cũ
-      const [oldStaff] = await conn.query('SELECT avatar_url AS avatar FROM staffs WHERE id = ?', [id]);
-      const oldAvatar = oldStaff[0]?.avatar;
+        // Cập nhật thông tin nhân viên
+        await tx.staffs.update({
+          where: { id: Number(id) },
+          data: {
+            full_name, phone: phone || null, email: email || null, gender: gender || 'male', 
+            dob: dob ? new Date(dob) : null, address: address || null, avatar_url: avatar || null, 
+            role_id: role_id ? Number(role_id) : null
+          }
+        });
 
-      // Cập nhật thông tin nhân viên
-      await conn.query(
-        `UPDATE staffs 
-         SET full_name = ?, phone = ?, email = ?, gender = ?, dob = ?, address = ?, avatar_url = ?, role_id = ?
-         WHERE id = ?`,
-        [full_name, phone || null, email || null, gender || 'male', dob || null, address || null, avatar || null, role_id || null, id]
-      );
-
-      // Cập nhật phân công chuồng
-      if (Array.isArray(barn_ids)) {
-        await conn.query('DELETE FROM staff_barns WHERE staff_id = ?', [id]);
-        if (barn_ids.length > 0) {
-          const uniqueBarnIds = [...new Set(barn_ids)];
-          const barnValues = uniqueBarnIds.map(barnId => [id, barnId]);
-          await conn.query(
-            'INSERT INTO staff_barns (staff_id, barn_id) VALUES ?',
-            [barnValues]
-          );
+        // Cập nhật phân công chuồng
+        if (Array.isArray(barn_ids)) {
+          await tx.staff_barns.deleteMany({ where: { staff_id: Number(id) } });
+          if (barn_ids.length > 0) {
+            const uniqueBarnIds = [...new Set(barn_ids)];
+            await tx.staff_barns.createMany({
+              data: uniqueBarnIds.map(barnId => ({ staff_id: Number(id), barn_id: Number(barnId) }))
+            });
+          }
         }
-      }
-
-      await conn.commit();
+        return oldAvatarUrl;
+      });
 
       // Xóa file ảnh cũ vật lý nếu có sự thay đổi ảnh (thay ảnh mới hoặc xóa ảnh về rỗng)
       if (oldAvatar && oldAvatar !== avatar) {
@@ -211,16 +205,13 @@ export const staffController = {
 
       return reply.send({ success: true, message: 'Cập nhật nhân viên thành công' });
     } catch (error) {
-      await conn.rollback();
       if (request.log) request.log.error(error);
       else console.error(error);
-      if (error.code === 'ER_DUP_ENTRY') {
-        if (error.message.includes('phone')) return reply.code(400).send({ success: false, message: 'Số điện thoại đã tồn tại' });
-        if (error.message.includes('email')) return reply.code(400).send({ success: false, message: 'Email đã tồn tại' });
+      if (error.code === 'P2002') {
+        if (error.meta?.target?.includes('phone')) return reply.code(400).send({ success: false, message: 'Số điện thoại đã tồn tại' });
+        if (error.meta?.target?.includes('email')) return reply.code(400).send({ success: false, message: 'Email đã tồn tại' });
       }
       return reply.code(500).send({ success: false, message: 'Lỗi khi cập nhật nhân viên' });
-    } finally {
-      conn.release();
     }
   },
 
@@ -239,24 +230,23 @@ export const staffController = {
 
     try {
       // 1. Kiểm tra staff đã có tài khoản chưa
-      const [existingAccount] = await pool.query('SELECT id FROM accounts WHERE staff_id = ?', [staff_id]);
-      if (existingAccount.length > 0) {
+      const existingAccount = await prisma.accounts.findFirst({ where: { staff_id: Number(staff_id) } });
+      if (existingAccount) {
         return reply.code(400).send({ success: false, message: 'Nhân viên này đã có tài khoản' });
       }
 
       // 2. Kiểm tra username trùng lặp
-      const [existingUsername] = await pool.query('SELECT id FROM accounts WHERE username = ?', [username]);
-      if (existingUsername.length > 0) {
+      const existingUsername = await prisma.accounts.findFirst({ where: { username } });
+      if (existingUsername) {
         return reply.code(400).send({ success: false, message: 'Tên đăng nhập đã tồn tại' });
       }
 
       // 3. Mã hóa mật khẩu
       const password_hash = await bcrypt.hash(password, 10);
 
-      await pool.query(
-        `INSERT INTO accounts (staff_id, username, password_hash, is_active) VALUES (?, ?, ?, 1)`,
-        [staff_id, username, password_hash]
-      );
+      await prisma.accounts.create({
+        data: { staff_id: Number(staff_id), username, password_hash, is_active: true }
+      });
 
       return reply.code(201).send({ success: true, message: 'Tạo tài khoản thành công' });
     } catch (error) {
@@ -276,22 +266,16 @@ export const staffController = {
     }
 
     try {
-      const [result] = await pool.query(
-        'UPDATE accounts SET is_active = ? WHERE id = ?',
-        [is_active ? 1 : 0, id]
-      );
-
-      // Thay vì affectedRows === 0, nên kiểm tra sự tồn tại nếu cần thiết
-      if (result.affectedRows === 0) {
-        // Kiểm tra xem ID có tồn tại hay không
-        const [check] = await pool.query('SELECT id FROM accounts WHERE id = ?', [id]);
-        if (check.length === 0) {
-          return reply.code(404).send({ success: false, message: 'Không tìm thấy tài khoản' });
-        }
-      }
+      await prisma.accounts.update({
+        where: { id: Number(id) },
+        data: { is_active: Boolean(is_active) }
+      });
 
       return reply.send({ success: true, message: 'Đã cập nhật trạng thái tài khoản' });
     } catch (error) {
+      if (error.code === 'P2025') {
+        return reply.code(404).send({ success: false, message: 'Không tìm thấy tài khoản' });
+      }
       if (request.log) request.log.error(error);
       else console.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi khi cập nhật tài khoản' });
@@ -306,20 +290,16 @@ export const staffController = {
     try {
       const password_hash = await bcrypt.hash(defaultPassword, 10);
 
-      const [result] = await pool.query(
-        'UPDATE accounts SET password_hash = ? WHERE id = ?',
-        [password_hash, id]
-      );
-
-      if (result.affectedRows === 0) {
-        const [check] = await pool.query('SELECT id FROM accounts WHERE id = ?', [id]);
-        if (check.length === 0) {
-          return reply.code(404).send({ success: false, message: 'Không tìm thấy tài khoản' });
-        }
-      }
+      await prisma.accounts.update({
+        where: { id: Number(id) },
+        data: { password_hash }
+      });
 
       return reply.send({ success: true, message: `Đã reset mật khẩu về: ${defaultPassword}` });
     } catch (error) {
+      if (error.code === 'P2025') {
+        return reply.code(404).send({ success: false, message: 'Không tìm thấy tài khoản' });
+      }
       if (request.log) request.log.error(error);
       else console.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi khi reset mật khẩu' });

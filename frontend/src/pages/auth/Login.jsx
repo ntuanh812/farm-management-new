@@ -27,7 +27,7 @@ export const Login = () => {
   return (
     <div className="login-page">
       <div className="auth-container">
-        <Card className="auth-card" bordered={false}>
+        <Card className="auth-card" variant="borderless">
           {/* Header */}
           <div className="auth-header">
             <div className="auth-logo">🐷</div>
@@ -44,7 +44,8 @@ export const Login = () => {
           {/* Error */}
           {error && (
             <Alert
-              message={error}
+              title="Đăng nhập thất bại"
+              description={error}
               type="error"
               showIcon
               className="auth-alert"

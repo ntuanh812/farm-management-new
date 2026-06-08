@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model accounts {
+  id            Int       @id @default(autoincrement())
+  staff_id      Int       @unique(map: "staff_id")
+  username      String    @unique(map: "username") @db.VarChar(50)
+  password_hash String    @db.VarChar(255)
+  is_active     Boolean?  @default(true)
+  last_login    DateTime? @db.DateTime(0)
+  created_at    DateTime? @default(now()) @db.DateTime(0)
+  staffs        staffs    @relation(fields: [staff_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "accounts_ibfk_1")
+}
+
+model barns {
+  id                                              Int               @id @default(autoincrement())
+  code                                            String            @unique(map: "code") @db.VarChar(50)
+  name                                            String            @db.VarChar(255)
+  capacity                                        Int
+  barn_type                                       String?           @db.VarChar(100)
+  status                                          String?           @default("ACTIVE") @db.VarChar(50)
+  note                                            String?           @db.Text
+  created_at                                      DateTime?         @default(now()) @db.DateTime(0)
+  feed_usages                                     feed_usages[]
+  medicine_usages                                 medicine_usages[]
+  pig_movements_pig_movements_from_barn_idTobarns pig_movements[]   @relation("pig_movements_from_barn_idTobarns")
+  pig_movements_pig_movements_to_barn_idTobarns   pig_movements[]   @relation("pig_movements_to_barn_idTobarns")
+  pig_reports                                     pig_reports[]
+  pigs                                            pigs[]
+  staff_barns                                     staff_barns[]
+  vaccine_usages                                  vaccine_usages[]
+}
+
+model feed_usages {
+  id          Int       @id @default(autoincrement())
+  barn_id     Int
+  feed_id     Int
+  quantity_kg Decimal   @db.Decimal(10, 2)
+  used_at     DateTime  @db.Date
+  staff_id    Int
+  note        String?   @db.Text
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  barns       barns     @relation(fields: [barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feed_usages_ibfk_1")
+  feeds       feeds     @relation(fields: [feed_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feed_usages_ibfk_2")
+  staffs      staffs    @relation(fields: [staff_id], references: [id], onUpdate: Restrict, map: "feed_usages_ibfk_3")
+
+  @@index([barn_id], map: "barn_id")
+  @@index([feed_id], map: "feed_id")
+  @@index([staff_id], map: "staff_id")
+}
+
+model feeds {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  stock       Decimal?      @default(0.00) @db.Decimal(10, 2)
+  created_at  DateTime?     @default(now()) @db.DateTime(0)
+  feed_usages feed_usages[]
+}
+
+model medicine_usages {
+  id          Int       @id @default(autoincrement())
+  barn_id     Int
+  pig_id      Int?
+  medicine_id Int
+  quantity    Decimal   @db.Decimal(10, 2)
+  unit        String    @db.VarChar(50)
+  used_at     DateTime  @db.Date
+  staff_id    Int
+  note        String?   @db.Text
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  barns       barns     @relation(fields: [barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "medicine_usages_ibfk_1")
+  pigs        pigs?     @relation(fields: [pig_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "medicine_usages_ibfk_2")
+  medicines   medicines @relation(fields: [medicine_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "medicine_usages_ibfk_3")
+  staffs      staffs    @relation(fields: [staff_id], references: [id], onUpdate: Restrict, map: "medicine_usages_ibfk_4")
+
+  @@index([barn_id], map: "barn_id")
+  @@index([medicine_id], map: "medicine_id")
+  @@index([pig_id], map: "pig_id")
+  @@index([staff_id], map: "staff_id")
+}
+
+model medicines {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(255)
+  unit            String?           @db.VarChar(50)
+  stock           Decimal?          @default(0.00) @db.Decimal(10, 2)
+  created_at      DateTime?         @default(now()) @db.DateTime(0)
+  medicine_usages medicine_usages[]
+}
+
+model pig_breedings {
+  id                               Int       @id @default(autoincrement())
+  sow_id                           Int
+  boar_id                          Int
+  breeding_date                    DateTime  @db.Date
+  expected_farrow_date             DateTime? @db.Date
+  status                           String?   @default("PENDING") @db.VarChar(50)
+  staff_id                         Int
+  note                             String?   @db.Text
+  created_at                       DateTime? @default(now()) @db.DateTime(0)
+  pigs_pig_breedings_sow_idTopigs  pigs      @relation("pig_breedings_sow_idTopigs", fields: [sow_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_breedings_ibfk_1")
+  pigs_pig_breedings_boar_idTopigs pigs      @relation("pig_breedings_boar_idTopigs", fields: [boar_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_breedings_ibfk_2")
+  staffs                           staffs    @relation(fields: [staff_id], references: [id], onUpdate: Restrict, map: "pig_breedings_ibfk_3")
+
+  @@index([boar_id], map: "boar_id")
+  @@index([sow_id], map: "sow_id")
+  @@index([staff_id], map: "staff_id")
+}
+
+model pig_deaths {
+  id              Int       @id @default(autoincrement())
+  pig_id          Int
+  death_date      DateTime  @db.Date
+  reason          String?   @db.VarChar(255)
+  disposal_method String?   @db.VarChar(255)
+  note            String?   @db.Text
+  recorded_by     Int
+  created_at      DateTime? @default(now()) @db.DateTime(0)
+  pigs            pigs      @relation(fields: [pig_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_deaths_ibfk_1")
+  staffs          staffs    @relation(fields: [recorded_by], references: [id], onUpdate: Restrict, map: "pig_deaths_ibfk_2")
+
+  @@index([pig_id], map: "pig_id")
+  @@index([recorded_by], map: "recorded_by")
+}
+
+model pig_farrowings {
+  id            Int       @id @default(autoincrement())
+  sow_id        Int
+  farrow_date   DateTime  @db.Date
+  alive_piglets Int?      @default(0)
+  dead_piglets  Int?      @default(0)
+  total_weight  Decimal?  @default(0.00) @db.Decimal(10, 2)
+  staff_id      Int
+  note          String?   @db.Text
+  created_at    DateTime? @default(now()) @db.DateTime(0)
+  pigs          pigs      @relation(fields: [sow_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_farrowings_ibfk_1")
+  staffs        staffs    @relation(fields: [staff_id], references: [id], onUpdate: Restrict, map: "pig_farrowings_ibfk_2")
+
+  @@index([sow_id], map: "sow_id")
+  @@index([staff_id], map: "staff_id")
+}
+
+model pig_movements {
+  id                                      Int       @id @default(autoincrement())
+  pig_id                                  Int
+  from_barn_id                            Int
+  to_barn_id                              Int
+  move_date                               DateTime  @db.Date
+  staff_id                                Int
+  note                                    String?   @db.Text
+  created_at                              DateTime? @default(now()) @db.DateTime(0)
+  pigs                                    pigs      @relation(fields: [pig_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_movements_ibfk_1")
+  barns_pig_movements_from_barn_idTobarns barns     @relation("pig_movements_from_barn_idTobarns", fields: [from_barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_movements_ibfk_2")
+  barns_pig_movements_to_barn_idTobarns   barns     @relation("pig_movements_to_barn_idTobarns", fields: [to_barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_movements_ibfk_3")
+  staffs                                  staffs    @relation(fields: [staff_id], references: [id], onUpdate: Restrict, map: "pig_movements_ibfk_4")
+
+  @@index([from_barn_id], map: "from_barn_id")
+  @@index([pig_id], map: "pig_id")
+  @@index([staff_id], map: "staff_id")
+  @@index([to_barn_id], map: "to_barn_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model pig_report_messages {
+  id            Int         @id @default(autoincrement())
+  pig_report_id Int
+  sender_id     Int
+  message       String      @db.Text
+  images        String?     @db.LongText
+  created_at    DateTime?   @default(now()) @db.DateTime(0)
+  pig_reports   pig_reports @relation(fields: [pig_report_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_report_messages_ibfk_1")
+  staffs        staffs      @relation(fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_report_messages_ibfk_2")
+
+  @@index([pig_report_id], map: "pig_report_id")
+  @@index([sender_id], map: "sender_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model pig_reports {
+  id                                       Int                   @id @default(autoincrement())
+  pig_id                                   Int
+  barn_id                                  Int
+  reporter_id                              Int
+  description                              String                @db.Text
+  images                                   String?               @db.LongText
+  status                                   pig_reports_status?   @default(cho_xu_ly)
+  vet_note                                 String?               @db.Text
+  vet_doctor_id                            Int?
+  created_at                               DateTime?             @default(now()) @db.DateTime(0)
+  updated_at                               DateTime?             @default(now()) @db.DateTime(0)
+  pig_report_messages                      pig_report_messages[]
+  pigs                                     pigs                  @relation(fields: [pig_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_reports_ibfk_1")
+  barns                                    barns                 @relation(fields: [barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_reports_ibfk_2")
+  staffs_pig_reports_reporter_idTostaffs   staffs                @relation("pig_reports_reporter_idTostaffs", fields: [reporter_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pig_reports_ibfk_3")
+  staffs_pig_reports_vet_doctor_idTostaffs staffs?               @relation("pig_reports_vet_doctor_idTostaffs", fields: [vet_doctor_id], references: [id], onUpdate: Restrict, map: "pig_reports_ibfk_4")
+
+  @@index([barn_id], map: "idx_barn")
+  @@index([reporter_id], map: "idx_reporter")
+  @@index([status], map: "idx_status")
+  @@index([pig_id], map: "pig_id")
+  @@index([vet_doctor_id], map: "vet_doctor_id")
+}
+
+model pigs {
+  id                                        Int                @id @default(autoincrement())
+  name                                      String?            @db.VarChar(255)
+  barn_id                                   Int
+  category                                  String             @db.VarChar(50)
+  lifecycle_status                          String?            @default("ACTIVE") @db.VarChar(50)
+  gender                                    pigs_gender?       @default(male)
+  dob                                       DateTime?          @db.Date
+  entry_date                                DateTime           @db.Date
+  entry_weight                              Decimal?           @db.Decimal(10, 2)
+  current_weight                            Decimal?           @db.Decimal(10, 2)
+  purchase_price                            Decimal?           @db.Decimal(15, 2)
+  farrowing_id                              Int?
+  mother_id                                 Int?
+  note                                      String?            @db.Text
+  created_at                                DateTime?          @default(now()) @db.DateTime(0)
+  updated_at                                DateTime?          @default(now()) @db.DateTime(0)
+  medicine_usages                           medicine_usages[]
+  pig_breedings_pig_breedings_sow_idTopigs  pig_breedings[]    @relation("pig_breedings_sow_idTopigs")
+  pig_breedings_pig_breedings_boar_idTopigs pig_breedings[]    @relation("pig_breedings_boar_idTopigs")
+  pig_deaths                                pig_deaths[]
+  pig_farrowings                            pig_farrowings[]
+  pig_movements                             pig_movements[]
+  pig_reports                               pig_reports[]
+  barns                                     barns              @relation(fields: [barn_id], references: [id], onUpdate: Restrict, map: "pigs_ibfk_1")
+  sale_batch_lines                          sale_batch_lines[]
+  vaccine_usages                            vaccine_usages[]
+
+  @@index([barn_id], map: "barn_id")
+}
+
+model roles {
+  id     Int      @id @default(autoincrement())
+  name   String   @db.VarChar(255)
+  code   String   @unique(map: "code") @db.VarChar(50)
+  staffs staffs[]
+}
+
+model sale_batch_lines {
+  id            Int          @id @default(autoincrement())
+  sale_batch_id Int
+  pig_id        Int
+  weight        Decimal      @db.Decimal(10, 2)
+  price         Decimal      @db.Decimal(15, 2)
+  total_amount  Decimal      @db.Decimal(15, 2)
+  reason        String?      @db.Text
+  note          String?      @db.Text
+  sale_batches  sale_batches @relation(fields: [sale_batch_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sale_batch_lines_ibfk_1")
+  pigs          pigs         @relation(fields: [pig_id], references: [id], onUpdate: Restrict, map: "sale_batch_lines_ibfk_2")
+
+  @@index([pig_id], map: "pig_id")
+  @@index([sale_batch_id], map: "sale_batch_id")
+}
+
+model sale_batches {
+  id               Int                @id @default(autoincrement())
+  sold_at          DateTime           @db.DateTime(0)
+  staff_id         Int?
+  created_at       DateTime?          @default(now()) @db.DateTime(0)
+  sale_batch_lines sale_batch_lines[]
+  staffs           staffs?            @relation(fields: [staff_id], references: [id], onUpdate: Restrict, map: "sale_batches_ibfk_1")
+
+  @@index([staff_id], map: "staff_id")
+}
+
+model staff_barns {
+  staff_id Int
+  barn_id  Int
+  staffs   staffs @relation(fields: [staff_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "staff_barns_ibfk_1")
+  barns    barns  @relation(fields: [barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "staff_barns_ibfk_2")
+
+  @@id([staff_id, barn_id])
+  @@index([barn_id], map: "barn_id")
+}
+
+model staffs {
+  id                                            Int                   @id @default(autoincrement())
+  full_name                                     String                @db.VarChar(255)
+  phone                                         String?               @unique(map: "phone") @db.VarChar(20)
+  email                                         String?               @unique(map: "email") @db.VarChar(255)
+  gender                                        staffs_gender?        @default(male)
+  dob                                           DateTime?             @db.Date
+  address                                       String?               @db.Text
+  avatar_url                                    String?               @db.VarChar(255)
+  role_id                                       Int?
+  created_at                                    DateTime?             @default(now()) @db.DateTime(0)
+  accounts                                      accounts?
+  feed_usages                                   feed_usages[]
+  medicine_usages                               medicine_usages[]
+  pig_breedings                                 pig_breedings[]
+  pig_deaths                                    pig_deaths[]
+  pig_farrowings                                pig_farrowings[]
+  pig_movements                                 pig_movements[]
+  pig_report_messages                           pig_report_messages[]
+  pig_reports_pig_reports_reporter_idTostaffs   pig_reports[]         @relation("pig_reports_reporter_idTostaffs")
+  pig_reports_pig_reports_vet_doctor_idTostaffs pig_reports[]         @relation("pig_reports_vet_doctor_idTostaffs")
+  sale_batches                                  sale_batches[]
+  staff_barns                                   staff_barns[]
+  roles                                         roles?                @relation(fields: [role_id], references: [id], onUpdate: Restrict, map: "staffs_ibfk_1")
+  vaccine_usages                                vaccine_usages[]
+
+  @@index([role_id], map: "role_id")
+}
+
+model vaccine_usages {
+  id            Int       @id @default(autoincrement())
+  pig_id        Int?
+  barn_id       Int?
+  vaccine_id    Int
+  quantity      Decimal?  @default(0.00) @db.Decimal(10, 2)
+  unit          String?   @db.VarChar(50)
+  vaccinated_at DateTime  @db.Date
+  performed_by  Int
+  note          String?   @db.Text
+  created_at    DateTime? @default(now()) @db.DateTime(0)
+  pigs          pigs?     @relation(fields: [pig_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "vaccine_usages_ibfk_1")
+  barns         barns?    @relation(fields: [barn_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "vaccine_usages_ibfk_2")
+  vaccines      vaccines  @relation(fields: [vaccine_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "vaccine_usages_ibfk_3")
+  staffs        staffs    @relation(fields: [performed_by], references: [id], onUpdate: Restrict, map: "vaccine_usages_ibfk_4")
+
+  @@index([barn_id], map: "barn_id")
+  @@index([performed_by], map: "performed_by")
+  @@index([pig_id], map: "pig_id")
+  @@index([vaccine_id], map: "vaccine_id")
+}
+
+model vaccines {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(255)
+  unit           String?          @db.VarChar(50)
+  stock          Decimal?         @default(0.00) @db.Decimal(10, 2)
+  created_at     DateTime?        @default(now()) @db.DateTime(0)
+  vaccine_usages vaccine_usages[]
+}
+
+enum staffs_gender {
+  male
+  female
+  other
+}
+
+enum pigs_gender {
+  male
+  female
+  other
+}
+
+enum pig_reports_status {
+  cho_xu_ly
+  dang_xu_ly
+  da_xu_ly
+}

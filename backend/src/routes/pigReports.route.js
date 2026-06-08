@@ -2,7 +2,7 @@ import { pipeline } from 'stream/promises'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import pool from '../config/db.js'
+import prisma from '../config/prisma.js'
 import { verifyToken, authorizeRoles } from '../middleware/auth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -45,33 +45,38 @@ export default async function pigReportsRoute(app) {
   // GET /api/pig-reports
   app.get('/', { preHandler: [verifyToken] }, async (request, reply) => {
     const { status, barn_id } = request.query
-    let sql = `
-      SELECT pr.*,
-             e.full_name   AS reporter_name,
-             b.name        AS barn_name,
-             v.full_name   AS vet_name
-      FROM pig_reports pr
-      JOIN staffs e ON pr.reporter_id   = e.id
-      JOIN barns     b ON pr.barn_id       = b.id
-      LEFT JOIN staffs v ON pr.vet_doctor_id = v.id
-      WHERE 1=1`
-    const params = []
 
-    if (status)  { sql += ' AND pr.status = ?';  params.push(status) }
-    if (barn_id) { sql += ' AND pr.barn_id = ?'; params.push(barn_id) }
+    const whereClause = {};
+    if (status) whereClause.status = status;
+    if (barn_id) whereClause.barn_id = Number(barn_id);
 
-    // Nhân viên thấy báo cáo của các chuồng được phân công quản lý
     if (request.user.role === 'FARM_WORKER') {
-      sql += ' AND pr.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)'
-      params.push(request.user.staff_id)
+      const allowedBarns = await prisma.staff_barns.findMany({
+        where: { staff_id: request.user.staff_id },
+        select: { barn_id: true }
+      });
+      whereClause.barn_id = { in: allowedBarns.map(b => b.barn_id) };
     }
 
-    sql += ' ORDER BY pr.created_at DESC'
-    const [rows] = await pool.query(sql, params)
+    const reports = await prisma.pig_reports.findMany({
+      where: whereClause,
+      orderBy: { created_at: 'desc' }
+    });
 
-    // Parse JSON images
-    const data = rows.map(r => ({
+    const staffIds = [...new Set(reports.flatMap(r => [r.reporter_id, r.vet_doctor_id]).filter(Boolean))];
+    const barnIds = [...new Set(reports.map(r => r.barn_id).filter(Boolean))];
+
+    const staffsInfo = await prisma.staffs.findMany({ where: { id: { in: staffIds } } });
+    const barnsInfo = await prisma.barns.findMany({ where: { id: { in: barnIds } } });
+
+    const staffMap = Object.fromEntries(staffsInfo.map(s => [s.id, s.full_name]));
+    const barnMap = Object.fromEntries(barnsInfo.map(b => [b.id, b.name]));
+
+    const data = reports.map(r => ({
       ...r,
+      reporter_name: staffMap[r.reporter_id] || null,
+      vet_name: staffMap[r.vet_doctor_id] || null,
+      barn_name: barnMap[r.barn_id] || null,
       images: r.images ? JSON.parse(r.images) : [],
     }))
 
@@ -89,16 +94,21 @@ export default async function pigReportsRoute(app) {
     }
 
     const reporter_id = request.user.staff_id
-    const [result] = await pool.query(
-      `INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images)
-       VALUES (?, ?, ?, ?, ?)`,
-      [pig_id, barn_id, reporter_id, description, JSON.stringify(images)]
-    )
+    
+    const result = await prisma.pig_reports.create({
+      data: {
+        pig_id: Number(pig_id),
+        barn_id: Number(barn_id),
+        reporter_id,
+        description,
+        images: JSON.stringify(images)
+      }
+    })
 
     return reply.code(201).send({
       success: true,
       message: 'Gửi báo cáo thành công',
-      data: { id: result.insertId },
+      data: { id: result.id },
     })
   })
 
@@ -110,12 +120,14 @@ export default async function pigReportsRoute(app) {
     const { status, vet_note } = request.body
     const vet_doctor_id = request.user.staff_id
 
-    await pool.query(
-      `UPDATE pig_reports
-       SET status = ?, vet_note = ?, vet_doctor_id = ?
-       WHERE id = ?`,
-      [status, vet_note, vet_doctor_id, request.params.id]
-    )
+    await prisma.pig_reports.update({
+      where: { id: Number(request.params.id) },
+      data: {
+        status,
+        vet_note,
+        vet_doctor_id
+      }
+    })
 
     return reply.send({ success: true, message: 'Đã cập nhật trạng thái báo cáo' })
   })
@@ -126,16 +138,19 @@ export default async function pigReportsRoute(app) {
     preHandler: [verifyToken, authorizeRoles('ADMIN')],
   }, async (request, reply) => {
     // Xóa ảnh trên disk trước
-    const [rows] = await pool.query('SELECT images FROM pig_reports WHERE id = ?', [request.params.id])
-    if (rows[0]?.images) {
-      const imgs = JSON.parse(rows[0].images)
+    const report = await prisma.pig_reports.findUnique({
+      where: { id: Number(request.params.id) },
+      select: { images: true }
+    })
+    if (report?.images) {
+      const imgs = typeof report.images === 'string' ? JSON.parse(report.images) : report.images
       imgs.forEach(url => {
         const file = path.join(UPLOAD_DIR, path.basename(url))
         fs.unlink(file, () => {}) // Bỏ qua lỗi nếu file không tồn tại
       })
     }
 
-    await pool.query('DELETE FROM pig_reports WHERE id = ?', [request.params.id])
+    await prisma.pig_reports.delete({ where: { id: Number(request.params.id) } })
     return reply.send({ success: true, message: 'Đã xóa báo cáo' })
   })
 
@@ -145,28 +160,43 @@ export default async function pigReportsRoute(app) {
     const reportId = request.params.id
 
     if (request.user.role === 'FARM_WORKER') {
-      const [reports] = await pool.query('SELECT barn_id FROM pig_reports WHERE id = ?', [reportId])
-      if (reports.length === 0) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
-      const [perms] = await pool.query(
-        'SELECT 1 FROM staff_barns WHERE staff_id = ? AND barn_id = ?',
-        [request.user.staff_id, reports[0].barn_id]
-      )
-      if (perms.length === 0) return reply.code(403).send({ success: false, message: 'Bạn không quản lý chuồng này' })
+      const report = await prisma.pig_reports.findUnique({
+        where: { id: Number(reportId) },
+        select: { barn_id: true }
+      })
+      if (!report) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
+      const perm = await prisma.staff_barns.findUnique({
+        where: { staff_id_barn_id: { staff_id: request.user.staff_id, barn_id: report.barn_id } }
+      })
+      if (!perm) return reply.code(403).send({ success: false, message: 'Bạn không quản lý chuồng này' })
     }
 
-    const [rows] = await pool.query(`
-      SELECT m.*, s.full_name AS sender_name, s.avatar_url, r.name AS sender_role
-      FROM pig_report_messages m
-      JOIN staffs s ON m.sender_id = s.id
-      LEFT JOIN roles r ON s.role_id = r.id
-      WHERE m.pig_report_id = ?
-      ORDER BY m.created_at ASC
-    `, [reportId])
+    const messages = await prisma.pig_report_messages.findMany({
+      where: { pig_report_id: Number(reportId) },
+      orderBy: { created_at: 'asc' }
+    });
 
-    const data = rows.map(r => ({
-      ...r,
-      images: r.images ? (typeof r.images === 'string' ? JSON.parse(r.images) : r.images) : []
-    }))
+    const staffIds = [...new Set(messages.map(m => m.sender_id).filter(Boolean))];
+    const staffsInfo = await prisma.staffs.findMany({
+      where: { id: { in: staffIds } },
+      include: { roles: { select: { name: true } } }
+    });
+    
+    const staffMap = Object.fromEntries(staffsInfo.map(s => [
+      s.id, 
+      { full_name: s.full_name, avatar_url: s.avatar_url, role_name: s.roles?.name }
+    ]));
+
+    const data = messages.map(m => {
+      const s = staffMap[m.sender_id] || {};
+      return {
+        ...m,
+        sender_name: s.full_name || null,
+        avatar_url: s.avatar_url || null,
+        sender_role: s.role_name || null,
+        images: m.images ? (typeof m.images === 'string' ? JSON.parse(m.images) : m.images) : []
+      };
+    });
 
     return reply.send({ success: true, data })
   })
@@ -180,25 +210,31 @@ export default async function pigReportsRoute(app) {
     if (!message) return reply.code(400).send({ success: false, message: 'Nội dung trống' })
 
     if (request.user.role === 'FARM_WORKER') {
-      const [reports] = await pool.query('SELECT barn_id FROM pig_reports WHERE id = ?', [reportId])
-      if (reports.length === 0) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
-      const [perms] = await pool.query(
-        'SELECT 1 FROM staff_barns WHERE staff_id = ? AND barn_id = ?',
-        [request.user.staff_id, reports[0].barn_id]
-      )
-      if (perms.length === 0) return reply.code(403).send({ success: false, message: 'Bạn không quản lý chuồng này' })
+      const report = await prisma.pig_reports.findUnique({
+        where: { id: Number(reportId) },
+        select: { barn_id: true }
+      })
+      if (!report) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
+      const perm = await prisma.staff_barns.findUnique({
+        where: { staff_id_barn_id: { staff_id: request.user.staff_id, barn_id: report.barn_id } }
+      })
+      if (!perm) return reply.code(403).send({ success: false, message: 'Bạn không quản lý chuồng này' })
     }
 
-    await pool.query(
-      'INSERT INTO pig_report_messages (pig_report_id, sender_id, message, images) VALUES (?, ?, ?, ?)',
-      [reportId, request.user.staff_id, message, JSON.stringify(images)]
-    )
+    await prisma.pig_report_messages.create({
+      data: {
+        pig_report_id: Number(reportId),
+        sender_id: request.user.staff_id,
+        message,
+        images: JSON.stringify(images)
+      }
+    })
 
     if (status && ['ADMIN', 'VET_DOCTOR'].includes(request.user.role)) {
-      await pool.query(
-        'UPDATE pig_reports SET status = ?, vet_doctor_id = ? WHERE id = ?',
-        [status, request.user.staff_id, reportId]
-      )
+      await prisma.pig_reports.update({
+        where: { id: Number(reportId) },
+        data: { status, vet_doctor_id: request.user.staff_id }
+      })
     }
 
     return reply.code(201).send({ success: true, message: 'Đã gửi tin nhắn' })

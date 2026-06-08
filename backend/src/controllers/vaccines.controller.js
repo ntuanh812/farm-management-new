@@ -1,9 +1,9 @@
-import pool from '../config/db.js';
+import prisma from '../config/prisma.js';
 
 export const vaccinesController = {
   getAll: async (request, reply) => {
     try {
-      const [rows] = await pool.query('SELECT * FROM vaccines ORDER BY created_at DESC');
+      const rows = await prisma.vaccines.findMany({ orderBy: { created_at: 'desc' } });
       return reply.send({ success: true, data: rows });
     } catch (error) {
       request.log.error(error);
@@ -18,11 +18,11 @@ export const vaccinesController = {
     }
     
     try {
-      const [result] = await pool.query('INSERT INTO vaccines (name, unit, stock) VALUES (?, ?, ?)', [name, unit || null, stock || 0]);
+      const result = await prisma.vaccines.create({ data: { name, unit: unit || null, stock: stock ? Number(stock) : 0 } });
       return reply.code(201).send({ 
         success: true, 
         message: 'Thêm loại vaccine thành công',
-        data: { id: result.insertId, name, unit, stock: stock || 0 }
+        data: result
       });
     } catch (error) {
       request.log?.error?.(error) || console.error(error);
@@ -35,7 +35,10 @@ export const vaccinesController = {
     const { quantity } = request.body;
     if (!quantity || quantity <= 0) return reply.code(400).send({ success: false, message: 'Số lượng nhập phải lớn hơn 0' });
     try {
-      await pool.query('UPDATE vaccines SET stock = COALESCE(stock, 0) + ? WHERE id = ?', [quantity, id]);
+      await prisma.vaccines.update({
+        where: { id: Number(id) },
+        data: { stock: { increment: Number(quantity) } }
+      });
       return reply.send({ success: true, message: 'Nhập thêm vaccine thành công' });
     } catch (error) {
       request.log?.error?.(error) || console.error(error);

@@ -1,6 +1,6 @@
 // routes/movements.route.js
 
-import pool from "../config/db.js";
+import prisma from "../config/prisma.js";
 import { verifyToken } from "../middleware/auth.js";
 
 export default async function movementsRoute(app) {
@@ -16,41 +16,41 @@ export default async function movementsRoute(app) {
 
       try {
 
-        let sql = `
-          SELECT
-            m.id,
-            m.pig_id,
-            p.category,
-            p.lifecycle_status,
-            m.from_barn_id,
-            m.to_barn_id,
-            b1.name AS from_barn_name,
-            b2.name AS to_barn_name,
-            m.move_date,
-            m.staff_id,
-            s.full_name AS staff_name,
-            m.note,
-            m.created_at
-          FROM pig_movements m
-          LEFT JOIN pigs p
-          ON p.id = m.pig_id
-          LEFT JOIN barns b1
-          ON b1.id = m.from_barn_id
-          LEFT JOIN barns b2
-          ON b2.id = m.to_barn_id
-          LEFT JOIN staffs s
-          ON s.id = m.staff_id
-        `;
-        const params = [];
+        const whereClause = {};
 
         if (request.user.role === 'FARM_WORKER') {
-          sql += ' WHERE m.from_barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?) OR m.to_barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
-          params.push(request.user.staff_id, request.user.staff_id);
+          whereClause.OR = [
+            { barns_pig_movements_from_barn_idTobarns: { staff_barns: { some: { staff_id: request.user.staff_id } } } },
+            { barns_pig_movements_to_barn_idTobarns: { staff_barns: { some: { staff_id: request.user.staff_id } } } }
+          ];
         }
 
-        sql += ' ORDER BY m.move_date DESC, m.id DESC';
+        const movements = await prisma.pig_movements.findMany({
+          where: whereClause,
+          include: {
+            pigs: { select: { category: true, lifecycle_status: true } },
+            barns_pig_movements_from_barn_idTobarns: { select: { name: true } },
+            barns_pig_movements_to_barn_idTobarns: { select: { name: true } },
+            staffs: { select: { full_name: true } }
+          },
+          orderBy: [ { move_date: 'desc' }, { id: 'desc' } ]
+        });
 
-        const [rows] = await pool.query(sql, params);
+        const rows = movements.map(m => ({
+          id: m.id,
+          pig_id: m.pig_id,
+          category: m.pigs?.category,
+          lifecycle_status: m.pigs?.lifecycle_status,
+          from_barn_id: m.from_barn_id,
+          to_barn_id: m.to_barn_id,
+          from_barn_name: m.barns_pig_movements_from_barn_idTobarns?.name,
+          to_barn_name: m.barns_pig_movements_to_barn_idTobarns?.name,
+          move_date: m.move_date,
+          staff_id: m.staff_id,
+          staff_name: m.staffs?.full_name,
+          note: m.note,
+          created_at: m.created_at
+        }));
 
         return reply.send({
           success: true,
@@ -82,12 +82,7 @@ export default async function movementsRoute(app) {
 
     async (request, reply) => {
 
-      const connection =
-        await pool.getConnection();
-
       try {
-
-        await connection.beginTransaction();
 
         const {
           pig_ids,
@@ -146,207 +141,51 @@ export default async function movementsRoute(app) {
         // GET STAFF
         // =====================================================
 
-        const [staffRows] =
-          await connection.query(
-            `
-            SELECT
-              full_name
+        // Dùng Prisma Transaction xử lý logic an toàn
+        const validPigs = await prisma.$transaction(async (tx) => {
+          const staff = await tx.staffs.findUnique({ where: { id: staffId } });
+          if (!staff) throw new Error("Không tìm thấy nhân viên");
 
-            FROM staffs
-
-            WHERE id = ?
-            `,
-            [staffId]
-          );
-
-        if (!staffRows.length) {
-
-          return reply.status(404).send({
-            success: false,
-            message:
-              "Không tìm thấy nhân viên",
+          const barn = await tx.barns.findUnique({
+            where: { id: Number(to_barn_id) },
+            include: { _count: { select: { pigs: { where: { lifecycle_status: 'ACTIVE' } } } } }
           });
-        }
+          if (!barn) throw new Error("Không tìm thấy chuồng");
 
-        const staffName =
-          staffRows[0].full_name;
-
-        // =====================================================
-        // CHECK TARGET BARN
-        // =====================================================
-
-        const [barnRows] =
-          await connection.query(
-            `
-            SELECT
-              b.id,
-              b.capacity,
-
-              COUNT(
-                CASE
-                  WHEN p.lifecycle_status = 'ACTIVE'
-                  THEN p.id
-                END
-              ) AS current_total
-
-            FROM barns b
-
-            LEFT JOIN pigs p
-            ON p.barn_id = b.id
-
-            WHERE b.id = ?
-
-            GROUP BY
-              b.id,
-              b.capacity
-            `,
-            [to_barn_id]
-          );
-
-        if (!barnRows.length) {
-
-          return reply.status(404).send({
-            success: false,
-            message:
-              "Không tìm thấy chuồng",
+          const pigs = await tx.pigs.findMany({
+            where: { id: { in: pig_ids.map(id => Number(id)) } }
           });
-        }
+          if (!pigs.length) throw new Error("Không tìm thấy lợn");
 
-        const barn = barnRows[0];
+          const valid = pigs.filter((pig) => pig.lifecycle_status === "ACTIVE" && Number(pig.barn_id) !== Number(to_barn_id));
+          if (!valid.length) throw new Error("Không có lợn hợp lệ để chuyển");
 
-        // =====================================================
-        // GET PIGS
-        // =====================================================
+          const totalAfterMove = barn._count.pigs + valid.length;
+          if (barn.capacity && totalAfterMove > barn.capacity) {
+            throw new Error("Chuồng vượt quá sức chứa");
+          }
 
-        const placeholders =
-          pig_ids.map(() => "?").join(",");
+          // Tạo movement và cập nhật lợn
+          for (const pig of valid) {
+            await tx.pig_movements.create({
+              data: {
+                pig_id: pig.id,
+                from_barn_id: pig.barn_id,
+                to_barn_id: Number(to_barn_id),
+                move_date: new Date(move_date),
+                staff_id: staffId,
+                note: note || null,
+              }
+            });
+            
+            await tx.pigs.update({
+              where: { id: pig.id },
+              data: { barn_id: Number(to_barn_id), updated_at: new Date() }
+            });
+          }
 
-        const [pigs] =
-          await connection.query(
-            `
-            SELECT
-              id,
-              barn_id,
-              lifecycle_status
-
-            FROM pigs
-
-            WHERE id IN (${placeholders})
-            `,
-            pig_ids
-          );
-
-        if (!pigs.length) {
-
-          return reply.status(404).send({
-            success: false,
-            message:
-              "Không tìm thấy lợn",
-          });
-        }
-
-        // =====================================================
-        // VALID ACTIVE PIGS
-        // =====================================================
-
-        const validPigs =
-          pigs.filter(
-            (pig) =>
-              pig.lifecycle_status ===
-                "ACTIVE" &&
-              Number(
-                pig.barn_id
-              ) !==
-                Number(
-                to_barn_id
-                )
-          );
-
-        if (!validPigs.length) {
-
-          return reply.status(400).send({
-            success: false,
-            message:
-              "Không có lợn hợp lệ để chuyển",
-          });
-        }
-
-        // =====================================================
-        // CHECK CAPACITY
-        // =====================================================
-
-        const totalAfterMove =
-          Number(
-            barn.current_total
-          ) +
-          validPigs.length;
-
-        if (
-          barn.capacity &&
-          totalAfterMove >
-            barn.capacity
-        ) {
-
-          return reply.status(400).send({
-            success: false,
-            message:
-              "Chuồng vượt quá sức chứa",
-          });
-        }
-
-        // =====================================================
-        // INSERT MOVEMENTS
-        // =====================================================
-
-        for (const pig of validPigs) {
-
-          // INSERT HISTORY
-          await connection.query(
-            `
-            INSERT INTO pig_movements
-            (
-              pig_id,
-              from_barn_id,
-              to_barn_id,
-              move_date,
-            staff_id,
-              note
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            `,
-            [
-              pig.id,
-              pig.barn_id,
-              to_barn_id,
-              move_date,
-            staffId,
-              note || null,
-            ]
-          );
-
-          // UPDATE PIG
-          await connection.query(
-            `
-            UPDATE pigs
-
-            SET
-              barn_id = ?,
-              updated_at = NOW()
-
-            WHERE id = ?
-            `,
-            [
-              to_barn_id,
-              pig.id,
-            ]
-          );
-        }
-
-        // =====================================================
-        // COMMIT
-        // =====================================================
-
-        await connection.commit();
+          return valid;
+        });
 
         return reply.send({
           success: true,
@@ -360,8 +199,6 @@ export default async function movementsRoute(app) {
 
       } catch (err) {
 
-        await connection.rollback();
-
         console.error(
           "CREATE MOVEMENT ERROR:",
           err
@@ -373,9 +210,6 @@ export default async function movementsRoute(app) {
             "Không thể chuyển chuồng",
         });
 
-      } finally {
-
-        connection.release();
       }
     }
   );
@@ -394,32 +228,14 @@ export default async function movementsRoute(app) {
         const { id } =
           request.params;
 
-        const [rows] =
-          await pool.query(
-            `
-            SELECT id
-            FROM pig_movements
-            WHERE id = ?
-            `,
-            [id]
-          );
-
-        if (!rows.length) {
-
-          return reply.status(404).send({
-            success: false,
-            message:
-              "Không tìm thấy lịch sử",
+        try {
+          await prisma.pig_movements.delete({
+            where: { id: Number(id) }
           });
+        } catch (e) {
+           // Prisma ném lỗi nến bản ghi không tồn tại
+           return reply.status(404).send({ success: false, message: "Không tìm thấy lịch sử" });
         }
-
-        await pool.query(
-          `
-          DELETE FROM pig_movements
-          WHERE id = ?
-          `,
-          [id]
-        );
 
         return reply.send({
           success: true,

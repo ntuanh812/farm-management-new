@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+import prisma from '../config/prisma.js'
 
 export async function checkBarnAccess(request, reply) {
   const { role, staff_id } = request.user;
@@ -19,16 +19,20 @@ export async function checkBarnAccess(request, reply) {
   }
 
   try {
-    const [rows] = await pool.query(
-      'SELECT 1 FROM staff_barns WHERE staff_id = ? AND barn_id = ?',
-      [staff_id, barn_id]
-    );
+    const access = await prisma.staff_barns.findUnique({
+      where: {
+        staff_id_barn_id: {
+          staff_id: Number(staff_id),
+          barn_id: Number(barn_id)
+        }
+      }
+    });
 
-    if (rows.length === 0) {
-      reply.status(403).send({ success: false, message: 'Bạn không có quyền truy cập vào chuồng này' });
+    if (!access) {
+      return reply.status(403).send({ success: false, message: 'Bạn không có quyền truy cập vào chuồng này' });
     }
   } catch (error) {
     request.log.error(error);
-    reply.status(500).send({ success: false, message: 'Lỗi kiểm tra quyền truy cập chuồng' });
+    return reply.status(500).send({ success: false, message: 'Lỗi kiểm tra quyền truy cập chuồng' });
   }
 }

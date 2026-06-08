@@ -1,24 +1,41 @@
-import pool from '../config/db.js';
+import prisma from '../config/prisma.js';
 
 export const deathsController = {
   getAll: async (request, reply) => {
     try {
-      let sql = `
-        SELECT d.*, b.name AS barn_name, s.full_name AS recorded_by_name
-        FROM pig_deaths d
-        LEFT JOIN pigs p ON d.pig_id = p.id
-        LEFT JOIN barns b ON p.barn_id = b.id
-        LEFT JOIN staffs s ON d.recorded_by = s.id
-      `;
-      const params = [];
+      const whereClause = {};
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE p.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
-        params.push(request.user.staff_id);
+        const allowedPigs = await prisma.pigs.findMany({
+          where: { barns: { staff_barns: { some: { staff_id: request.user.staff_id } } } },
+          select: { id: true }
+        });
+        whereClause.pig_id = { in: allowedPigs.map(p => p.id) };
       }
-      sql += ' ORDER BY d.death_date DESC, d.created_at DESC';
 
-      const [rows] = await pool.query(sql, params);
-      return reply.send({ success: true, data: rows });
+      const deaths = await prisma.pig_deaths.findMany({
+        where: whereClause,
+        orderBy: [ { death_date: 'desc' }, { created_at: 'desc' } ]
+      });
+
+      const pigIds = [...new Set(deaths.map(d => d.pig_id).filter(Boolean))];
+      const staffIds = [...new Set(deaths.map(d => d.recorded_by).filter(Boolean))];
+
+      const pigsInfo = await prisma.pigs.findMany({
+        where: { id: { in: pigIds } },
+        include: { barns: { select: { name: true } } }
+      });
+      const pigMap = Object.fromEntries(pigsInfo.map(p => [p.id, p]));
+
+      const staffsInfo = await prisma.staffs.findMany({ where: { id: { in: staffIds } } });
+      const staffMap = Object.fromEntries(staffsInfo.map(s => [s.id, s.full_name]));
+
+      const data = deaths.map(d => ({
+        ...d,
+        barn_name: pigMap[d.pig_id]?.barns?.name || null,
+        recorded_by_name: staffMap[d.recorded_by] || null
+      }));
+
+      return reply.send({ success: true, data });
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi tải dữ liệu lợn chết' });
@@ -28,30 +45,37 @@ export const deathsController = {
   create: async (request, reply) => {
     const { pig_id, death_date, reason, disposal_method, note } = request.body;
     const recorded_by = request.user.staff_id;
-    const conn = await pool.getConnection();
     try {
-      await conn.beginTransaction();
-      
-      await conn.query(
-        'INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, note, recorded_by) VALUES (?, ?, ?, ?, ?, ?)',
-        [pig_id, death_date, reason, disposal_method, note, recorded_by]
-      );
-      await conn.query('UPDATE pigs SET lifecycle_status = "DEAD" WHERE id = ?', [pig_id]);
-      
-      await conn.commit();
+      await prisma.$transaction(async (tx) => {
+        await tx.pig_deaths.create({
+          data: {
+            pig_id: Number(pig_id),
+            death_date: new Date(death_date),
+            reason,
+            disposal_method,
+            note: note || null,
+            recorded_by: Number(recorded_by)
+          }
+        });
+        
+        await tx.pigs.update({
+          where: { id: Number(pig_id) },
+          data: { lifecycle_status: "DEAD", updated_at: new Date() }
+        });
+      });
+
       return reply.code(201).send({ success: true, message: 'Ghi nhận lợn chết thành công' });
     } catch (error) {
-      await conn.rollback();
       request.log.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi hệ thống khi ghi nhận' });
-    } finally {
-      conn.release();
     }
   },
 
   delete: async (request, reply) => {
     try {
-      await pool.query('DELETE FROM pig_deaths WHERE id = ?', [request.params.id]);
+      await prisma.pig_deaths.delete({
+        where: { id: Number(request.params.id) }
+      });
       return reply.send({ success: true, message: 'Xóa bản ghi thành công' });
     } catch (error) {
       return reply.code(500).send({ success: false, message: 'Lỗi khi xóa bản ghi' });

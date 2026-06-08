@@ -1,24 +1,38 @@
-import pool from '../config/db.js';
+import prisma from '../config/prisma.js';
 
 export const feedUsagesController = {
   getAll: async (request, reply) => {
     try {
-      let sql = `
-        SELECT f.*, b.name AS barn_name, fd.name AS feed_name, s.full_name AS staff_name
-        FROM feed_usages f
-        LEFT JOIN barns b ON f.barn_id = b.id
-        LEFT JOIN feeds fd ON f.feed_id = fd.id
-        LEFT JOIN staffs s ON f.staff_id = s.id
-      `;
-      const params = [];
+      const whereClause = {};
       if (request.user.role === 'FARM_WORKER') {
-        sql += ' WHERE f.barn_id IN (SELECT barn_id FROM staff_barns WHERE staff_id = ?)';
-        params.push(request.user.staff_id);
+        whereClause.barns = {
+          staff_barns: {
+            some: { staff_id: request.user.staff_id }
+          }
+        };
       }
-      sql += ' ORDER BY f.used_at DESC, f.created_at DESC';
 
-      const [rows] = await pool.query(sql, params);
-      return reply.send({ success: true, data: rows });
+      const feedUsages = await prisma.feed_usages.findMany({
+        where: whereClause,
+        include: {
+          barns: { select: { name: true } },
+          feeds: { select: { name: true } },
+          staffs: { select: { full_name: true } }
+        },
+        orderBy: [ { used_at: 'desc' }, { created_at: 'desc' } ]
+      });
+
+      const data = feedUsages.map(f => {
+        const { barns, feeds, staffs, ...rest } = f;
+        return {
+          ...rest,
+          barn_name: barns?.name || null,
+          feed_name: feeds?.name || null,
+          staff_name: staffs?.full_name || null
+        };
+      });
+
+      return reply.send({ success: true, data });
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi tải dữ liệu cám' });
@@ -32,60 +46,59 @@ export const feedUsagesController = {
       return reply.code(400).send({ success: false, message: 'Số lượng tiêu thụ phải lớn hơn 0' });
     }
 
-    const conn = await pool.getConnection();
     try {
-      await conn.beginTransaction();
-      
-      // 1. Kiểm tra tồn kho
-      const [feeds] = await conn.query('SELECT name, COALESCE(stock, 0) as stock FROM feeds WHERE id = ? FOR UPDATE', [feed_id]);
-      if (feeds.length === 0) throw new Error('Không tìm thấy loại cám');
-      
-      const currentStock = feeds[0].stock;
-      if (currentStock < quantity_kg) {
-        await conn.rollback();
-        return reply.code(400).send({ success: false, message: `Kho không đủ cám (Còn: ${currentStock} kg). Vui lòng nhập kho.` });
-      }
+      await prisma.$transaction(async (tx) => {
+        // 1. Kiểm tra tồn kho
+        const feeds = await tx.feeds.findUnique({ where: { id: Number(feed_id) } });
+        if (!feeds) throw new Error('Không tìm thấy loại cám');
+        
+        const currentStock = feeds.stock || 0;
+        if (currentStock < quantity_kg) {
+          throw new Error(`Kho không đủ cám (Còn: ${currentStock} kg). Vui lòng nhập kho.`);
+        }
 
-      // 2. Trừ tồn kho
-      await conn.query('UPDATE feeds SET stock = stock - ? WHERE id = ?', [quantity_kg, feed_id]);
+        // 2. Trừ tồn kho
+        await tx.feeds.update({
+          where: { id: Number(feed_id) },
+          data: { stock: { decrement: Number(quantity_kg) } }
+        });
 
-      // 3. Ghi nhận tiêu thụ
-      await conn.query(
-        'INSERT INTO feed_usages (barn_id, feed_id, quantity_kg, used_at, staff_id, note) VALUES (?, ?, ?, ?, ?, ?)',
-        [barn_id, feed_id, quantity_kg, used_at, staff_id, note]
-      );
+        // 3. Ghi nhận tiêu thụ
+        await tx.feed_usages.create({
+          data: {
+            barn_id: barn_id ? Number(barn_id) : null,
+            feed_id: Number(feed_id),
+            quantity_kg: Number(quantity_kg),
+            used_at: new Date(used_at),
+            staff_id: Number(staff_id),
+            note: note || ''
+          }
+        });
+      });
 
-      await conn.commit();
       return reply.code(201).send({ success: true, message: 'Ghi nhận thành công' });
     } catch (error) {
-      await conn.rollback();
       request.log.error(error);
-      return reply.code(500).send({ success: false, message: error.message || 'Lỗi ghi nhận tiêu thụ cám' });
-    } finally {
-      conn.release();
+      return reply.code(error.message.includes('Kho không đủ') ? 400 : 500).send({ success: false, message: error.message || 'Lỗi ghi nhận tiêu thụ cám' });
     }
   },
   delete: async (request, reply) => {
-    const conn = await pool.getConnection();
     try {
-      await conn.beginTransaction();
+      await prisma.$transaction(async (tx) => {
+        const usage = await tx.feed_usages.findUnique({ where: { id: Number(request.params.id) } });
+        if (usage) {
+          await tx.feeds.update({
+            where: { id: usage.feed_id },
+            data: { stock: { increment: usage.quantity_kg } }
+          });
+          await tx.feed_usages.delete({ where: { id: usage.id } });
+        }
+      });
       
-      // Lấy thông tin phiếu sử dụng trước khi xóa
-      const [usage] = await conn.query('SELECT feed_id, quantity_kg FROM feed_usages WHERE id = ?', [request.params.id]);
-      if (usage.length > 0) {
-        // Cộng lại số lượng tồn kho (Hoàn kho)
-        await conn.query('UPDATE feeds SET stock = COALESCE(stock, 0) + ? WHERE id = ?', [usage[0].quantity_kg, usage[0].feed_id]);
-        await conn.query('DELETE FROM feed_usages WHERE id = ?', [request.params.id]);
-      }
-      
-      await conn.commit();
       return reply.send({ success: true, message: 'Đã xóa bản ghi và hoàn lại cám vào kho' });
     } catch (error) {
-      await conn.rollback();
       request.log.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi khi xóa bản ghi' });
-    } finally {
-      conn.release();
     }
   }
 };
