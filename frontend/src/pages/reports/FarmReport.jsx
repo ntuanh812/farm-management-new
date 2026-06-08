@@ -82,6 +82,20 @@ export default function FarmReport() {
 
   const totalActivePigs = activePigsMapped.reduce((sum, item) => sum + item.count, 0);
 
+  // Tự động quét và chuẩn hóa dữ liệu Cám từ Backend
+  const feedUsageMapped = useMemo(() => {
+    // Quét các key có thể có từ backend
+    const rawData = data.feed_usage || data.feedUsage || data.bran_usage || [];
+    
+    console.log("🛠 [DEBUG] Dữ liệu Cám từ Backend:", rawData); // Mở F12 (Console) để xem
+
+    return rawData.map(item => ({
+      ...item,
+      displayName: item.feed_name || item.feed_type || item.name || item.feedName || item.bran_name || 'Không rõ',
+      displayValue: Number(item.total_kg || item.quantity_kg || item.total_quantity || item.quantity || item.total || 0)
+    }));
+  }, [data]);
+
   const vaccineColumns = [
     {
       title: 'STT',
@@ -269,13 +283,13 @@ export default function FarmReport() {
             <Card title="Tiêu thụ thức ăn / cám" bordered={false} style={{ height: '100%' }}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.feed_usage} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart data={feedUsageMapped} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="feed_type" />
+                    <XAxis dataKey="displayName" />
                     <YAxis />
                     <RechartsTooltip formatter={(value) => [`${value} kg`, 'Khối lượng']} />
                     <Legend />
-                    <Bar dataKey="total_kg" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
+                    <Bar dataKey="displayValue" name="Khối lượng đã dùng" fill="#82ca9d" barSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

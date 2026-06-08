@@ -67,51 +67,51 @@ INSERT INTO vaccines (name, unit, stock) VALUES
 
 -- Thêm Lợn mẫu (Chỉ sử dụng ID tự tăng)
 INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, purchase_price) VALUES
-('Nái York 01', 1, 'SOW', 'ACTIVE', 'female', '2023-01-10', 100, 150, 5000000),
-('Nái Landrace 02', 1, 'SOW', 'ACTIVE', 'female', '2023-02-15', 110, 160, 5500000),
-('Đực Duroc 01', 2, 'BOAR', 'ACTIVE', 'male', '2023-01-05', 120, 180, 8000000),
-('Lợn thịt T1', 4, 'FATTENING', 'ACTIVE', 'male', '2023-10-01', 15, 80, 1500000),
-('Lợn thịt T2', 4, 'FATTENING', 'ACTIVE', 'female', '2023-10-01', 14, 75, 1500000),
-('Lợn thịt T3', 4, 'FATTENING', 'ACTIVE', 'male', '2023-10-01', 16, 85, 1500000),
-('Lợn bán X1', 4, 'FATTENING', 'SOLD', 'male', '2023-05-01', 10, 100, 1000000),
-('Lợn chết C1', 4, 'FATTENING', 'DEAD', 'female', '2023-11-01', 12, 30, 1200000);
+('Nái York 01', 1, 'SOW', 'ACTIVE', 'female', '2026-01-10', 100, 150, 5000000),
+('Nái Landrace 02', 1, 'SOW', 'ACTIVE', 'female', '2026-02-15', 110, 160, 5500000),
+('Đực Duroc 01', 2, 'BOAR', 'ACTIVE', 'male', '2026-01-05', 120, 180, 8000000),
+('Lợn thịt T1', 4, 'FATTENING', 'ACTIVE', 'male', '2026-3-01', 15, 80, 1500000),
+('Lợn thịt T2', 4, 'FATTENING', 'ACTIVE', 'female', '2026-2-01', 14, 75, 1500000),
+('Lợn thịt T3', 4, 'FATTENING', 'ACTIVE', 'male', '2026-1-01', 16, 85, 1500000),
+('Lợn bán X1', 4, 'FATTENING', 'SOLD', 'male', '2026-05-01', 10, 100, 1000000),
+('Lợn chết C1', 4, 'FATTENING', 'DEAD', 'female', '2026-5-01', 12, 30, 1200000);
 
 -- Thêm lịch sử chuyển chuồng
 INSERT INTO pig_movements (pig_id, from_barn_id, to_barn_id, move_date, staff_id) VALUES
-(4, 3, 4, '2023-11-15', 2);
+(4, 3, 4, '2026-1-15', 2);
 
 -- Phối giống mẫu
 INSERT INTO pig_breedings (sow_id, boar_id, breeding_date, expected_farrow_date, status, staff_id) VALUES
-(1, 3, '2023-08-01', '2023-11-24', 'SUCCESS', 2);
+(1, 3, '2026-02-12', '2026-11-24', 'SUCCESS', 2);
 
 -- Lịch sử đẻ (Đẻ ra 2 con lợn con)
 INSERT INTO pig_farrowings (sow_id, farrow_date, alive_piglets, dead_piglets, total_weight, staff_id) VALUES
-(1, '2023-11-25', 2, 0, 3.5, 2);
+(1, '2026-4-25', 2, 0, 3.5, 2);
 
 INSERT INTO pigs (name, barn_id, category, lifecycle_status, gender, entry_date, entry_weight, current_weight, farrowing_id, mother_id) VALUES
-('Lợn con ổ 1 - 1', 3, 'PIGLET', 'ACTIVE', 'male', '2023-11-25', 1.75, 5, 1, 1),
-('Lợn con ổ 1 - 2', 3, 'PIGLET', 'ACTIVE', 'female', '2023-11-25', 1.75, 4.5, 1, 1);
+('Lợn con ổ 1 - 1', 3, 'PIGLET', 'ACTIVE', 'male', '2026-4-25', 1.75, 5, 1, 1),
+('Lợn con ổ 1 - 2', 3, 'PIGLET', 'ACTIVE', 'female', '2026-4-25', 1.75, 4.5, 1, 1);
 
 -- Dữ liệu lợn chết
 INSERT INTO pig_deaths (pig_id, death_date, reason, disposal_method, recorded_by) VALUES
-(8, '2023-12-10', 'Viêm phổi nặng', 'Tiêu hủy', 3);
+(8, '2026-3-10', 'Viêm phổi nặng', 'Tiêu hủy', 3);
 
 -- Dữ liệu xuất bán
 INSERT INTO sale_batches (sold_at, staff_id) VALUES
-('2023-12-15', 1);
+('2026-2-15', 1);
 
 INSERT INTO sale_batch_lines (sale_batch_id, pig_id, weight, price, total_amount, reason) VALUES
 (1, 7, 100, 55000, 5500000, 'Xuất chuồng chuẩn');
 
 -- Lịch sử tiêm phòng & sử dụng thức ăn
 INSERT INTO vaccine_usages (pig_id, barn_id, vaccine_id, quantity, unit, vaccinated_at, performed_by) VALUES
-(NULL, 4, 1, 100, 'liều', '2023-10-15', 3);
+(NULL, 4, 1, 100, 'liều', '2026-10-15', 3);
 
 INSERT INTO feed_usages (barn_id, feed_id, quantity_kg, used_at, staff_id) VALUES
-(4, 1, 50, '2023-12-01', 2);
+(4, 1, 50, '2026-1-01', 2);
 
 INSERT INTO medicine_usages (barn_id, pig_id, medicine_id, quantity, unit, used_at, staff_id) VALUES
-(4, 4, 1, 2, 'lọ', '2023-12-05', 3);
+(4, 4, 1, 2, 'lọ', '2026-6-05', 3);
 
 -- Báo cáo bệnh
 INSERT INTO pig_reports (pig_id, barn_id, reporter_id, description, images, status) VALUES

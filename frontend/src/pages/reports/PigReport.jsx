@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Table, Button, Modal, Form, Input, Select,
   Upload, Tag, Space, Popconfirm, Image, message, Row, Col, Card
@@ -28,6 +28,14 @@ export default function PigReport() {
   const [fileList, setFileList] = useState([])   // ảnh đã chọn
   const [uploading, setUploading] = useState(false)
   const [form] = Form.useForm()
+  
+  const [chatOpen, setChatOpen] = useState(false)
+  const [selectedReport, setSelectedReport] = useState(null)
+  const [messagesList, setMessagesList] = useState([])
+  const [newMessage, setNewMessage] = useState('')
+  const [messageFileList, setMessageFileList] = useState([])
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef(null)
 
   // ── Fetch danh sách ──────────────────────────────────────
   const fetchList = useCallback(async () => {
@@ -104,6 +112,43 @@ export default function PigReport() {
     } catch { message.error('Xóa thất bại') }
   }
 
+  // ── Thảo luận (Chat) ────────────────────────────────────
+  const openChat = (rec) => {
+    setSelectedReport(rec)
+    setChatOpen(true)
+    fetchMessages(rec.id)
+  }
+
+  const fetchMessages = async (id) => {
+    try {
+      const { data } = await axios.get(`${API}/pig-reports/${id}/messages`, { headers })
+      setMessagesList(data.data)
+    } catch { message.error('Lỗi tải tin nhắn') }
+  }
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return
+    setSending(true)
+    try {
+      const images = messageFileList
+        .filter(f => f.status === 'done')
+        .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
+        .filter(Boolean)
+
+      await axios.post(`${API}/pig-reports/${selectedReport.id}/messages`, { message: newMessage, images }, { headers })
+      setNewMessage('')
+      setMessageFileList([])
+      fetchMessages(selectedReport.id)
+    } catch { message.error('Lỗi gửi tin nhắn') }
+    finally { setSending(false) }
+  }
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messagesList, chatOpen])
+
   // ── Columns ──────────────────────────────────────────────
   const columns = [
     {
@@ -165,13 +210,18 @@ export default function PigReport() {
       ) : <span className="reports-page__empty-text">Chưa có phản hồi</span>
     },
     {
-      title: 'Thao tác', key: 'action', width: 80, align: 'center',
+      title: 'Thao tác', key: 'action', width: 100, align: 'center',
       render: (_, rec) => (
-        user?.role === 'ADMIN' && (
-          <Popconfirm title="Xóa báo cáo này?" onConfirm={() => handleDelete(rec.id)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        )
+        <Space>
+          <Button size="small" type="primary" onClick={() => openChat(rec)}>
+            Thảo luận
+          </Button>
+          {user?.role === 'ADMIN' && (
+            <Popconfirm title="Xóa báo cáo này?" onConfirm={() => handleDelete(rec.id)}>
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
       ),
     },
   ]
@@ -270,6 +320,93 @@ export default function PigReport() {
             </div>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Hội thoại */}
+      <Modal
+        title={`Thảo luận báo cáo — PIG${String(selectedReport?.pig_id).padStart(3, "0")}`}
+        open={chatOpen}
+        onCancel={() => { setChatOpen(false); setSelectedReport(null); setMessagesList([]); setNewMessage(''); setMessageFileList([]); }}
+        footer={null}
+        width={700}
+      >
+        {selectedReport && (
+          <div className="reports-chat__container">
+            <div className="reports-chat__messages">
+              <div className="reports-chat__item">
+                <div className="reports-chat__item-content">
+                  <div className="reports-chat__meta">
+                    <b>{selectedReport.reporter_name}</b> (Người báo cáo) - {dayjs(selectedReport.created_at).format('HH:mm DD/MM')}
+                  </div>
+                  <div className="reports-chat__bubble reports-chat__bubble--other">
+                    <div className="reports-chat__text">{selectedReport.description}</div>
+                    {Array.isArray(selectedReport.images) && selectedReport.images.length > 0 && (
+                      <div className="reports-chat__images">
+                        <Image.PreviewGroup>
+                          <Space size={8} wrap>
+                            {selectedReport.images.map((url, i) => (
+                              <Image key={i} width={60} height={60} src={`http://localhost:3000${url}`} className="reports-chat__img" />
+                            ))}
+                          </Space>
+                        </Image.PreviewGroup>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {messagesList.map(msg => {
+                const isMe = msg.sender_id === user?.staff_id;
+                return (
+                  <div key={msg.id} className={`reports-chat__item ${isMe ? 'reports-chat__item--me' : ''}`}>
+                    <div className={`reports-chat__item-content ${isMe ? 'reports-chat__item-content--me' : ''}`}>
+                      <div className="reports-chat__meta">
+                        <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs(msg.created_at).format('HH:mm DD/MM')}
+                      </div>
+                      <div className={`reports-chat__bubble ${isMe ? 'reports-chat__bubble--me' : 'reports-chat__bubble--other'}`}>
+                        <div className="reports-chat__text">{msg.message}</div>
+                        {Array.isArray(msg.images) && msg.images.length > 0 && (
+                          <div className="reports-chat__images" style={{ marginTop: 8 }}>
+                            <Image.PreviewGroup>
+                              <Space size={8} wrap>
+                                {msg.images.map((url, i) => (
+                                  <Image key={i} width={60} height={60} src={`http://localhost:3000${url}`} className="reports-chat__img" />
+                                ))}
+                              </Space>
+                            </Image.PreviewGroup>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="reports-chat__input-area" style={{ flexDirection: 'column' }}>
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                <TextArea value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Nhập phản hồi..." autoSize={{ minRows: 2, maxRows: 4 }} onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                <Button type="primary" className="reports-chat__send-btn" onClick={handleSendMessage} loading={sending} style={{ height: 'auto' }}>Gửi</Button>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <Upload
+                  customRequest={handleUpload}
+                  listType="picture-card"
+                  fileList={messageFileList}
+                  onChange={({ fileList: fl }) => setMessageFileList(fl)}
+                  maxCount={3}
+                  accept="image/*"
+                  multiple
+                >
+                  {messageFileList.length < 3 && (
+                    <div><UploadOutlined /><div style={{ marginTop: 8 }}>Tải ảnh</div></div>
+                  )}
+                </Upload>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

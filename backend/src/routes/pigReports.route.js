@@ -138,4 +138,69 @@ export default async function pigReportsRoute(app) {
     await pool.query('DELETE FROM pig_reports WHERE id = ?', [request.params.id])
     return reply.send({ success: true, message: 'Đã xóa báo cáo' })
   })
+
+  // ── Lấy tin nhắn của báo cáo ─────────────────────────
+  // GET /api/pig-reports/:id/messages
+  app.get('/:id/messages', { preHandler: [verifyToken] }, async (request, reply) => {
+    const reportId = request.params.id
+
+    if (request.user.role === 'FARM_WORKER') {
+      const [reports] = await pool.query('SELECT barn_id FROM pig_reports WHERE id = ?', [reportId])
+      if (reports.length === 0) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
+      const [perms] = await pool.query(
+        'SELECT 1 FROM staff_barns WHERE staff_id = ? AND barn_id = ?',
+        [request.user.staff_id, reports[0].barn_id]
+      )
+      if (perms.length === 0) return reply.code(403).send({ success: false, message: 'Bạn không quản lý chuồng này' })
+    }
+
+    const [rows] = await pool.query(`
+      SELECT m.*, s.full_name AS sender_name, s.avatar_url, r.name AS sender_role
+      FROM pig_report_messages m
+      JOIN staffs s ON m.sender_id = s.id
+      LEFT JOIN roles r ON s.role_id = r.id
+      WHERE m.pig_report_id = ?
+      ORDER BY m.created_at ASC
+    `, [reportId])
+
+    const data = rows.map(r => ({
+      ...r,
+      images: r.images ? (typeof r.images === 'string' ? JSON.parse(r.images) : r.images) : []
+    }))
+
+    return reply.send({ success: true, data })
+  })
+
+  // ── Gửi tin nhắn mới ───────────────────────────────────
+  // POST /api/pig-reports/:id/messages
+  app.post('/:id/messages', { preHandler: [verifyToken] }, async (request, reply) => {
+    const reportId = request.params.id
+    const { message, images = [], status } = request.body
+
+    if (!message) return reply.code(400).send({ success: false, message: 'Nội dung trống' })
+
+    if (request.user.role === 'FARM_WORKER') {
+      const [reports] = await pool.query('SELECT barn_id FROM pig_reports WHERE id = ?', [reportId])
+      if (reports.length === 0) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
+      const [perms] = await pool.query(
+        'SELECT 1 FROM staff_barns WHERE staff_id = ? AND barn_id = ?',
+        [request.user.staff_id, reports[0].barn_id]
+      )
+      if (perms.length === 0) return reply.code(403).send({ success: false, message: 'Bạn không quản lý chuồng này' })
+    }
+
+    await pool.query(
+      'INSERT INTO pig_report_messages (pig_report_id, sender_id, message, images) VALUES (?, ?, ?, ?)',
+      [reportId, request.user.staff_id, message, JSON.stringify(images)]
+    )
+
+    if (status && ['ADMIN', 'VET_DOCTOR'].includes(request.user.role)) {
+      await pool.query(
+        'UPDATE pig_reports SET status = ?, vet_doctor_id = ? WHERE id = ?',
+        [status, request.user.staff_id, reportId]
+      )
+    }
+
+    return reply.code(201).send({ success: true, message: 'Đã gửi tin nhắn' })
+  })
 }

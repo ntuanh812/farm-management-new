@@ -264,3 +264,15 @@ CREATE TABLE IF NOT EXISTS pig_reports (
   INDEX idx_reporter (reporter_id),
   INDEX idx_barn (barn_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 20. Bảng Tin nhắn báo cáo (Pig_Report_Messages)
+CREATE TABLE IF NOT EXISTS pig_report_messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pig_report_id INT NOT NULL,
+  sender_id INT NOT NULL,
+  message TEXT NOT NULL,
+  images JSON COMMENT 'Danh sách đường dẫn ảnh đính kèm',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (pig_report_id) REFERENCES pig_reports(id) ON DELETE CASCADE,
+  FOREIGN KEY (sender_id) REFERENCES staffs(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

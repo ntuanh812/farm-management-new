@@ -283,14 +283,7 @@ export default function PigManage() {
         return r.entry_date ? dayjs(r.entry_date).format('DD/MM/YYYY') : '-';
       },
     },
-    {
-      title: 'Tuổi',
-      key: 'age',
-      render: (_, r) => {
-        if (r.dob) return `${dayjs().diff(dayjs(r.dob), 'day')} ngày`;
-        return '-';
-      },
-    },
+  
     {
       title: 'Trọng lượng',
       key: 'current_weight',
