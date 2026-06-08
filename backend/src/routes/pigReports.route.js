@@ -119,9 +119,14 @@ export default async function pigReportsRoute(app) {
   }, async (request, reply) => {
     const { status, vet_note } = request.body
     const vet_doctor_id = request.user.staff_id
+    const id = Number(request.params.id)
+
+    const report = await prisma.pig_reports.findUnique({ where: { id } })
+    if (!report) return reply.code(404).send({ success: false, message: 'Không tìm thấy báo cáo' })
+    if (report.status === 'da_xu_ly') return reply.code(400).send({ success: false, message: 'Báo cáo đã đóng, không thể thay đổi' })
 
     await prisma.pig_reports.update({
-      where: { id: Number(request.params.id) },
+      where: { id },
       data: {
         status,
         vet_note,
@@ -209,12 +214,14 @@ export default async function pigReportsRoute(app) {
 
     if (!message) return reply.code(400).send({ success: false, message: 'Nội dung trống' })
 
+    const report = await prisma.pig_reports.findUnique({
+      where: { id: Number(reportId) },
+      select: { barn_id: true, status: true }
+    })
+    if (!report) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
+    if (report.status === 'da_xu_ly') return reply.code(400).send({ success: false, message: 'Báo cáo đã đóng, không thể gửi thêm tin nhắn' })
+
     if (request.user.role === 'FARM_WORKER') {
-      const report = await prisma.pig_reports.findUnique({
-        where: { id: Number(reportId) },
-        select: { barn_id: true }
-      })
-      if (!report) return reply.code(404).send({ success: false, message: 'Báo cáo không tồn tại' })
       const perm = await prisma.staff_barns.findUnique({
         where: { staff_id_barn_id: { staff_id: request.user.staff_id, barn_id: report.barn_id } }
       })

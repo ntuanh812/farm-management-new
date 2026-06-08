@@ -370,8 +370,8 @@ export default function PigReport() {
 
             <div className="reports-chat__input-area" style={{ flexDirection: 'column' }}>
               <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <TextArea value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Nhập phản hồi..." autoSize={{ minRows: 2, maxRows: 4 }} onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
-                <Button type="primary" className="reports-chat__send-btn" onClick={handleSendMessage} loading={sending} style={{ height: 'auto' }}>Gửi</Button>
+                <TextArea disabled={selectedReport.status === 'da_xu_ly'} value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={selectedReport.status === 'da_xu_ly' ? "Báo cáo đã đóng..." : "Nhập phản hồi..."} autoSize={{ minRows: 2, maxRows: 4 }} onPressEnter={e => { if (!e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} />
+                <Button disabled={selectedReport.status === 'da_xu_ly'} type="primary" className="reports-chat__send-btn" onClick={handleSendMessage} loading={sending} style={{ height: 'auto' }}>Gửi</Button>
               </div>
               <div style={{ marginTop: 8 }}>
                 <Upload
@@ -382,11 +382,13 @@ export default function PigReport() {
                   maxCount={3}
                   accept="image/*"
                   multiple
+                  disabled={selectedReport.status === 'da_xu_ly'}
                 >
                   {messageFileList.length < 3 && (
                     <div><UploadOutlined /><div style={{ marginTop: 8 }}>Tải ảnh</div></div>
                   )}
                 </Upload>
+                {selectedReport.status === 'da_xu_ly' && <div style={{ color: '#ff4d4f', marginTop: 8, fontStyle: 'italic' }}>* Báo cáo này đã được xử lý xong, không thể tiếp tục thảo luận.</div>}
               </div>
             </div>
           </div>
