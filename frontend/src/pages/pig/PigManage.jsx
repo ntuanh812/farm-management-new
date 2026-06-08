@@ -1,34 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
-  Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col, Descriptions, Spin, Alert, Divider
+  Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col, Descriptions, Spin, Divider
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, ShoppingCartOutlined, HeartOutlined, DashboardOutlined, EyeOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { CATEGORY_MAP, STATUS_MAP, GENDER_MAP } from '@/utils/constants';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const CATEGORY_MAP = {
-  'SOW': 'Lợn nái',
-  'BOAR': 'Lợn đực',
-  'PIGLET': 'Lợn con',
-  'FATTENING': 'Lợn thịt'
-};
-
-const STATUS_MAP = {
-  'ACTIVE': { text: 'Khỏe mạnh', color: 'green' },
-  'SICK': { text: 'Đang bệnh', color: 'orange' },
-  'SOLD': { text: 'Đã xuất bán', color: 'blue' },
-  'DEAD': { text: 'Đã chết', color: 'red' }
-};
-
-const GENDER_MAP = {
-  'male': 'Đực',
-  'female': 'Cái'
-};
 
 export default function PigManage() {
   const { token, user } = useAuthStore();
@@ -36,7 +18,6 @@ export default function PigManage() {
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
-  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -60,15 +41,13 @@ export default function PigManage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resPigs, resBarns, resReports] = await Promise.all([
+      const [resPigs, resBarns] = await Promise.all([
         axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/barns`, { headers }),
-        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } }))
+        axios.get(`${API}/barns`, { headers })
       ]);
 
       if (resPigs.data.success) setPigs(resPigs.data.data);
       if (resBarns.data.success) setBarns(resBarns.data.data);
-      if (resReports.data?.data) setReports(resReports.data.data);
     } catch (error) {
       message.error('Không thể tải dữ liệu đàn lợn');
     } finally {
@@ -83,8 +62,8 @@ export default function PigManage() {
   // Kết hợp trạng thái từ báo cáo lợn bệnh
   const augmentedPigs = useMemo(() => {
     return pigs.map(p => {
-      // Kiểm tra có báo cáo lợn bệnh nào chưa xử lý (cho_xu_ly, dang_xu_ly) không
-      const hasActiveReport = reports.some(r => r.pig_id === p.id && r.status !== 'da_xu_ly');
+      // Sử dụng is_sick được trả về sẵn từ Backend
+      const hasActiveReport = p.is_sick === 1;
       
       let status = p.lifecycle_status;
       if (status === 'ACTIVE' && hasActiveReport) {
@@ -97,7 +76,7 @@ export default function PigManage() {
         computedStatus: status
       };
     });
-  }, [pigs, reports]);
+  }, [pigs]);
 
   // Tính toán thống kê từ danh sách lợn
   const stats = useMemo(() => {

@@ -11,14 +11,9 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ROLE_CONFIG } from '@/utils/constants';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const ROLE_CONFIG = {
-  ADMIN: { text: 'Quản trị viên', color: 'red' },
-  FARM_WORKER: { text: 'Nhân viên', color: 'green' },
-  VET_DOCTOR: { text: 'Bác sỹ thú y', color: 'orange' },
-};
 
 export default function StaffManagement() {
   const { token } = useAuthStore();

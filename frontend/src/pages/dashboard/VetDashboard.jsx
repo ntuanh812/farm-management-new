@@ -3,10 +3,7 @@ import { Card, Row, Col, List, message, Spin } from "antd";
 import {
   RiseOutlined,
   BugOutlined,
-  SnippetsOutlined,
-  CalendarOutlined,
   MedicineBoxOutlined,
-  DashboardOutlined,
   WarningOutlined
 } from "@ant-design/icons";
 import axios from "axios";

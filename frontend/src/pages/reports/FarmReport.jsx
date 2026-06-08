@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Col, Row, Statistic, Table, Typography, Space, Spin, message, Divider, Form, DatePicker, Button } from 'antd';
+import { Card, Col, Row, Table, Typography, Spin, message, Divider, Form, DatePicker, Button } from 'antd';
 import {
   DollarOutlined,
   FallOutlined,
@@ -87,8 +87,6 @@ export default function FarmReport() {
     // Quét các key có thể có từ backend
     const rawData = data.feed_usage || data.feedUsage || data.bran_usage || [];
     
-    console.log("🛠 [DEBUG] Dữ liệu Cám từ Backend:", rawData); // Mở F12 (Console) để xem
-
     return rawData.map(item => ({
       ...item,
       displayName: item.feed_name || item.feed_type || item.name || item.feedName || item.bran_name || 'Không rõ',

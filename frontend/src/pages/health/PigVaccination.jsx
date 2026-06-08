@@ -196,8 +196,8 @@ export default function PigVaccination() {
         return <span>Cá thể: <strong>PIG{String(r.pig_id).padStart(3, "0")}</strong>{barnName ? ` - Chuồng: ${barnName}` : ''}</span>;
       }
     },
-    { title: "Vaccine", dataIndex: "vaccine_name", key: "vaccine_name" },
-    { title: "Số lượng", key: "quantity", render: (_, r) => r.quantity ? `${r.quantity} ${r.unit || ''}` : '-' },
+    { title: "Vaccine", dataIndex: "vaccine_name", key: "vaccine_name", render: (text) => <strong className="text-primary">{text}</strong> },
+    { title: "Số lượng", key: "quantity", render: (_, r) => r.quantity ? <strong>{`${Number(r.quantity)} ${r.unit || ''}`}</strong> : '-' },
     { title: "Người thực hiện", dataIndex: "performed_by_name", key: "performed_by_name" },
     { 
       title: "Ghi chú", 
@@ -393,7 +393,7 @@ export default function PigVaccination() {
           <Form.Item label="Tên Vaccine" required>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Form.Item name="vaccine_id" noStyle rules={[{ required: true, message: 'Nhập hoặc chọn tên vaccine' }]}>
-                <Select showSearch options={vaccines.map(v => ({ label: `${v.name} (Tồn: ${v.stock || 0} ${v.unit || ''})`, value: v.id }))} placeholder="VD: LMLM, Tai xanh..." style={{ flex: 1 }} />
+                <Select showSearch options={vaccines.map(v => ({ label: `${v.name} (Tồn: ${Number(v.stock) || 0} ${v.unit || ''})`, value: v.id }))} placeholder="VD: LMLM, Tai xanh..." style={{ flex: 1 }} />
               </Form.Item>
               {canImport && <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddVaccineModalOpen(true)} title="Thêm loại vaccine mới" />}
             </div>
@@ -401,7 +401,7 @@ export default function PigVaccination() {
 
           <Space align="baseline">
             <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-              <InputNumber min={0.1} step={0.1} className="w-100" />
+              <InputNumber min={1} step={1} className="w-100" />
             </Form.Item>
           <Form.Item name="unit" label="Đơn vị" initialValue="liều">
             <Input disabled className="w-120" style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
@@ -453,13 +453,13 @@ export default function PigVaccination() {
           <Form.Item label="Tên vaccine" required>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Form.Item name="vaccine_id" noStyle rules={[{ required: true, message: 'Chọn vaccine để nhập' }]}>
-                <Select showSearch options={vaccines.map(v => ({ label: `${v.name} (Tồn hiện tại: ${v.stock || 0} ${v.unit || ''})`, value: v.id }))} placeholder="Chọn vaccine..." style={{ flex: 1 }} />
+                <Select showSearch options={vaccines.map(v => ({ label: `${v.name} (Tồn hiện tại: ${Number(v.stock) || 0} ${v.unit || ''})`, value: v.id }))} placeholder="Chọn vaccine..." style={{ flex: 1 }} />
               </Form.Item>
               <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsAddVaccineModalOpen(true)} title="Thêm loại vaccine mới" />
             </div>
           </Form.Item>
           <Form.Item name="quantity" label="Số lượng nhập thêm" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-            <InputNumber min={0.1} step={0.1} className="w-100" placeholder="Ví dụ: 100" />
+            <InputNumber min={1} step={1} className="w-100" placeholder="Ví dụ: 100" />
           </Form.Item>
         </Form>
       </Modal>

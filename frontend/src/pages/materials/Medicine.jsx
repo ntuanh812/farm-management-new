@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space, Radio, Row, Col } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space, Radio, Row, Col, AutoComplete } from 'antd';
 import { PlusOutlined, DeleteOutlined, ImportOutlined, AppstoreOutlined, DatabaseOutlined, LineChartOutlined, WarningOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -7,8 +7,6 @@ import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-const UNIT_TYPES = ['ml', 'mg', 'lọ', 'gói', 'viên'];
 
 export default function Medicine() {
   const { token, user } = useAuthStore();
@@ -92,6 +90,12 @@ export default function Medicine() {
     return { totalMedicineTypes, totalStock, totalUsed, lowStock };
   }, [medicines, medicineUsages]);
 
+  // Tự động trích xuất danh sách đơn vị tính không trùng lặp từ CSDL
+  const unitTypes = useMemo(() => {
+    const units = medicines.map(m => m.unit).filter(Boolean);
+    return [...new Set(units)];
+  }, [medicines]);
+
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${API}/medicine-usages/${id}`, { headers });
@@ -156,7 +160,7 @@ export default function Medicine() {
         return <span>Chuồng: <strong>{r.barn_name || 'Không rõ'}</strong></span>;
     }},
     { title: 'Tên thuốc/Vật tư', dataIndex: 'medicine_name', key: 'medicine_name', render: text => <strong className="text-primary">{text}</strong> },
-    { title: 'Số lượng', key: 'quantity', render: (_, r) => `${r.quantity} ${r.unit}` },
+    { title: 'Số lượng', key: 'quantity', render: (_, r) => <strong>{`${Number(r.quantity)} ${r.unit}`}</strong> },
     { title: 'Người thực hiện', dataIndex: 'staff_name', key: 'staff_name' },
     { title: 'Ghi chú', dataIndex: 'note', key: 'note', render: (text) => {
         if (text && text.startsWith('[Cá thể:')) {
@@ -293,7 +297,7 @@ export default function Medicine() {
               <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Nhập hoặc chọn tên thuốc' }]}>
                 <Select 
                   showSearch 
-                  options={medicines.map(m => ({ label: `${m.name} (Tồn: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} 
+                  options={medicines.map(m => ({ label: `${m.name} (Tồn: ${Number(m.stock) || 0} ${m.unit || ''})`, value: m.id }))} 
                   placeholder="VD: Kháng sinh, Vitamin..." 
                   style={{ flex: 1 }} 
                   onChange={(val) => {
@@ -307,7 +311,7 @@ export default function Medicine() {
           </Form.Item>
           <Space align="baseline">
             <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-              <InputNumber min={0.1} step={0.1} className="w-100" />
+              <InputNumber min={1} step={1} className="w-100" />
             </Form.Item>
             <Form.Item name="unit" label="Đơn vị" rules={[{ required: true, message: 'Chọn đơn vị' }]}>
               <Input disabled className="w-120" style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
@@ -331,8 +335,14 @@ export default function Medicine() {
           <Form.Item name="name" label="Tên thuốc/vật tư" rules={[{ required: true, message: 'Vui lòng nhập tên thuốc' }]}>
             <Input placeholder="Ví dụ: Kháng sinh Amoxicillin..." />
           </Form.Item>
-          <Form.Item name="unit" label="Đơn vị tính" rules={[{ required: true, message: 'Vui lòng chọn đơn vị' }]}>
-            <Select options={UNIT_TYPES.map(u => ({ label: u, value: u }))} placeholder="VD: ml, lọ..." />
+          <Form.Item name="unit" label="Đơn vị tính" rules={[{ required: true, message: 'Vui lòng chọn hoặc nhập đơn vị' }]}>
+            <AutoComplete 
+              options={unitTypes.map(u => ({ value: u }))} 
+              placeholder="Chọn hoặc nhập đơn vị tính mới..." 
+              filterOption={(inputValue, option) =>
+                option.value.toUpperCase().includes(inputValue.toUpperCase())
+              }
+            />
           </Form.Item>
           <Form.Item name="stock" label="Số lượng tồn ban đầu">
             <InputNumber min={0} className="w-100" placeholder="0" />
@@ -354,7 +364,7 @@ export default function Medicine() {
               <Form.Item name="medicine_id" noStyle rules={[{ required: true, message: 'Chọn thuốc để nhập' }]}>
                 <Select 
                   showSearch 
-                  options={medicines.map(m => ({ label: `${m.name} (Tồn hiện tại: ${m.stock || 0} ${m.unit || ''})`, value: m.id }))} 
+                  options={medicines.map(m => ({ label: `${m.name} (Tồn hiện tại: ${Number(m.stock) || 0} ${m.unit || ''})`, value: m.id }))} 
                   placeholder="Chọn thuốc..." 
                   style={{ flex: 1 }} 
                   onChange={(val) => {
@@ -368,7 +378,7 @@ export default function Medicine() {
           </Form.Item>
           <Space align="baseline">
             <Form.Item name="quantity" label="Số lượng nhập thêm" rules={[{ required: true, message: 'Nhập số lượng' }]}>
-              <InputNumber min={0.1} step={0.1} className="w-100" placeholder="Ví dụ: 100" />
+              <InputNumber min={1} step={1} className="w-100" placeholder="Ví dụ: 100" />
             </Form.Item>
             <Form.Item name="unit" label="Đơn vị">
               <Input disabled className="w-120" style={{ color: '#000', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }} />
