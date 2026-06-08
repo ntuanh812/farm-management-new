@@ -8,6 +8,7 @@ import axios from 'axios'
 import dayjs from 'dayjs'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { uploadFile } from '@/utils/upload'
 
 const { TextArea } = Input
 const { Option }   = Select
@@ -59,23 +60,6 @@ export default function PigReport() {
   }, [headers])
 
   useEffect(() => { fetchList(); fetchDropdowns() }, [fetchList, fetchDropdowns])
-
-  // ── Xử lý upload ảnh ────────────────────────────────────
-  const handleUpload = async ({ file, onSuccess, onError }) => {
-    const formData = new FormData()
-    formData.append('files', file)
-    try {
-      const { data } = await axios.post(`${API}/pig-reports/upload`, formData, {
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
-      })
-      // Lưu URL trả về vào file object để dùng khi submit
-      file.serverUrl = data.data[0]
-      onSuccess(data)
-    } catch (err) {
-      onError(err)
-      message.error('Upload ảnh thất bại')
-    }
-  }
 
   // ── Submit tạo báo cáo ───────────────────────────────────
   const handleSubmit = async () => {
@@ -300,7 +284,7 @@ export default function PigReport() {
 
           <Form.Item label="📷 Ảnh chụp (tối đa 5 ảnh)">
             <Upload
-              customRequest={handleUpload}
+              customRequest={(options) => uploadFile({ ...options, headers, endpoint: `${API}/pig-reports/upload`, fieldName: 'files' })}
               listType="picture-card"
               fileList={fileList}
               onChange={({ fileList: fl }) => setFileList(fl)}
@@ -391,7 +375,7 @@ export default function PigReport() {
               </div>
               <div style={{ marginTop: 8 }}>
                 <Upload
-                  customRequest={handleUpload}
+                  customRequest={(options) => uploadFile({ ...options, headers, endpoint: `${API}/pig-reports/upload`, fieldName: 'files' })}
                   listType="picture-card"
                   fileList={messageFileList}
                   onChange={({ fileList: fl }) => setMessageFileList(fl)}

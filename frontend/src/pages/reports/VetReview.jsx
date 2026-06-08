@@ -8,6 +8,7 @@ import axios from 'axios'
 import dayjs from 'dayjs'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { uploadFile } from '@/utils/upload'; // Gợi ý: Tách hàm upload ra file riêng
 
 
 const { TextArea } = Input
@@ -60,22 +61,6 @@ export default function VetReview() {
       const { data } = await axios.get(`${API}/pig-reports/${id}/messages`, { headers })
       setMessagesList(data.data)
     } catch { message.error('Lỗi tải tin nhắn') }
-  }
-
-  // ── Xử lý upload ảnh ────────────────────────────────────
-  const handleUpload = async ({ file, onSuccess, onError }) => {
-    const formData = new FormData()
-    formData.append('files', file)
-    try {
-      const { data } = await axios.post(`${API}/pig-reports/upload`, formData, {
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
-      })
-      file.serverUrl = data.data[0]
-      onSuccess(data)
-    } catch (err) {
-      onError(err)
-      message.error('Upload ảnh thất bại')
-    }
   }
 
   // ── Submit phản hồi ──────────────────────────────────────
@@ -317,7 +302,7 @@ export default function VetReview() {
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <Upload
-                    customRequest={handleUpload}
+                    customRequest={({ file, onSuccess, onError }) => uploadFile({ file, onSuccess, onError, headers, endpoint: `${API}/pig-reports/upload` })}
                     listType="picture-card"
                     fileList={messageFileList}
                     onChange={({ fileList: fl }) => setMessageFileList(fl)}

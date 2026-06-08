@@ -115,55 +115,16 @@ export default function PigManage() {
     setDetailOpen(true);
     setLoadingHistory(true);
     try {
-      const bId = record.barn_id;
-      const entryDate = record.entry_date;
-      
-      const [moveRes, vacRes, repRes, medRes] = await Promise.all([
-        axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } }))
-      ]);
-
-      const moves = (moveRes.data?.data || []).filter(m => m.pig_id === record.id);
-      const reps = (repRes.data?.data || []).filter(r => r.pig_id === record.id);
-
-      // Sort movements descending by move_date
-      const sortedMoves = [...moves].sort((a, b) => dayjs(b.move_date).valueOf() - dayjs(a.move_date).valueOf());
-
-      const getPigBarnOnDate = (targetDate) => {
-        if (entryDate && dayjs(targetDate).isBefore(dayjs(entryDate), 'day')) return null;
-        let currentBarn = bId;
-        for (let m of sortedMoves) {
-          if (dayjs(m.move_date).isAfter(dayjs(targetDate), 'day')) {
-            currentBarn = m.from_barn_id;
-          } else {
-            break;
-          }
-        }
-        return currentBarn;
-      };
-
-      const vacs = (vacRes.data?.data || []).filter(v => {
-        if (v.pig_id === record.id) return true;
-        if (v.barn_id) {
-          const barnOnDate = getPigBarnOnDate(v.vaccinated_at);
-          return barnOnDate === v.barn_id;
-        }
-        return false;
-      });
-
-      const meds = (medRes.data?.data || []).filter(m => {
-        const pId = m.pig_id;
-        if (pId === record.id) return true;
-        if (m.note && (m.note.includes(`[Cá thể: ${record.id}]`) || m.note.includes(`[Cá thể: PIG${String(record.id).padStart(3, "0")}]`))) return true;
-        if (m.note && m.note.startsWith('[Cá thể:')) return false;
-        
-        const barnOnDate = getPigBarnOnDate(m.used_at);
-        return barnOnDate === m.barn_id;
-      });
-
-      setPigHistory({ movements: moves, vaccinations: vacs, reports: reps, medicines: meds });
+      // GỢI Ý: Thay vì gọi 4 API và xử lý logic phức tạp ở Frontend,
+      // nên tạo một endpoint duy nhất ở Backend để lấy toàn bộ lịch sử của một cá thể lợn.
+      // Ví dụ: GET /api/pigs/:id/history
+      const res = await axios.get(`${API}/pigs/${record.id}/history`, { headers });
+      if (res.data.success) {
+        setPigHistory(res.data.data);
+      } else {
+        setPigHistory({ movements: [], vaccinations: [], reports: [], medicines: [] });
+        message.error("Không thể tải lịch sử cá thể lợn");
+      }
     } catch (error) {
       message.error("Không thể tải lịch sử cá thể lợn");
     } finally {

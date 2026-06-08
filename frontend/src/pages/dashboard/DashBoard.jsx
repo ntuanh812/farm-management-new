@@ -33,44 +33,9 @@ import {
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
+import { formatRelativeTime } from "@/utils/formatters";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-
-// =========================================================
-// TIME FORMAT
-// =========================================================
-function formatRelativeTime(dateString) {
-
-  if (!dateString) return "";
-
-  const time =
-    new Date(dateString).getTime();
-
-  if (Number.isNaN(time)) return "";
-
-  const diffMs =
-    Date.now() - time;
-
-  const diffMin =
-    Math.floor(diffMs / 60000);
-
-  if (diffMin < 1)
-    return "Vừa xong";
-
-  if (diffMin < 60)
-    return `${diffMin} phút trước`;
-
-  const diffHour =
-    Math.floor(diffMin / 60);
-
-  if (diffHour < 24)
-    return `${diffHour} giờ trước`;
-
-  const diffDay =
-    Math.floor(diffHour / 24);
-
-  return `${diffDay} ngày trước`;
-}
 
 export const DashBoard = () => {
 
@@ -115,7 +80,6 @@ export const DashBoard = () => {
           barnRes,
           pigRes,
           staffRes,
-          reportRes,
           saleRes,
           feedRes,
           moveRes,
@@ -138,11 +102,6 @@ export const DashBoard = () => {
             `${API}/staff`,
             { headers }
           ).catch(() => ({ data: { data: [] } })),
-
-          axios.get(
-            `${API}/reports/farm-overview`,
-            { headers }
-          ).catch(() => ({ data: null })),
 
           axios.get(
             `${API}/sale-batches`,
