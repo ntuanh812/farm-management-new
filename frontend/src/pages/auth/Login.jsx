@@ -3,7 +3,7 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 
-// Redirect theo role sau khi login thành công
+
 const ROLE_HOME = {
   ADMIN: '/dashboard',
   FARM_WORKER: '/staff/dashboard',

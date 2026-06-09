@@ -1,7 +1,3 @@
-// =========================================================
-// backend/src/app.js
-// =========================================================
-
 import "dotenv/config";
 
 import Fastify from "fastify";
@@ -69,8 +65,6 @@ const UPLOAD_DIR = path.resolve(
   __dirname,
   "../uploads"
 );
-
-console.log("UPLOAD_DIR:", UPLOAD_DIR);
 
 // =========================================================
 // PLUGINS

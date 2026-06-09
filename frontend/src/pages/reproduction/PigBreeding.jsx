@@ -153,8 +153,8 @@ export default function PigBreeding() {
 
         const options = Object.entries(STATUS_CONFIG)
           .filter(([val]) => {
-            if (val === 'FARROWED') return false; // Không tự chọn "Đã đẻ" thủ công từ dropdown
-            if (status !== 'PENDING' && val === 'PENDING') return false; // Đã có kết quả thì không quay lại PENDING
+            if (val === 'FARROWED') return false; 
+            if (status !== 'PENDING' && val === 'PENDING') return false; 
             return true;
           })
           .map(([val, cfg]) => ({ 

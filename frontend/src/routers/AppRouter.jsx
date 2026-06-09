@@ -39,13 +39,15 @@ import PigReport from '@/pages/reports/PigReport'
 import VetReview from '@/pages/reports/VetReview'
 import FarmReport from '@/pages/reports/FarmReport'
 
+// ── Helper: Kiểm tra trạng thái đăng nhập hợp lệ ─────────
+const checkAuth = (token, user) => token && token !== 'null' && user && user.role;
+
 // ── PrivateRoute: kiểm tra đăng nhập + quyền role ────────
 // roles = [] => chỉ cần đăng nhập, không cần role cụ thể
 function PrivateRoute({ children, roles = [] }) {
   const { token, user } = useAuthStore()
 
-  // Kiểm tra chặt chẽ token và thông tin user (phòng trường hợp local storage lưu chuỗi 'null' hoặc bị hỏng)
-  const isAuthenticated = token && token !== 'null' && user && user.role;
+  const isAuthenticated = checkAuth(token, user);
 
   // Chưa đăng nhập → về login
   if (!isAuthenticated) {
@@ -64,8 +66,7 @@ function PrivateRoute({ children, roles = [] }) {
 function RootRedirect() {
   const { token, user } = useAuthStore()
   
-  const isAuthenticated = token && token !== 'null' && user && user.role;
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!checkAuth(token, user)) return <Navigate to="/login" replace />
 
   switch (user.role) {
     case 'ADMIN': return <Navigate to="/dashboard" replace />
@@ -78,7 +79,7 @@ function RootRedirect() {
 // ── UnauthorizedPage: Giao diện báo lỗi không có quyền ────────
 function UnauthorizedPage() {
   const { token, user } = useAuthStore()
-  const isAuthenticated = token && token !== 'null' && user && user.role;
+  const isAuthenticated = checkAuth(token, user);
 
   return (
     <div style={{ textAlign: 'center', padding: 100 }}>

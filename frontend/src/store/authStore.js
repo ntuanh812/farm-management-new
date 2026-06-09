@@ -63,10 +63,4 @@ export const useAuthStore = create((set, get) => ({
       get().logout()
     }
   },
-
-  // ── Helper: lấy header Authorization ─────────────────
-  getAuthHeader: () => {
-    const { token } = get()
-    return token ? { Authorization: `Bearer ${token}` } : {}
-  },
 }))
