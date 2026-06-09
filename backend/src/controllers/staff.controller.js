@@ -86,7 +86,7 @@ export const staffController = {
       return reply.code(400).send({ success: false, message: 'Email không đúng định dạng' });
     }
 
-    const cleanPhone = phone ? String(phone).replace(/[\s\-\.]/g, '') : null;
+    const cleanPhone = phone ? String(phone).replace(/[\s-.]/g, '') : null;
     if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
       return reply.code(400).send({ success: false, message: 'Số điện thoại không hợp lệ' });
     }
@@ -155,7 +155,7 @@ export const staffController = {
       return reply.code(400).send({ success: false, message: 'Email không đúng định dạng' });
     }
 
-    const cleanPhone = phone ? String(phone).replace(/[\s\-\.]/g, '') : null;
+    const cleanPhone = phone ? String(phone).replace(/[\s-.]/g, '') : null;
     if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
       return reply.code(400).send({ success: false, message: 'Số điện thoại không hợp lệ' });
     }
