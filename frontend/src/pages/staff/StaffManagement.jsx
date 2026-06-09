@@ -66,6 +66,9 @@ export default function StaffManagement() {
       // Format date
       if (values.dob) values.dob = values.dob.format('YYYY-MM-DD');
       
+      // Chuẩn hóa SĐT trước khi gửi (Loại bỏ khoảng trắng, dấu chấm, dấu gạch ngang)
+      if (values.phone) values.phone = String(values.phone).replace(/[\s\-\.]/g, '');
+
       // Lấy URL của Avatar nếu có
       let avatarUrl = null;
       if (fileList.length > 0) {
@@ -334,10 +337,12 @@ export default function StaffManagement() {
                 label="Số điện thoại" 
                 rules={[
                   { required: true, message: 'Vui lòng nhập SĐT' },
+                  { pattern: /^(\+84|0)[0-9\s\-\.]{8,12}$/, message: 'SĐT không hợp lệ (Bắt đầu bằng 0 hoặc +84)' },
                   () => ({
                     validator(_, value) {
                       if (!value) return Promise.resolve();
-                      const exists = staffData.find(s => s.phone === value);
+                      const cleanVal = String(value).replace(/[\s\-\.]/g, '');
+                      const exists = staffData.find(s => s.phone === cleanVal);
                       if (exists && exists.id !== editingStaff?.id) {
                         return Promise.reject(new Error('Số điện thoại này đã được sử dụng!'));
                       }

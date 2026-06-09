@@ -10,7 +10,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
-import { formatRelativeTime } from "@/utils/formatters"; // Gợi ý: Chuyển hàm formatRelativeTime ra file utils
+import { formatRelativeTime } from "@/utils/formatters";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 

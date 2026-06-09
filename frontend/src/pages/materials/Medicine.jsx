@@ -153,19 +153,12 @@ export default function Medicine() {
           const pigId = r.pig_id;
           return <span>Cá thể: <strong>PIG{String(pigId).padStart(3, "0")}</strong></span>;
         }
-        if (r.note && r.note.startsWith('[Cá thể:')) {
-          const match = r.note.match(/^\[Cá thể:\s*(.+?)\]/);
-          if (match) return <span>Cá thể: <strong>{match[1]}</strong></span>;
-        }
         return <span>Chuồng: <strong>{r.barn_name || 'Không rõ'}</strong></span>;
     }},
     { title: 'Tên thuốc/Vật tư', dataIndex: 'medicine_name', key: 'medicine_name', render: text => <strong className="text-primary">{text}</strong> },
     { title: 'Số lượng', key: 'quantity', render: (_, r) => <strong>{`${Number(r.quantity)} ${r.unit}`}</strong> },
     { title: 'Người thực hiện', dataIndex: 'staff_name', key: 'staff_name' },
     { title: 'Ghi chú', dataIndex: 'note', key: 'note', render: (text) => {
-        if (text && text.startsWith('[Cá thể:')) {
-          return text.replace(/^\[Cá thể:\s*[^\]]+\]\s*/, '') || '-';
-        }
         return text || '-';
     } },
     {
@@ -222,7 +215,7 @@ export default function Medicine() {
                 <div className="stat-card__icon"><DatabaseOutlined /></div>
               </div>
               <div className="stat-card__value">
-                {Math.round(stats.totalStock).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                {Math.round(stats.totalStock).toLocaleString()}
                 <span className="stat-card__label"> đv</span>
               </div>
             </Card>
@@ -234,7 +227,7 @@ export default function Medicine() {
                 <div className="stat-card__icon"><LineChartOutlined /></div>
               </div>
               <div className="stat-card__value">
-                {Math.round(stats.totalUsed).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                {Math.round(stats.totalUsed).toLocaleString()}
                 <span className="stat-card__label"> đv</span>
               </div>
             </Card>

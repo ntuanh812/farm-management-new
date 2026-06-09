@@ -8,16 +8,10 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { useAuthStore } from "@/store/authStore";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CATEGORY_MAP } from '@/utils/constants';
 
 const { Option } = Select;
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-
-const CATEGORY_MAP = {
-  'SOW': 'Lợn nái',
-  'BOAR': 'Lợn đực',
-  'PIGLET': 'Lợn con',
-  'FATTENING': 'Lợn thịt'
-};
 
 export default function PigstyHistory() {
   const { token, user } = useAuthStore();

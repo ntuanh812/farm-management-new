@@ -86,7 +86,8 @@ export const staffController = {
       return reply.code(400).send({ success: false, message: 'Email không đúng định dạng' });
     }
 
-    if (phone && !/^[0-9]{10,11}$/.test(phone)) {
+    const cleanPhone = phone ? String(phone).replace(/[\s\-\.]/g, '') : null;
+    if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
       return reply.code(400).send({ success: false, message: 'Số điện thoại không hợp lệ' });
     }
 
@@ -101,7 +102,7 @@ export const staffController = {
         const empResult = await tx.staffs.create({
           data: {
             full_name,
-            phone: phone || null,
+            phone: cleanPhone || null,
             email: email || null,
             gender: gender || 'male',
             dob: dob ? new Date(dob) : null,
@@ -154,7 +155,8 @@ export const staffController = {
       return reply.code(400).send({ success: false, message: 'Email không đúng định dạng' });
     }
 
-    if (phone && !/^[0-9]{10,11}$/.test(phone)) {
+    const cleanPhone = phone ? String(phone).replace(/[\s\-\.]/g, '') : null;
+    if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
       return reply.code(400).send({ success: false, message: 'Số điện thoại không hợp lệ' });
     }
 
@@ -176,7 +178,7 @@ export const staffController = {
         await tx.staffs.update({
           where: { id: Number(id) },
           data: {
-            full_name, phone: phone || null, email: email || null, gender: gender || 'male', 
+            full_name, phone: cleanPhone || null, email: email || null, gender: gender || 'male', 
             dob: dob ? new Date(dob) : null, address: address || null, avatar_url: avatar || null, 
             role_id: role_id ? Number(role_id) : null
           }

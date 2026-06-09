@@ -9,34 +9,12 @@ import {
 } from 'recharts';
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { CATEGORY_MAP } from '@/utils/constants'
+import { formatRelativeTime } from '@/utils/formatters'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const CATEGORY_MAP = {
-  'SOW': 'Lợn nái',
-  'BOAR': 'Lợn đực',
-  'PIGLET': 'Lợn con',
-  'FATTENING': 'Lợn thịt'
-};
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-// =========================================================
-// TIME FORMAT
-// =========================================================
-function formatRelativeTime(dateString) {
-  if (!dateString) return "";
-  const time = new Date(dateString).getTime();
-  if (Number.isNaN(time)) return "";
-  const diffMs = Date.now() - time;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "Vừa xong";
-  if (diffMin < 60) return `${diffMin} phút trước`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour} giờ trước`;
-  const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay} ngày trước`;
-}
 
 export default function StaffDashboard() {
   const { token, user } = useAuthStore()

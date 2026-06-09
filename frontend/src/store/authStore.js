@@ -3,7 +3,6 @@ import axios from 'axios'
 
 const API = 'http://localhost:3000/api'
 
-// Lấy user đã lưu từ sessionStorage (khi refresh trang)
 function loadFromStorage() {
   try {
     const token = sessionStorage.getItem('token')
