@@ -61,26 +61,39 @@ export default function PigBarns() {
     fetchData();
   }, [fetchData]);
 
+  // Thêm computedStatus cho chuồng
+  const augmentedBarns = useMemo(() => {
+    return barns.map(b => ({
+      ...b,
+      computedStatus: b.status === 'MAINTENANCE' ? 'MAINTENANCE' : ((b.current_quantity || 0) >= (b.capacity || 1) ? 'FULL' : 'ACTIVE')
+    }));
+  }, [barns]);
+
   // Tính toán thống kê chuồng trại
   const stats = useMemo(() => {
-    const active = barns.filter(b => b.status === 'ACTIVE').length;
-    const full = barns.filter(b => (b.current_quantity || 0) >= (b.capacity || 1)).length;
-    const totalPigs = barns.reduce((sum, b) => sum + (b.current_quantity || 0), 0);
-    const totalCapacity = barns.reduce((sum, b) => sum + (b.capacity || 0), 0);
-    return { total: barns.length, active, full, totalPigs, totalCapacity };
-  }, [barns]);
+    const active = augmentedBarns.filter(b => b.computedStatus === 'ACTIVE').length;
+    const full = augmentedBarns.filter(b => b.computedStatus === 'FULL').length;
+    const totalPigs = augmentedBarns.reduce((sum, b) => sum + (b.current_quantity || 0), 0);
+    const totalCapacity = augmentedBarns.reduce((sum, b) => sum + (b.capacity || 0), 0);
+    return { total: augmentedBarns.length, active, full, totalPigs, totalCapacity };
+  }, [augmentedBarns]);
 
   // Lọc dữ liệu hiển thị trên bảng
   const filteredBarns = useMemo(() => {
-    return barns.filter(b => {
+    return augmentedBarns.filter(b => {
       const matchSearch = !searchText || 
         (b.code || '').toLowerCase().includes(searchText.toLowerCase()) || 
         (b.name || '').toLowerCase().includes(searchText.toLowerCase());
       const matchType = !filterType || b.barn_type === filterType;
-      const matchStatus = !filterStatus || b.status === filterStatus;
+      const matchStatus = !filterStatus || b.computedStatus === filterStatus;
       return matchSearch && matchType && matchStatus;
     });
-  }, [barns, searchText, filterType, filterStatus]);
+  }, [augmentedBarns, searchText, filterType, filterStatus]);
+
+  const editingBarn = useMemo(() => {
+    if (!editingId) return null;
+    return augmentedBarns.find(b => b.id === editingId);
+  }, [editingId, augmentedBarns]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -180,11 +193,10 @@ export default function PigBarns() {
     },
     {
       title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        const cfg = STATUS_CONFIG[status];
-        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{status}</Tag>;
+      key: 'computedStatus',
+      render: (_, record) => {
+        const cfg = STATUS_CONFIG[record.computedStatus];
+        return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{record.computedStatus}</Tag>;
       }
     },
     {
@@ -375,12 +387,17 @@ export default function PigBarns() {
           </Row>
 
           {editingId && (
-            <Form.Item name="status" label="Trạng thái" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-              <Select>
-                {Object.entries(STATUS_CONFIG).map(([key, val]) => (
-                  <Select.Option key={key} value={key}>{val.text}</Select.Option>
-                ))}
-              </Select>
+            <Form.Item label="Trạng thái">
+              {editingBarn?.computedStatus === 'FULL' ? (
+                <Input value="Đã đầy" disabled />
+              ) : (
+                <Form.Item name="status" noStyle rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
+                  <Select options={[
+                    { label: 'Hoạt động', value: 'ACTIVE' },
+                    { label: 'Bảo trì', value: 'MAINTENANCE' }
+                  ]} />
+                </Form.Item>
+              )}
             </Form.Item>
           )}
 

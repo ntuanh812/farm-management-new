@@ -152,6 +152,10 @@ export default async function movementsRoute(app) {
           });
           if (!barn) throw new Error("Không tìm thấy chuồng");
 
+          if (barn.status === 'MAINTENANCE') {
+            throw new Error("Chuồng đang bảo trì, không thể chuyển lợn đến");
+          }
+
           const pigs = await tx.pigs.findMany({
             where: { id: { in: pig_ids.map(id => Number(id)) } }
           });
@@ -206,8 +210,7 @@ export default async function movementsRoute(app) {
 
         return reply.status(500).send({
           success: false,
-          message:
-            "Không thể chuyển chuồng",
+          message: err.message || "Không thể chuyển chuồng",
         });
 
       }

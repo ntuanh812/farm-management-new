@@ -280,13 +280,15 @@ export default function PigstyHistory() {
             label="Chuyển sang chuồng"
             rules={[{ required: true, message: "Chọn chuồng" }]}
           >
-            <Select showSearch placeholder="Chọn chuồng đích">
-              {barns.map((b) => (
-                <Option key={b.id} value={b.id}>
-                  {b.name}
-                </Option>
-              ))}
-            </Select>
+            <Select showSearch placeholder="Chọn chuồng đích" options={barns.map((b) => {
+              const isMaintenance = b.status === 'MAINTENANCE';
+              const isFull = (b.current_quantity || 0) >= (b.capacity || 1);
+              return {
+                label: `${b.name} ${isMaintenance ? '(Bảo trì)' : isFull ? '(Đã đầy)' : ''}`,
+                value: b.id,
+                disabled: isMaintenance || isFull
+              };
+            })} />
           </Form.Item>
 
           <Form.Item name="note" label="Ghi chú">

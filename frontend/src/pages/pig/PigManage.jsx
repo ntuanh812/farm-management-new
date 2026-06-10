@@ -399,7 +399,15 @@ export default function PigManage() {
             )}
             <Col span={12}>
               <Form.Item name="barn_id" label="Chuồng trại" rules={[{ required: true, message: 'Chọn chuồng' }]}>
-                <Select disabled={!!editingId} showSearch options={barns.map(b => ({ label: b.name, value: b.id }))} placeholder="Chọn..." />
+                <Select disabled={!!editingId} showSearch placeholder="Chọn..." options={barns.map(b => {
+                    const isMaintenance = b.status === 'MAINTENANCE';
+                    const isFull = (b.current_quantity || 0) >= (b.capacity || 1);
+                    return {
+                      label: `${b.name} ${isMaintenance ? '(Bảo trì)' : isFull ? '(Đã đầy)' : ''}`,
+                      value: b.id,
+                      disabled: isMaintenance || isFull
+                    };
+                })} />
               </Form.Item>
             </Col>
           </Row>

@@ -132,6 +132,10 @@ export default async function pigsRoute(app) {
           return reply.status(404).send({ success: false, message: "Không tìm thấy chuồng" });
         }
 
+        if (barn.status === 'MAINTENANCE') {
+          return reply.status(400).send({ success: false, message: "Chuồng đang bảo trì, không thể thêm lợn" });
+        }
+
         if (barn._count.pigs >= barn.capacity) {
           return reply.status(400).send({ success: false, message: "Chuồng đã đầy" });
         }
@@ -203,9 +207,10 @@ export default async function pigsRoute(app) {
         // 1. Lấy trạng thái cũ của lợn để so sánh
         const oldPig = await prisma.pigs.findUnique({
           where: { id: Number(id) },
-          select: { lifecycle_status: true }
+          select: { lifecycle_status: true, barn_id: true }
         });
         const oldStatus = oldPig?.lifecycle_status;
+        const oldBarnId = oldPig?.barn_id;
 
         // KHÓA CHỈNH SỬA NẾU LỢN ĐÃ CHẾT HOẶC ĐÃ BÁN
         if (oldStatus === 'DEAD' || oldStatus === 'SOLD') {
@@ -218,6 +223,25 @@ export default async function pigsRoute(app) {
       if (Number(entry_weight || 0) < 0 || Number(current_weight || 0) < 0 || Number(purchase_price || 0) < 0) {
         return reply.status(400).send({ success: false, message: "Trọng lượng hoặc giá tiền không hợp lệ" });
       }
+
+        if (oldBarnId && Number(barn_id) !== oldBarnId) {
+          const newBarn = await prisma.barns.findUnique({
+            where: { id: Number(barn_id) },
+            include: {
+              _count: { select: { pigs: { where: { lifecycle_status: 'ACTIVE' } } } }
+            }
+          });
+
+          if (!newBarn) {
+            return reply.status(404).send({ success: false, message: "Không tìm thấy chuồng mới" });
+          }
+          if (newBarn.status === 'MAINTENANCE') {
+            return reply.status(400).send({ success: false, message: "Chuồng mới đang bảo trì, không thể chuyển lợn đến" });
+          }
+          if (newBarn.capacity && newBarn._count.pigs >= newBarn.capacity) {
+            return reply.status(400).send({ success: false, message: "Chuồng mới đã đầy" });
+          }
+        }
 
         await prisma.pigs.update({
           where: { id: Number(id) },

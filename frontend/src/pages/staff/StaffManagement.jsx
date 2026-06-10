@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Table, Button, Space, Tag, Modal, Form, Input, 
   Select, DatePicker, Switch, message, Popconfirm, Card, Row, Col, Upload, Avatar 
@@ -18,7 +18,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function StaffManagement() {
   const { token } = useAuthStore();
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   // States
   const [staffData, setStaffData] = useState([]);
@@ -34,7 +34,7 @@ export default function StaffManagement() {
   const [staffForm] = Form.useForm();
 
   // Fetch Data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       // Giả định backend đã gộp nhân viên + account + chuồng
@@ -53,11 +53,11 @@ export default function StaffManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [headers]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Handlers
 
@@ -98,7 +98,7 @@ export default function StaffManagement() {
         message.success('Thêm nhân sự thành công!');
       }
 
-      // Tự động tạo tài khoản khi thêm mới (hoặc khi nhân sự chưa có tài khoản)
+      // Gọi API tạo tài khoản nếu Admin có nhập username và password trên form Thêm mới
       if (!editingStaff?.account_id && staffId && values.username && values.password) {
         await axios.post(`${API}/staff/accounts`, {
           staff_id: staffId,
