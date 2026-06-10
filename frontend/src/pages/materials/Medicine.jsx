@@ -124,8 +124,8 @@ export default function Medicine() {
       } else {
         const requests = pig_ids.map(pigId => {
           const pig = pigs.find(p => p.id === pigId);
-          const customNote = `[Cá thể: PIG${String(pigId).padStart(3, "0")}] ${note || ''}`;
-          return axios.post(`${API}/medicine-usages`, { ...basePayload, pig_id: pigId, barn_id: pig?.barn_id, note: customNote.trim() }, { headers });
+          
+          return axios.post(`${API}/medicine-usages`, { ...basePayload, pig_id: pigId, barn_id: pig?.barn_id }, { headers });
         });
         await Promise.all(requests);
       }
