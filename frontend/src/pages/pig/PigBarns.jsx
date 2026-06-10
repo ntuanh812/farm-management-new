@@ -4,11 +4,9 @@ import {
   Select, InputNumber, message, Popconfirm, Card, Row, Col, Progress
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOutlined, WarningOutlined, TeamOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const BARN_TYPES = {
   'SOW': 'Chuồng lợn nái',
@@ -25,8 +23,7 @@ const STATUS_CONFIG = {
 };
 
 export default function PigBarns() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [barns, setBarns] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +43,7 @@ export default function PigBarns() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${API}/barns`, { headers });
+      const { data } = await axiosClient.get(`/barns`);
       if (data.success) {
         setBarns(data.data);
       }
@@ -55,7 +52,7 @@ export default function PigBarns() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -112,7 +109,7 @@ export default function PigBarns() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/barns/${id}`, { headers });
+      await axiosClient.delete(`/barns/${id}`);
       message.success('Đã xóa chuồng thành công');
       fetchData();
     } catch (error) {
@@ -125,10 +122,10 @@ export default function PigBarns() {
       const values = await form.validateFields();
 
       if (editingId) {
-        await axios.put(`${API}/barns/${editingId}`, values, { headers });
+        await axiosClient.put(`/barns/${editingId}`, values);
         message.success('Cập nhật chuồng thành công');
       } else {
-        await axios.post(`${API}/barns`, values, { headers });
+        await axiosClient.post(`/barns`, values);
         message.success('Thêm chuồng mới thành công');
       }
 

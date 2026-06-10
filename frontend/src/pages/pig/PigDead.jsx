@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Card, Space, Tag, Row, Col } from 'antd';
 import { PlusOutlined, DeleteOutlined, FallOutlined, TeamOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const DISPOSAL_METHODS = [
   'Chôn lấp an toàn',
@@ -16,8 +14,7 @@ const DISPOSAL_METHODS = [
 ];
 
 export default function PigDead() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [deaths, setDeaths] = useState([]);
   const [pigs, setPigs] = useState([]);
@@ -33,8 +30,8 @@ export default function PigDead() {
     setLoading(true);
     try {
       const [resDeaths, resPigs] = await Promise.all([
-        axios.get(`${API}/deaths`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/deaths`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/pigs`).catch(() => ({ data: { data: [] } })),
       ]);
       setDeaths(resDeaths.data?.data || []);
       setPigs(resPigs.data?.data || []);
@@ -43,7 +40,7 @@ export default function PigDead() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -56,7 +53,7 @@ export default function PigDead() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/deaths/${id}`, { headers });
+      await axiosClient.delete(`/deaths/${id}`);
       message.success('Đã xóa bản ghi lợn chết');
       fetchData();
     } catch (error) {
@@ -72,7 +69,7 @@ export default function PigDead() {
         death_date: values.death_date.format('YYYY-MM-DD'),
       };
 
-      await axios.post(`${API}/deaths`, payload, { headers });
+      await axiosClient.post(`/deaths`, payload);
       message.success('Ghi nhận lợn chết thành công');
       setOpen(false);
       form.resetFields();

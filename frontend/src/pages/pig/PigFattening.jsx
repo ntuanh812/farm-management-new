@@ -16,17 +16,19 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import weekOfYear from "dayjs/plugin/weekOfYear";
-import axios from "axios";
+import utc from "dayjs/plugin/utc";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import axiosClient from "@/utils/axiosClient";
 import { TeamOutlined, ExportOutlined, DollarOutlined, DashboardOutlined } from "@ant-design/icons";
 import { useAuthStore } from "@/store/authStore";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 dayjs.extend(weekOfYear);
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+dayjs.extend(utc);
+dayjs.extend(isSameOrBefore);
 
 export default function PigFattening() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [pigs, setPigs] = useState([]);
   const [saleBatches, setSaleBatches] = useState([]);
@@ -60,8 +62,8 @@ export default function PigFattening() {
     setLoading(true);
     try {
       const [resPigs, resSales] = await Promise.all([
-        axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/sale-batches`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/pigs`),
+        axiosClient.get(`/sale-batches`).catch(() => ({ data: { data: [] } })),
       ]);
       setPigs(resPigs.data?.data || []);
       setSaleBatches(resSales.data?.data || []);
@@ -70,7 +72,7 @@ export default function PigFattening() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -130,7 +132,7 @@ export default function PigFattening() {
     const map = {};
 
     sellRows.forEach((d) => {
-      const date = dayjs(d.sold_at);
+      const date = dayjs.utc(d.sold_at);
       let key = "";
 
       if (filterType === "day") key = date.format("DD/MM/YYYY");
@@ -174,7 +176,7 @@ export default function PigFattening() {
         ],
       };
 
-      await axios.post(`${API}/sale-batches`, payload, { headers });
+      await axiosClient.post(`/sale-batches`, payload);
       message.success("Ghi nhận xuất bán thành công");
       setOpenSingle(false);
       form.resetFields();
@@ -208,7 +210,7 @@ export default function PigFattening() {
         lines,
       };
 
-      await axios.post(`${API}/sale-batches`, payload, { headers });
+      await axiosClient.post(`/sale-batches`, payload);
       message.success("Xuất bán hàng loạt thành công");
       setOpenBulk(false);
       setBulkSelectedKeys([]);
@@ -378,22 +380,45 @@ export default function PigFattening() {
         >
           <Form form={form} onFinish={handleSell} layout="vertical" disabled={!canEdit}>
             <Form.Item name="sold_at" label="Ngày xuất bán" rules={[{ required: true, message: 'Chọn ngày bán' }]}>
-              <DatePicker disabledDate={(current) => current && current > dayjs().endOf('day')} format="DD/MM/YYYY" className="w-100" />
+              <DatePicker 
+                onChange={() => {
+                  // Khi ngày thay đổi, reset lại lợn đã chọn
+                  form.setFieldsValue({ pig_id: null, weight: null });
+                }}
+                disabledDate={(current) => current && current > dayjs().endOf('day')} 
+                format="DD/MM/YYYY" 
+                className="w-100" 
+              />
             </Form.Item>
 
-            <Form.Item name="pig_id" label="Chọn lợn" rules={[{ required: true }]}>
-              <Select
-                options={fatteningActive.map((p) => ({
-                  value: p.id,
-                  label: `PIG${String(p.id).padStart(3, "0")}`,
-                }))}
-                onChange={(val) => {
-                  const pig = fatteningActive.find(p => p.id === val);
-                  if (pig && (pig.current_weight || pig.entry_weight)) {
-                    form.setFieldsValue({ weight: pig.current_weight || pig.entry_weight });
-                  }
-                }}
-              />
+            <Form.Item noStyle dependencies={['sold_at']}>
+              {({ getFieldValue }) => {
+                const soldAtDate = getFieldValue('sold_at');
+                const eligiblePigs = soldAtDate 
+                  ? fatteningActive.filter(p => dayjs(p.entry_date).isSameOrBefore(soldAtDate, 'day'))
+                  : [];
+
+                return (
+                  <Form.Item name="pig_id" label="Chọn lợn" rules={[{ required: true, message: 'Vui lòng chọn lợn' }]}>
+                    <Select
+                      showSearch
+                      disabled={!soldAtDate}
+                      placeholder={!soldAtDate ? "Vui lòng chọn ngày bán trước" : "Chọn lợn..."}
+                      options={eligiblePigs.map((p) => ({
+                        value: p.id,
+                        label: `PIG${String(p.id).padStart(3, "0")} - Chuồng: ${p.barn_name}`,
+                      }))}
+                      onChange={(val) => {
+                        const pig = fatteningActive.find(p => p.id === val);
+                        if (pig && (pig.current_weight || pig.entry_weight)) {
+                          form.setFieldsValue({ weight: pig.current_weight || pig.entry_weight });
+                        }
+                      }}
+                      filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                    />
+                  </Form.Item>
+                );
+              }}
             </Form.Item>
 
             <Form.Item name="weight" label="Kg" rules={[{ required: true }]}>
@@ -437,42 +462,62 @@ export default function PigFattening() {
         >
           <Form form={bulkForm} onFinish={handleBulkSell} layout="vertical" disabled={!canEdit}>
             <Form.Item name="sold_at" label="Ngày xuất bán" rules={[{ required: true, message: 'Chọn ngày bán' }]} style={{ width: '40%' }}>
-              <DatePicker disabledDate={(current) => current && current > dayjs().endOf('day')} format="DD/MM/YYYY" className="w-100" />
+              <DatePicker 
+                onChange={() => {
+                  setBulkSelectedKeys([]);
+                  bulkForm.setFieldsValue({ items: [] });
+                }}
+                disabledDate={(current) => current && current > dayjs().endOf('day')} 
+                format="DD/MM/YYYY" 
+                className="w-100" 
+              />
             </Form.Item>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 8, fontWeight: 500 }}>Chọn lợn xuất bán:</div>
-              <Table
-                rowKey="id"
-                rowSelection={{
-                  selectedRowKeys: bulkSelectedKeys,
-                  onChange: (keys) => {
-                    setBulkSelectedKeys(keys);
-                    const currentItems = bulkForm.getFieldValue("items") || [];
-                    bulkForm.setFieldsValue({
-                      items: keys.map((v) => {
-                        const existing = currentItems.find((i) => i && i.pig_id === v);
-                        const pigData = fatteningActive.find((p) => p.id === v);
-                        return {
-                  pig_id: v,
-                          weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.current_weight || pigData?.entry_weight || null),
-                          price: existing && existing.price !== undefined ? existing.price : null,
-                        };
-                      }),
-                    });
-                  }
-                }}
-                dataSource={fatteningActive}
-                columns={[
-                  { title: "STT", width: 60, render: (_, __, i) => i + 1 },
-                  { title: "Mã lợn", dataIndex: "id", render: text => <strong>PIG{String(text).padStart(3, "0")}</strong> },
-                  { title: "Chuồng", dataIndex: "barn_name" },
-                  { title: "Trọng lượng", key: "current_weight", render: (_, r) => (r.current_weight || r.entry_weight) ? `${r.current_weight || r.entry_weight} kg` : '-' },
-                ]}
-                pagination={{ pageSize: 5 }}
-                size="small"
-              />
-            </div>
+            <Form.Item noStyle dependencies={['sold_at']}>
+              {({ getFieldValue }) => {
+                const soldAtDate = getFieldValue('sold_at');
+                const eligiblePigs = soldAtDate 
+                  ? fatteningActive.filter(p => dayjs(p.entry_date).isSameOrBefore(soldAtDate, 'day'))
+                  : [];
+
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ marginBottom: 8, fontWeight: 500 }}>Chọn lợn xuất bán:</div>
+                    <Table
+                      rowKey="id"
+                      rowSelection={{
+                        selectedRowKeys: bulkSelectedKeys,
+                        onChange: (keys) => {
+                          setBulkSelectedKeys(keys);
+                          const currentItems = bulkForm.getFieldValue("items") || [];
+                          bulkForm.setFieldsValue({
+                            items: keys.map((v) => {
+                              const existing = currentItems.find((i) => i && i.pig_id === v);
+                              const pigData = fatteningActive.find((p) => p.id === v);
+                              return {
+                                pig_id: v,
+                                weight: existing && existing.weight !== undefined ? existing.weight : (pigData?.current_weight || pigData?.entry_weight || null),
+                                price: existing && existing.price !== undefined ? existing.price : null,
+                              };
+                            }),
+                          });
+                        }
+                      }}
+                      dataSource={eligiblePigs}
+                      columns={[
+                        { title: "STT", width: 60, render: (_, __, i) => i + 1 },
+                        { title: "Mã lợn", dataIndex: "id", render: text => <strong>PIG{String(text).padStart(3, "0")}</strong> },
+                        { title: "Chuồng", dataIndex: "barn_name" },
+                        { title: "Trọng lượng", key: "current_weight", render: (_, r) => (r.current_weight || r.entry_weight) ? `${r.current_weight || r.entry_weight} kg` : '-' },
+                      ]}
+                      pagination={{ pageSize: 5 }}
+                      size="small"
+                      locale={{ emptyText: !soldAtDate ? 'Vui lòng chọn ngày bán để xem danh sách lợn' : 'Không có lợn thịt nào hợp lệ' }}
+                    />
+                  </div>
+                );
+              }}
+            </Form.Item>
 
             <Form.List name="items">
               {(fields) => (
@@ -554,7 +599,7 @@ export default function PigFattening() {
             rowKey={(r, i) => r.id || i}
             columns={[
               { title: "STT", render: (_, __, i) => i + 1 },
-              { title: "Ngày bán", dataIndex: "sold_at", render: (d) => dayjs(d).format("DD/MM/YYYY") },
+              { title: "Ngày bán", dataIndex: "sold_at", render: (d) => dayjs.utc(d).format("DD/MM/YYYY") },
               { title: "Mã lợn", dataIndex: "pig_id", render: (v) => `PIG${String(v).padStart(3, "0")}` },
               { title: "Kg", dataIndex: "weight" },
               { title: "Giá", dataIndex: "price", render: (v) => v ? Math.round(Number(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '-' },

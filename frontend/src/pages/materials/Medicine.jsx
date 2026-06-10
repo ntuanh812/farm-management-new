@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Space, Radio, Row, Col, AutoComplete } from 'antd';
 import { PlusOutlined, DeleteOutlined, ImportOutlined, AppstoreOutlined, DatabaseOutlined, LineChartOutlined, WarningOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 export default function Medicine() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [medicineUsages, setMedicineUsages] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -35,10 +32,10 @@ export default function Medicine() {
     setLoading(true);
     try {
       const [resUsages, resBarns, resPigs, resMeds] = await Promise.all([
-        axios.get(`${API}/medicine-usages`, { headers }),
-        axios.get(`${API}/barns`, { headers }),
-        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/medicines`, { headers }).catch(() => ({ data: { data: [] } }))
+        axiosClient.get(`/medicine-usages`),
+        axiosClient.get(`/barns`),
+        axiosClient.get(`/pigs`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/medicines`).catch(() => ({ data: { data: [] } }))
       ]);
       setMedicineUsages(resUsages.data?.data || []);
       setBarns(resBarns.data?.data || []);
@@ -49,7 +46,7 @@ export default function Medicine() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -58,7 +55,7 @@ export default function Medicine() {
   const handleAddMedicine = async () => {
     try {
       const values = await addMedicineForm.validateFields();
-      await axios.post(`${API}/medicines`, values, { headers });
+      await axiosClient.post(`/medicines`, values);
       message.success('Thêm loại thuốc thành công');
       setIsAddMedicineModalOpen(false);
       addMedicineForm.resetFields();
@@ -71,7 +68,7 @@ export default function Medicine() {
   const handleImportSubmit = async () => {
     try {
       const values = await importForm.validateFields();
-      await axios.put(`${API}/medicines/${values.medicine_id}/stock`, { quantity: values.quantity }, { headers });
+      await axiosClient.put(`/medicines/${values.medicine_id}/stock`, { quantity: values.quantity });
       message.success('Nhập thêm thuốc vào kho thành công');
       setIsImportModalOpen(false);
       importForm.resetFields();
@@ -98,7 +95,7 @@ export default function Medicine() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/medicine-usages/${id}`, { headers });
+      await axiosClient.delete(`/medicine-usages/${id}`);
       message.success('Đã xóa bản ghi sử dụng thuốc');
       fetchData();
     } catch (error) {
@@ -120,12 +117,12 @@ export default function Medicine() {
       };
 
       if (apply_type === 'barn') {
-        await axios.post(`${API}/medicine-usages`, { ...basePayload, barn_id }, { headers });
+        await axiosClient.post(`/medicine-usages`, { ...basePayload, barn_id });
       } else {
         const requests = pig_ids.map(pigId => {
           const pig = pigs.find(p => p.id === pigId);
           
-          return axios.post(`${API}/medicine-usages`, { ...basePayload, pig_id: pigId, barn_id: pig?.barn_id }, { headers });
+          return axiosClient.post(`/medicine-usages`, { ...basePayload, pig_id: pigId, barn_id: pig?.barn_id });
         });
         await Promise.all(requests);
       }
@@ -319,6 +316,7 @@ export default function Medicine() {
       <Modal 
         title="Thêm loại thuốc/vật tư mới" 
         open={isAddMedicineModalOpen} 
+        zIndex={1050}
         onCancel={() => { setIsAddMedicineModalOpen(false); addMedicineForm.resetFields(); }}
         onOk={handleAddMedicine}
         okText="Thêm mới"

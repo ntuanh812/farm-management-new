@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col, Space } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, UsergroupAddOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 export default function PigFarrowing() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [farrowings, setFarrowings] = useState([]);
   const [pigs, setPigs] = useState([]);
@@ -28,10 +25,10 @@ export default function PigFarrowing() {
     setLoading(true);
     try {
       const [resFarrow, resPigs, resBreedings, resBarns] = await Promise.all([
-        axios.get(`${API}/farrowings`, { headers }),
-        axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/breedings`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/farrowings`),
+        axiosClient.get(`/pigs`),
+        axiosClient.get(`/breedings`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/barns`).catch(() => ({ data: { data: [] } })),
       ]);
       setFarrowings(resFarrow.data?.data || []);
       setPigs(resPigs.data?.data || []);
@@ -42,7 +39,7 @@ export default function PigFarrowing() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -88,7 +85,7 @@ export default function PigFarrowing() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/farrowings/${id}`, { headers });
+      await axiosClient.delete(`/farrowings/${id}`);
       message.success('Đã xóa ổ đẻ và các lợn con tương ứng. Nái mẹ được trả về trạng thái Đậu thai!');
       fetchData();
     } catch (error) {
@@ -119,10 +116,10 @@ export default function PigFarrowing() {
       };
 
       if (editingRecord) {
-        await axios.put(`${API}/farrowings/${editingRecord.id}`, payload, { headers });
+        await axiosClient.put(`/farrowings/${editingRecord.id}`, payload);
         message.success('Cập nhật thông tin thành công');
       } else {
-        await axios.post(`${API}/farrowings`, payload, { headers });
+        await axiosClient.post(`/farrowings`, payload);
         message.success('Ghi nhận đẻ con thành công');
       }
       setOpen(false);
@@ -272,7 +269,7 @@ export default function PigFarrowing() {
           <Form.Item name="sow_id" label="Lợn nái mẹ" rules={[{ required: true, message: 'Chọn nái' }]}>
             <Select disabled={!!editingRecord} showSearch >
               {editingRecord ? (
-                <Select.Option value={editingRecord.sow_id}>{editingRecord.sow_code}</Select.Option>
+                <Select.Option value={editingRecord.sow_id}>PIG{String(editingRecord.sow_code).padStart(3, "0")}</Select.Option>
               ) : (
                 eligibleSows.map(p => (
                   <Select.Option key={p.id} value={p.id}>

@@ -18,16 +18,14 @@ import {
 } from "antd";
 import { PlusOutlined, DeleteOutlined, ImportOutlined, AppstoreOutlined, DatabaseOutlined, LineChartOutlined, WarningOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import axios from "axios";
+import axiosClient from "@/utils/axiosClient";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 
 const { Option } = Select;
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function PigVaccination() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   // States
   const [vaccinations, setVaccinations] = useState([]);
@@ -54,10 +52,10 @@ export default function PigVaccination() {
     setLoading(true);
     try {
       const [resVac, resPigs, resBarns, resVaccines] = await Promise.all([
-        axios.get(`${API}/vaccinations`, { headers }),
-        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/vaccines`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/vaccinations`),
+        axiosClient.get(`/pigs`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/barns`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/vaccines`).catch(() => ({ data: { data: [] } })),
       ]);
 
       if (resVac.data?.success) setVaccinations(resVac.data.data);
@@ -69,7 +67,7 @@ export default function PigVaccination() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -121,7 +119,7 @@ export default function PigVaccination() {
   const handleAddVaccine = async () => {
     try {
       const values = await addVaccineForm.validateFields();
-      await axios.post(`${API}/vaccines`, values, { headers });
+      await axiosClient.post(`/vaccines`, values);
       message.success('Thêm loại vaccine thành công');
       setIsAddVaccineModalOpen(false);
       addVaccineForm.resetFields();
@@ -134,7 +132,7 @@ export default function PigVaccination() {
   const handleImportSubmit = async () => {
     try {
       const values = await importForm.validateFields();
-      await axios.put(`${API}/vaccines/${values.vaccine_id}/stock`, { quantity: values.quantity }, { headers });
+      await axiosClient.put(`/vaccines/${values.vaccine_id}/stock`, { quantity: values.quantity });
       message.success('Nhập thêm vaccine vào kho thành công');
       setIsImportModalOpen(false);
       importForm.resetFields();
@@ -157,10 +155,10 @@ export default function PigVaccination() {
     try {
       if (record.isGroup && record.recordIds.length > 1) {
         // Xóa tất cả lợn trong lần tiêm chung này (bản cũ)
-        await Promise.all(record.recordIds.map(id => axios.delete(`${API}/vaccinations/${id}`, { headers })));
+        await Promise.all(record.recordIds.map(id => axiosClient.delete(`/vaccinations/${id}`)));
       } else {
         // Bản ghi tiêm chuồng mới hoặc cá thể
-        await axios.delete(`${API}/vaccinations/${record.id}`, { headers });
+        await axiosClient.delete(`/vaccinations/${record.id}`);
       }
       message.success("Đã xóa bản ghi tiêm phòng");
       fetchData();
@@ -238,7 +236,7 @@ export default function PigVaccination() {
             vaccinated_at: vaccinated_at.format("YYYY-MM-DD"),
             note: note || ''
           };
-          await axios.post(`${API}/vaccinations`, payload, { headers });
+          await axiosClient.post(`/vaccinations`, payload);
           message.success(`Đã lưu lịch tiêm chung cho chuồng`);
         } else {
           const requests = pig_ids.map(pigId => {
@@ -250,7 +248,7 @@ export default function PigVaccination() {
               vaccinated_at: vaccinated_at.format("YYYY-MM-DD"),
               note: note || ''
             };
-            return axios.post(`${API}/vaccinations`, payload, { headers });
+            return axiosClient.post(`/vaccinations`, payload);
           });
 
           await Promise.all(requests);
@@ -430,13 +428,26 @@ export default function PigVaccination() {
       <Modal 
         title="Thêm loại vaccine mới" 
         open={isAddVaccineModalOpen} 
+        zIndex={1050}
         onCancel={() => setIsAddVaccineModalOpen(false)}
         onOk={handleAddVaccine}
         okText="Thêm mới"
         cancelText="Hủy"
       >
         <Form form={addVaccineForm} layout="vertical">
-          <Form.Item name="name" label="Tên vaccine" rules={[{ required: true, message: 'Vui lòng nhập tên vaccine' }]}>
+          <Form.Item 
+            name="name" 
+            label="Tên vaccine" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập tên vaccine' },
+              () => ({
+                validator(_, value) {
+                  if (!value || !vaccines.some(v => v.name.toLowerCase() === value.toLowerCase())) return Promise.resolve();
+                  return Promise.reject(new Error('Tên vaccine này đã tồn tại trong kho!'));
+                }
+              })
+            ]}
+          >
             <Input placeholder="Ví dụ: Vaccine Tai xanh..." />
           </Form.Item>
           <Form.Item name="unit" label="Đơn vị tính" initialValue="liều">

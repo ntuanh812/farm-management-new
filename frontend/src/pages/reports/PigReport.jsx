@@ -1,25 +1,26 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Table, Button, Modal, Form, Input, Select,
   Upload, Tag, Space, Popconfirm, Image, message, Row, Col, Card
 } from 'antd'
 import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import axiosClient from '@/utils/axiosClient'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { uploadFile } from '@/utils/upload'
 
+dayjs.extend(utc)
+
 const { TextArea } = Input
 const { Option }   = Select
-const API = 'http://localhost:3000/api'
 
 const STATUS_COLOR = { cho_xu_ly: 'orange', dang_xu_ly: 'blue', da_xu_ly: 'green' }
 const STATUS_LABEL = { cho_xu_ly: 'Chờ xử lý', dang_xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' }
 
 export default function PigReport() {
-  const { token, user } = useAuthStore()
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
+  const { user } = useAuthStore()
 
   const [list, setList]       = useState([])
   const [barns, setBarns]     = useState([])
@@ -42,22 +43,22 @@ export default function PigReport() {
   const fetchList = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await axios.get(`${API}/pig-reports`, { headers })
+      const { data } = await axiosClient.get(`/pig-reports`)
       setList(data.data)
     } catch { message.error('Lỗi tải dữ liệu') }
     finally { setLoading(false) }
-  }, [headers])
+  }, [])
 
   const fetchDropdowns = useCallback(async () => {
     try {
       const [barnsRes, pigsRes] = await Promise.all([
-        axios.get(`${API}/barns`, { headers }),
-        axios.get(`${API}/pigs`, { headers })
+        axiosClient.get(`/barns`),
+        axiosClient.get(`/pigs`)
       ])
       setBarns(barnsRes.data?.data || [])
       setPigs(pigsRes.data?.data || [])
     } catch { /* lỗi thì bỏ qua */ }
-  }, [headers])
+  }, [])
 
   useEffect(() => { fetchList(); fetchDropdowns() }, [fetchList, fetchDropdowns])
 
@@ -73,10 +74,10 @@ export default function PigReport() {
         .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
         .filter(Boolean)
 
-      await axios.post(`${API}/pig-reports`, {
+      await axiosClient.post(`/pig-reports`, {
         ...values,
         images,
-      }, { headers })
+      })
 
       message.success('Gửi báo cáo thành công! Bác sĩ sẽ xem xét sớm.')
       setOpen(false)
@@ -90,7 +91,7 @@ export default function PigReport() {
   // ── Xóa báo cáo ─────────────────────────────────────────
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/pig-reports/${id}`, { headers })
+      await axiosClient.delete(`/pig-reports/${id}`)
       message.success('Đã xóa báo cáo')
       fetchList()
     } catch { message.error('Xóa thất bại') }
@@ -105,7 +106,7 @@ export default function PigReport() {
 
   const fetchMessages = async (id) => {
     try {
-      const { data } = await axios.get(`${API}/pig-reports/${id}/messages`, { headers })
+      const { data } = await axiosClient.get(`/pig-reports/${id}/messages`)
       setMessagesList(data.data)
     } catch { message.error('Lỗi tải tin nhắn') }
   }
@@ -119,7 +120,7 @@ export default function PigReport() {
         .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
         .filter(Boolean)
 
-      await axios.post(`${API}/pig-reports/${selectedReport.id}/messages`, { message: newMessage, images }, { headers })
+      await axiosClient.post(`/pig-reports/${selectedReport.id}/messages`, { message: newMessage, images })
       setNewMessage('')
       setMessageFileList([])
       fetchMessages(selectedReport.id)
@@ -141,7 +142,7 @@ export default function PigReport() {
       width: 60,
       render: (_, __, index) => index + 1,
     },
-    { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
+    { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs.utc(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Lợn & Chuồng',
       key: 'pig_info',
@@ -284,7 +285,7 @@ export default function PigReport() {
 
           <Form.Item label="📷 Ảnh chụp (tối đa 5 ảnh)">
             <Upload
-              customRequest={(options) => uploadFile({ ...options, headers, endpoint: `${API}/pig-reports/upload`, fieldName: 'files' })}
+              customRequest={(options) => uploadFile({ ...options, endpoint: `/pig-reports/upload`, fieldName: 'files' })}
               listType="picture-card"
               fileList={fileList}
               onChange={({ fileList: fl }) => setFileList(fl)}
@@ -320,7 +321,7 @@ export default function PigReport() {
               <div className="reports-chat__item">
                 <div className="reports-chat__item-content">
                   <div className="reports-chat__meta">
-                    <b>{selectedReport.reporter_name}</b> (Người báo cáo) - {dayjs(selectedReport.created_at).format('HH:mm DD/MM')}
+                    <b>{selectedReport.reporter_name}</b> (Người báo cáo) - {dayjs.utc(selectedReport.created_at).format('HH:mm DD/MM')}
                   </div>
                   <div className="reports-chat__bubble reports-chat__bubble--other">
                     <div className="reports-chat__text">{selectedReport.description}</div>
@@ -345,7 +346,7 @@ export default function PigReport() {
                   <div key={msg.id} className={`reports-chat__item ${isMe ? 'reports-chat__item--me' : ''}`}>
                     <div className={`reports-chat__item-content ${isMe ? 'reports-chat__item-content--me' : ''}`}>
                       <div className="reports-chat__meta">
-                        <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs(msg.created_at).format('HH:mm DD/MM')}
+                        <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs.utc(msg.created_at).format('HH:mm DD/MM')}
                       </div>
                       <div className={`reports-chat__bubble ${isMe ? 'reports-chat__bubble--me' : 'reports-chat__bubble--other'}`}>
                         <div className="reports-chat__text">{msg.message}</div>
@@ -375,7 +376,7 @@ export default function PigReport() {
               </div>
               <div style={{ marginTop: 8 }}>
                 <Upload
-                  customRequest={(options) => uploadFile({ ...options, headers, endpoint: `${API}/pig-reports/upload`, fieldName: 'files' })}
+                  customRequest={(options) => uploadFile({ ...options, endpoint: `/pig-reports/upload`, fieldName: 'files' })}
                   listType="picture-card"
                   fileList={messageFileList}
                   onChange={({ fileList: fl }) => setMessageFileList(fl)}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Row, Col, Card, message, Spin } from 'antd'
 import { TeamOutlined, HomeOutlined, ShoppingCartOutlined, RiseOutlined, FallOutlined, DashboardOutlined, SnippetsOutlined, AuditOutlined, AppleOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import axiosClient from '@/utils/axiosClient'
 import dayjs from 'dayjs'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -12,13 +12,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { CATEGORY_MAP } from '@/utils/constants'
 import { formatRelativeTime } from '@/utils/formatters'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function StaffDashboard() {
-  const { token, user } = useAuthStore()
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore()
 
   const [loading, setLoading] = useState(false);
   const [barns, setBarns] = useState([]);
@@ -30,14 +27,14 @@ export default function StaffDashboard() {
     setLoading(true);
     try {
       const [barnRes, pigRes, feedRes, moveRes, saleRes, reportRes, medicineRes, vaccineRes] = await Promise.all([
-        axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/feed-usages`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/sale-batches`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/barns`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/pigs`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/feed-usages`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/movements`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/sale-batches`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/pig-reports`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/medicine-usages`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/vaccinations`).catch(() => ({ data: { data: [] } })),
       ]);
 
       setBarns(barnRes.data?.data || []);
@@ -115,7 +112,7 @@ export default function StaffDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchDashboard();

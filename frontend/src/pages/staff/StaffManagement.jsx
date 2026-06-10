@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Table, Button, Space, Tag, Modal, Form, Input, 
   Select, DatePicker, Switch, message, Popconfirm, Card, Row, Col, Upload, Avatar 
@@ -7,18 +7,16 @@ import {
   PlusOutlined, EditOutlined, LockOutlined,
   UnlockOutlined, KeyOutlined, UserAddOutlined, UploadOutlined, UserOutlined, DeleteOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
-import { useAuthStore } from '@/store/authStore';
+import utc from 'dayjs/plugin/utc';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ROLE_CONFIG } from '@/utils/constants';
 import { AvatarUpload } from '@/components/common/AvatarUpload';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+dayjs.extend(utc);
 
 export default function StaffManagement() {
-  const { token } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   // States
   const [staffData, setStaffData] = useState([]);
@@ -38,13 +36,13 @@ export default function StaffManagement() {
     setLoading(true);
     try {
       // Giả định backend đã gộp nhân viên + account + chuồng
-      const resStaff = await axios.get(`${API}/staff`, { headers });
+      const resStaff = await axiosClient.get(`/staff`);
       if (resStaff.data.success) {
         setStaffData(resStaff.data.data);
       }
 
       // Lấy danh sách chuồng để phân công
-      const resBarns = await axios.get(`${API}/barns`, { headers });
+      const resBarns = await axiosClient.get(`/barns`);
       if (resBarns.data.success) {
         setBarns(resBarns.data.data);
       }
@@ -53,7 +51,7 @@ export default function StaffManagement() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -77,8 +75,8 @@ export default function StaffManagement() {
           // Tiến hành Upload ảnh lên server KHI BẤM LƯU
           const formData = new FormData();
           formData.append('file', file.originFileObj);
-          const uploadRes = await axios.post(`${API}/staff/upload`, formData, {
-            headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+          const uploadRes = await axiosClient.post(`/staff/upload`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
           });
           avatarUrl = uploadRes.data.data;
         } else if (file.url) {
@@ -90,21 +88,21 @@ export default function StaffManagement() {
       let staffId = editingStaff?.id;
 
       if (editingStaff) {
-        await axios.put(`${API}/staff/${editingStaff.id}`, values, { headers });
+        await axiosClient.put(`/staff/${editingStaff.id}`, values);
         message.success('Cập nhật nhân sự thành công!');
       } else {
-        const res = await axios.post(`${API}/staff`, values, { headers });
+        const res = await axiosClient.post(`/staff`, values);
         staffId = res.data.data?.id;
         message.success('Thêm nhân sự thành công!');
       }
 
       // Gọi API tạo tài khoản nếu Admin có nhập username và password trên form Thêm mới
       if (!editingStaff?.account_id && staffId && values.username && values.password) {
-        await axios.post(`${API}/staff/accounts`, {
+        await axiosClient.post(`/staff/accounts`, {
           staff_id: staffId,
           username: values.username,
           password: values.password
-        }, { headers });
+        });
         message.success('Tạo tài khoản đăng nhập thành công!');
       }
 
@@ -134,7 +132,7 @@ export default function StaffManagement() {
     if (!accountId) return;
     try {
       const newStatus = currentStatus ? 0 : 1;
-      await axios.patch(`${API}/staff/accounts/${accountId}/toggle`, { is_active: newStatus }, { headers });
+      await axiosClient.patch(`/staff/accounts/${accountId}/toggle`, { is_active: newStatus });
       message.success(`Đã ${newStatus ? 'mở khóa' : 'khóa'} tài khoản`);
       fetchData();
     } catch (error) {
@@ -144,7 +142,7 @@ export default function StaffManagement() {
 
   const handleResetPassword = async (accountId) => {
     try {
-      await axios.post(`${API}/staff/accounts/${accountId}/reset-password`, {}, { headers });
+      await axiosClient.post(`/staff/accounts/${accountId}/reset-password`);
       message.success('Đã reset mật khẩu về mặc định (123456)');
     } catch (error) {
       message.error('Lỗi khi reset mật khẩu');
@@ -228,6 +226,7 @@ export default function StaffManagement() {
       key: 'is_active',
       render: (_, record) => {
         if (!record.account_id) return <Tag color="default">Chưa có TK</Tag>;
+        if (record.role_code === 'ADMIN') return <Tag color="blue">Luôn mở</Tag>;
         return (
           <Popconfirm
             title={record.is_active ? "Khóa tài khoản này?" : "Mở khóa tài khoản này?"}
@@ -246,24 +245,27 @@ export default function StaffManagement() {
       title: 'Ngày tạo',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => dayjs(date).format('DD/MM/YYYY'),
+      render: (date) => dayjs.utc(date).format('DD/MM/YYYY'),
     },
     {
       title: 'Thao tác',
       key: 'action',
-      render: (_, record) => (
-        <Space size="middle">
-          <Button type="text" icon={<EditOutlined />} className="text-primary" title="Sửa" onClick={() => handleEdit(record)} />
-          {record.account_id && (
-            <Popconfirm 
-              title="Reset mật khẩu về mặc định (123456)?"
-              onConfirm={() => handleResetPassword(record.account_id)}
-            >
-              <Button type="text" icon={<KeyOutlined />} danger title="Reset Mật khẩu" />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+      render: (_, record) => {
+        if (record.role_code === 'ADMIN') return <span className="text-muted staff-management__dash">-</span>;
+        return (
+          <Space size="middle">
+            <Button type="text" icon={<EditOutlined />} className="text-primary" title="Sửa" onClick={() => handleEdit(record)} />
+            {record.account_id && (
+              <Popconfirm 
+                title="Reset mật khẩu về mặc định (123456)?"
+                onConfirm={() => handleResetPassword(record.account_id)}
+              >
+                <Button type="text" icon={<KeyOutlined />} danger title="Reset Mật khẩu" />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 

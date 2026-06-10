@@ -14,13 +14,11 @@ import {
   BarChart, Bar, LineChart, Line, 
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import axios from 'axios';
-import { useAuthStore } from '@/store/authStore';
+import axiosClient from '@/utils/axiosClient';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const CATEGORY_MAP = {
   'SOW': 'Lợn nái',
@@ -30,8 +28,6 @@ const CATEGORY_MAP = {
 };
 
 export default function FarmReport() {
-  const { token } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -59,7 +55,7 @@ export default function FarmReport() {
         params.endDate = values.dateRange[1].format('YYYY-MM-DD');
       }
 
-      const res = await axios.get(`${API}/reports/farm-overview`, { headers, params });
+      const res = await axiosClient.get(`/reports/farm-overview`, { params });
       if (res.data.success) {
         setData(res.data.data);
       }
@@ -68,7 +64,7 @@ export default function FarmReport() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchReportData();

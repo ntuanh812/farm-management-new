@@ -26,16 +26,13 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
-import axios from "axios";
+import axiosClient from "@/utils/axiosClient";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useAuthStore } from "@/store/authStore";
 import { formatRelativeTime } from "@/utils/formatters";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export const DashBoard = () => {
 
@@ -60,8 +57,6 @@ export const DashBoard = () => {
   const [chartData, setChartData] =
     useState({ revenue: [], feed: [] });
 
-  const { token } = useAuthStore();
-
   // =========================================================
   // FETCH DATA
   // =========================================================
@@ -70,11 +65,6 @@ export const DashBoard = () => {
       try {
 
         setLoading(true);
-
-        const headers = {
-          Authorization:
-            `Bearer ${token}`,
-        };
 
         const [
           barnRes,
@@ -88,49 +78,40 @@ export const DashBoard = () => {
           vaccineRes,
         ] = await Promise.all([
 
-          axios.get(
-            `${API}/barns`,
-            { headers }
+          axiosClient.get(
+            `/barns`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/pigs`,
-            { headers }
+          axiosClient.get(
+            `/pigs`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/staff`,
-            { headers }
+          axiosClient.get(
+            `/staff`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/sale-batches`,
-            { headers }
+          axiosClient.get(
+            `/sale-batches`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/feed-usages`,
-            { headers }
+          axiosClient.get(
+            `/feed-usages`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/movements`,
-            { headers }
+          axiosClient.get(
+            `/movements`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/pig-reports`,
-            { headers }
+          axiosClient.get(
+            `/pig-reports`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/medicine-usages`,
-            { headers }
+          axiosClient.get(
+            `/medicine-usages`
           ).catch(() => ({ data: { data: [] } })),
 
-          axios.get(
-            `${API}/vaccinations`,
-            { headers }
+          axiosClient.get(
+            `/vaccinations`
           ).catch(() => ({ data: { data: [] } })),
         ]);
 
@@ -294,7 +275,7 @@ export const DashBoard = () => {
 
         setLoading(false);
       }
-    }, [token]);
+    }, []);
 
   // =========================================================
   // LOAD

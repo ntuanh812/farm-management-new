@@ -1,26 +1,26 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Table, Button, Modal, Form, Select, Input,
   Tag, Space, Image, Badge, message, Divider, Descriptions, Card, Upload
 } from 'antd'
 import { AuditOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import axiosClient from '@/utils/axiosClient'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { uploadFile } from '@/utils/upload'; // Gợi ý: Tách hàm upload ra file riêng
 
+dayjs.extend(utc)
 
 const { TextArea } = Input
 const { Option }   = Select
-const API = 'http://localhost:3000/api'
 
 const STATUS_COLOR = { cho_xu_ly: 'orange', dang_xu_ly: 'blue', da_xu_ly: 'green' }
 const STATUS_LABEL = { cho_xu_ly: 'Chờ xử lý', dang_xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' }
 
 export default function VetReview() {
-  const { token, user } = useAuthStore()
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
+  const { user } = useAuthStore()
 
   const [list, setList]           = useState([])
   const [loading, setLoading]     = useState(false)
@@ -40,11 +40,11 @@ export default function VetReview() {
     try {
       const params = {}
       if (filterStatus) params.status = filterStatus
-      const { data } = await axios.get(`${API}/pig-reports`, { headers, params })
+      const { data } = await axiosClient.get(`/pig-reports`, { params })
       setList(data.data)
     } catch { message.error('Lỗi tải dữ liệu') }
     finally { setLoading(false) }
-  }, [headers, filterStatus])
+  }, [filterStatus])
 
   useEffect(() => { fetchList() }, [fetchList])
 
@@ -58,7 +58,7 @@ export default function VetReview() {
 
   const fetchMessages = async (id) => {
     try {
-      const { data } = await axios.get(`${API}/pig-reports/${id}/messages`, { headers })
+      const { data } = await axiosClient.get(`/pig-reports/${id}/messages`)
       setMessagesList(data.data)
     } catch { message.error('Lỗi tải tin nhắn') }
   }
@@ -74,11 +74,11 @@ export default function VetReview() {
         .filter(Boolean)
 
       const currentStatus = form.getFieldValue('status');
-      await axios.post(`${API}/pig-reports/${selected.id}/messages`, {
+      await axiosClient.post(`/pig-reports/${selected.id}/messages`, {
         message: newMessage,
         images,
         status: currentStatus
-      }, { headers })
+      })
       setNewMessage('')
       setMessageFileList([])
       fetchMessages(selected.id)
@@ -103,7 +103,7 @@ export default function VetReview() {
       width: 60,
       render: (_, __, index) => index + 1,
     },
-    { title: 'Thời gian', dataIndex: 'created_at', width: 130, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
+    { title: 'Thời gian', dataIndex: 'created_at', width: 130, render: v => dayjs.utc(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Lợn & Chuồng',
       key: 'pig_info',
@@ -226,7 +226,7 @@ export default function VetReview() {
                       className="reports-page__status-select" 
                       disabled={selected.status === 'da_xu_ly'}
                       onChange={async (val) => {
-                        await axios.patch(`${API}/pig-reports/${selected.id}/respond`, { status: val }, { headers })
+                        await axiosClient.patch(`/pig-reports/${selected.id}/respond`, { status: val })
                         message.success('Cập nhật trạng thái thành công')
                         fetchList()
                         setSelected({...selected, status: val})
@@ -248,7 +248,7 @@ export default function VetReview() {
                 <div className="reports-chat__item">
                   <div className="reports-chat__item-content">
                     <div className="reports-chat__meta">
-                      <b>{selected.reporter_name}</b> (Người báo cáo) - {dayjs(selected.created_at).format('HH:mm DD/MM')}
+                      <b>{selected.reporter_name}</b> (Người báo cáo) - {dayjs.utc(selected.created_at).format('HH:mm DD/MM')}
                     </div>
                     <div className="reports-chat__bubble reports-chat__bubble--other">
                       <div className="reports-chat__text">{selected.description}</div>
@@ -273,7 +273,7 @@ export default function VetReview() {
                     <div key={msg.id} className={`reports-chat__item ${isMe ? 'reports-chat__item--me' : ''}`}>
                       <div className={`reports-chat__item-content ${isMe ? 'reports-chat__item-content--me' : ''}`}>
                         <div className="reports-chat__meta">
-                          <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs(msg.created_at).format('HH:mm DD/MM')}
+                            <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs.utc(msg.created_at).format('HH:mm DD/MM')}
                         </div>
                         <div className={`reports-chat__bubble ${isMe ? 'reports-chat__bubble--me' : 'reports-chat__bubble--other'}`}>
                           <div className="reports-chat__text">{msg.message}</div>
@@ -303,7 +303,7 @@ export default function VetReview() {
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <Upload
-                    customRequest={({ file, onSuccess, onError }) => uploadFile({ file, onSuccess, onError, headers, endpoint: `${API}/pig-reports/upload` })}
+                    customRequest={({ file, onSuccess, onError }) => uploadFile({ file, onSuccess, onError, endpoint: `/pig-reports/upload` })}
                     listType="picture-card"
                     fileList={messageFileList}
                     onChange={({ fileList: fl }) => setMessageFileList(fl)}

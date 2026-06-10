@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Space, Modal, Form, Input, Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col } from 'antd';
 import { PlusOutlined, DeleteOutlined, ImportOutlined, AppstoreOutlined, DatabaseOutlined, LineChartOutlined, WarningOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 export default function Bran() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [feedUsages, setFeedUsages] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -33,9 +30,9 @@ export default function Bran() {
     setLoading(true);
     try {
       const [resUsages, resBarns, resFeeds] = await Promise.all([
-        axios.get(`${API}/feed-usages`, { headers }),
-        axios.get(`${API}/barns`, { headers }),
-        axios.get(`${API}/feeds`, { headers }).catch(() => ({ data: { data: [] } }))
+        axiosClient.get(`/feed-usages`),
+        axiosClient.get(`/barns`),
+        axiosClient.get(`/feeds`).catch(() => ({ data: { data: [] } }))
       ]);
       setFeedUsages(resUsages.data?.data || []);
       setBarns(resBarns.data?.data || []);
@@ -45,7 +42,7 @@ export default function Bran() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -53,7 +50,7 @@ export default function Bran() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/feed-usages/${id}`, { headers });
+      await axiosClient.delete(`/feed-usages/${id}`);
       message.success('Đã xóa bản ghi tiêu thụ cám');
       fetchData();
     } catch (error) {
@@ -69,7 +66,7 @@ export default function Bran() {
         used_at: values.used_at.format('YYYY-MM-DD')
       };
 
-      await axios.post(`${API}/feed-usages`, payload, { headers });
+      await axiosClient.post(`/feed-usages`, payload);
       message.success('Ghi nhận sử dụng cám thành công');
       setOpen(false);
       form.resetFields();
@@ -82,7 +79,7 @@ export default function Bran() {
   const handleAddFeed = async () => {
     try {
       const values = await addFeedForm.validateFields();
-      await axios.post(`${API}/feeds`, values, { headers });
+      await axiosClient.post(`/feeds`, values);
       message.success('Thêm loại cám thành công');
       setIsAddFeedModalOpen(false);
       addFeedForm.resetFields();
@@ -95,7 +92,7 @@ export default function Bran() {
   const handleImportSubmit = async () => {
     try {
       const values = await importForm.validateFields();
-      await axios.put(`${API}/feeds/${values.feed_id}/stock`, { quantity: values.quantity }, { headers });
+      await axiosClient.put(`/feeds/${values.feed_id}/stock`, { quantity: values.quantity });
       message.success('Nhập thêm cám vào kho thành công');
       setIsImportModalOpen(false);
       importForm.resetFields();
@@ -247,13 +244,26 @@ export default function Bran() {
       <Modal 
         title="Thêm loại cám mới" 
         open={isAddFeedModalOpen} 
+        zIndex={1050}
         onCancel={() => setIsAddFeedModalOpen(false)}
         onOk={handleAddFeed}
         okText="Thêm mới"
         cancelText="Hủy"
       >
         <Form form={addFeedForm} layout="vertical">
-          <Form.Item name="name" label="Tên loại cám" rules={[{ required: true, message: 'Vui lòng nhập tên cám' }]}>
+          <Form.Item 
+            name="name" 
+            label="Tên loại cám" 
+            rules={[
+              { required: true, message: 'Vui lòng nhập tên cám' },
+              () => ({
+                validator(_, value) {
+                  if (!value || !feeds.some(f => f.name.toLowerCase() === value.toLowerCase())) return Promise.resolve();
+                  return Promise.reject(new Error('Tên cám này đã tồn tại trong kho!'));
+                }
+              })
+            ]}
+          >
             <Input placeholder="Ví dụ: Cám lợn con tập ăn..." />
           </Form.Item>
           <Form.Item name="stock" label="Số lượng tồn ban đầu (kg)">

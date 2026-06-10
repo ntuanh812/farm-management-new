@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, message, Popconfirm, Card, Space, Tag, Row, Col } from 'antd';
 import { PlusOutlined, DeleteOutlined, HeartOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const STATUS_CONFIG = {
   'PENDING': { text: 'Chờ kết quả (18-24 ngày)', color: 'orange' },
@@ -16,8 +14,7 @@ const STATUS_CONFIG = {
 };
 
 export default function PigBreeding() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [breedings, setBreedings] = useState([]);
   const [pigs, setPigs] = useState([]);
@@ -32,8 +29,8 @@ export default function PigBreeding() {
     setLoading(true);
     try {
       const [resBreed, resPigs] = await Promise.all([
-        axios.get(`${API}/breedings`, { headers }),
-        axios.get(`${API}/pigs`, { headers }),
+        axiosClient.get(`/breedings`),
+        axiosClient.get(`/pigs`),
       ]);
       setBreedings(resBreed.data?.data || []);
       setPigs(resPigs.data?.data || []);
@@ -42,7 +39,7 @@ export default function PigBreeding() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -66,7 +63,7 @@ export default function PigBreeding() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/breedings/${id}`, { headers });
+      await axiosClient.delete(`/breedings/${id}`);
       message.success('Đã xóa bản ghi phối giống');
       fetchData();
     } catch (error) {
@@ -76,7 +73,7 @@ export default function PigBreeding() {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      await axios.patch(`${API}/breedings/${id}/status`, { status: newStatus }, { headers });
+      await axiosClient.patch(`/breedings/${id}/status`, { status: newStatus });
       message.success('Cập nhật trạng thái thành công');
       fetchData();
     } catch (error) {
@@ -94,7 +91,7 @@ export default function PigBreeding() {
         status: 'PENDING',
       };
 
-      await axios.post(`${API}/breedings`, payload, { headers });
+      await axiosClient.post(`/breedings`, payload);
       message.success('Ghi nhận phối giống thành công');
       setOpen(false);
       form.resetFields();
@@ -296,12 +293,59 @@ export default function PigBreeding() {
             </Form.Item>
           </Space>
 
-          <Form.Item name="breeding_date" label="Ngày phối giống" rules={[{ required: true, message: 'Vui lòng chọn ngày phối' }]}>
-            <DatePicker 
-              format="DD/MM/YYYY" 
-              style={{ width: '100%' }} 
-              disabledDate={(current) => current && current > dayjs().endOf('day')} 
-            />
+          <Form.Item noStyle dependencies={['sow_id']}>
+            {({ getFieldValue }) => {
+              const selectedSowId = getFieldValue('sow_id');
+              let minAllowedDate = null;
+              let hintMsg = null;
+
+              if (selectedSowId) {
+                const sowBreedings = breedings.filter(b => b.sow_id === selectedSowId);
+                if (sowBreedings.length > 0) {
+                  // Lấy lần phối gần nhất
+                  sowBreedings.sort((a, b) => dayjs(b.breeding_date).valueOf() - dayjs(a.breeding_date).valueOf());
+                  const latest = sowBreedings[0];
+                  
+                  if (latest.status === 'FAILED') {
+                    minAllowedDate = dayjs(latest.breeding_date).add(18, 'day');
+                    hintMsg = `* Lần phối trước trượt, chỉ được phối lại từ ngày ${minAllowedDate.add(1, 'day').format('DD/MM/YYYY')} trở đi`;
+                  } else {
+                    minAllowedDate = dayjs(latest.breeding_date);
+                  }
+                }
+              }
+
+              return (
+                <Form.Item 
+                  name="breeding_date" 
+                  label="Ngày phối giống" 
+                  extra={hintMsg && <span style={{ color: '#faad14', fontSize: '12px' }}>{hintMsg}</span>}
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn ngày phối' },
+                    () => ({
+                      validator(_, value) {
+                        if (!value || !minAllowedDate) return Promise.resolve();
+                        if (value <= minAllowedDate.endOf('day')) {
+                          return Promise.reject(new Error(`Ngày phối phải từ ngày ${minAllowedDate.add(1, 'day').format('DD/MM/YYYY')} trở đi`));
+                        }
+                        return Promise.resolve();
+                      }
+                    })
+                  ]}
+                >
+                  <DatePicker 
+                    format="DD/MM/YYYY" 
+                    style={{ width: '100%' }} 
+                    disabledDate={(current) => {
+                      if (!current) return false;
+                      if (current > dayjs().endOf('day')) return true; // Chặn chọn ngày tương lai
+                      if (minAllowedDate && current <= minAllowedDate.endOf('day')) return true; // Chặn các ngày trong khoảng 18 ngày chờ
+                      return false;
+                    }} 
+                  />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
 
           <Form.Item shouldUpdate noStyle>

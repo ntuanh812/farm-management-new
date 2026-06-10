@@ -11,13 +11,13 @@
     "@fastify/jwt": "^9.0.3",
     "@fastify/multipart": "^10.0.0",
     "@fastify/static": "^9.1.0",
-    "@prisma/client": "^6.4.0",
+    "@prisma/client": "^6.19.3",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "mysql2": "^3.11.5"
   },
   "devDependencies": {
-    "prisma": "^6.4.0"
+    "prisma": "^6.19.3"
   }
 }

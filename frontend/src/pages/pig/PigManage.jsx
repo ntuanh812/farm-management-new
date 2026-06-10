@@ -4,17 +4,14 @@ import {
   Select, DatePicker, InputNumber, message, Popconfirm, Card, Row, Col, Descriptions, Spin, Divider
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, ShoppingCartOutlined, HeartOutlined, DashboardOutlined, EyeOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '@/utils/axiosClient';
 import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { CATEGORY_MAP, STATUS_MAP, GENDER_MAP } from '@/utils/constants';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 export default function PigManage() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -42,8 +39,8 @@ export default function PigManage() {
     setLoading(true);
     try {
       const [resPigs, resBarns] = await Promise.all([
-        axios.get(`${API}/pigs`, { headers }),
-        axios.get(`${API}/barns`, { headers })
+        axiosClient.get(`/pigs`),
+        axiosClient.get(`/barns`)
       ]);
 
       if (resPigs.data.success) setPigs(resPigs.data.data);
@@ -53,7 +50,7 @@ export default function PigManage() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -118,7 +115,7 @@ export default function PigManage() {
       // GỢI Ý: Thay vì gọi 4 API và xử lý logic phức tạp ở Frontend,
       // nên tạo một endpoint duy nhất ở Backend để lấy toàn bộ lịch sử của một cá thể lợn.
       // Ví dụ: GET /api/pigs/:id/history
-      const res = await axios.get(`${API}/pigs/${record.id}/history`, { headers });
+      const res = await axiosClient.get(`/pigs/${record.id}/history`);
       if (res.data.success) {
         setPigHistory(res.data.data);
       } else {
@@ -152,7 +149,7 @@ export default function PigManage() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/pigs/${id}`, { headers });
+      await axiosClient.delete(`/pigs/${id}`);
       message.success('Đã xóa lợn thành công');
       fetchData();
     } catch (error) {
@@ -171,10 +168,10 @@ export default function PigManage() {
       };
 
       if (editingId) {
-        await axios.put(`${API}/pigs/${editingId}`, payload, { headers });
+        await axiosClient.put(`/pigs/${editingId}`, payload);
         message.success('Cập nhật thông tin lợn thành công');
       } else {
-        await axios.post(`${API}/pigs`, payload, { headers });
+        await axiosClient.post(`/pigs`, payload);
         message.success('Thêm lợn mới thành công');
       }
 
@@ -428,7 +425,7 @@ export default function PigManage() {
               <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.category !== currentValues.category}>
                 {({ getFieldValue }) => (
                   <Form.Item name="gender" label="Giới tính" rules={[{ required: true }]}>
-                    <Select disabled={!!editingId || getFieldValue('category') === 'SOW' || getFieldValue('category') === 'BOAR'} options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
+                    <Select disabled={getFieldValue('category') === 'SOW' || getFieldValue('category') === 'BOAR'} options={Object.entries(GENDER_MAP).map(([val, label]) => ({ label, value: val }))} />
                   </Form.Item>
                 )}
               </Form.Item>

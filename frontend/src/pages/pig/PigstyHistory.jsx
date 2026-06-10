@@ -4,18 +4,16 @@ import {
   Input, Space, Tag, message
 } from "antd";
 import { SwapRightOutlined, SwapOutlined, TeamOutlined } from "@ant-design/icons";
-import axios from "axios";
+import axiosClient from "@/utils/axiosClient";
 import dayjs from "dayjs";
 import { useAuthStore } from "@/store/authStore";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CATEGORY_MAP } from '@/utils/constants';
 
 const { Option } = Select;
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function PigstyHistory() {
-  const { token, user } = useAuthStore();
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const { user } = useAuthStore();
 
   const [pigs, setPigs] = useState([]);
   const [barns, setBarns] = useState([]);
@@ -32,9 +30,9 @@ export default function PigstyHistory() {
     try {
       setLoading(true);
       const [pigRes, barnRes, movementRes] = await Promise.all([
-        axios.get(`${API}/pigs`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/barns`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/movements`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/pigs`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/barns`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/movements`).catch(() => ({ data: { data: [] } })),
       ]);
 
       setPigs(pigRes.data?.data || []);
@@ -45,7 +43,7 @@ export default function PigstyHistory() {
     } finally {
       setLoading(false);
     }
-  }, [headers]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -167,7 +165,7 @@ export default function PigstyHistory() {
         note: values.note,
       };
 
-      await axios.post(`${API}/movements`, payload, { headers });
+      await axiosClient.post(`/movements`, payload);
       message.success("Đã chuyển chuồng thành công");
       setSelectedRowKeys([]);
       setIsModalOpen(false);

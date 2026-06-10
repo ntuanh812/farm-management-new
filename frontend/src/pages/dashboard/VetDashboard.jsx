@@ -6,16 +6,14 @@ import {
   MedicineBoxOutlined,
   WarningOutlined
 } from "@ant-design/icons";
-import axios from "axios";
+import axiosClient from "@/utils/axiosClient";
 import dayjs from "dayjs";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { formatRelativeTime } from "@/utils/formatters";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-
 export default function VetDashboard() {
-  const { token, user } = useAuthStore();
+  const { user } = useAuthStore();
   
   const [loading, setLoading] = useState(false);
   const [reports, setReports] = useState([]);
@@ -25,12 +23,11 @@ export default function VetDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const headers = { Authorization: `Bearer ${token}` };
 
       const [reportsRes, vaccinesRes, medicineRes] = await Promise.all([
-        axios.get(`${API}/pig-reports`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/vaccinations`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API}/medicine-usages`, { headers }).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/pig-reports`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/vaccinations`).catch(() => ({ data: { data: [] } })),
+        axiosClient.get(`/medicine-usages`).catch(() => ({ data: { data: [] } })),
       ]);
 
       setReports(reportsRes.data?.data || []);
@@ -43,7 +40,7 @@ export default function VetDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
