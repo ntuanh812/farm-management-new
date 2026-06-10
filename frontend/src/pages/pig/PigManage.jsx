@@ -534,7 +534,7 @@ export default function PigManage() {
                 columns={[
                   { title: 'Ngày tiêm', render: (_, r) => dayjs(r.vaccinated_at).format('DD/MM/YYYY') },
                   { title: 'Tên Vaccine', dataIndex: 'vaccine_name' },
-                  { title: 'Hình thức', render: (_, r) => r.barn_id || (r.note && r.note.startsWith('[Chuồng:')) ? <Tag>Cả chuồng</Tag> : <Tag color="blue">Tiêm riêng</Tag> },
+                  { title: 'Hình thức', render: (_, r) => r.pig_id ? <Tag color="blue">Tiêm riêng</Tag> : <Tag>Cả chuồng</Tag> },
                   { title: 'Người tiêm', dataIndex: 'staff_name', render: (_, r) => r.staff_name || 'Hệ thống' },
                   { title: 'Ghi chú', dataIndex: 'note', render: text => {
                       if (text && text.startsWith('[Chuồng:')) {
@@ -556,7 +556,7 @@ export default function PigManage() {
                   { title: 'Ngày dùng', render: (_, r) => dayjs(r.used_at).format('DD/MM/YYYY') },
                   { title: 'Tên thuốc', dataIndex: 'medicine_name' },
                   { title: 'Liều lượng', render: (_, r) => `${r.quantity} ${r.unit}` },
-                  { title: 'Hình thức', render: (_, r) => r.note && r.note.includes('[Cá thể:') ? <Tag color="blue">Dùng riêng</Tag> : <Tag>Cả chuồng</Tag> },
+                  { title: 'Hình thức', render: (_, r) => r.pig_id ? <Tag color="blue">Dùng riêng</Tag> : <Tag>Cả chuồng</Tag> },
                   { title: 'Người thực hiện', dataIndex: 'staff_name' }
                 ]} 
                 locale={{ emptyText: 'Chưa có dữ liệu sử dụng thuốc' }}

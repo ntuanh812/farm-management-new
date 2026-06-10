@@ -71,6 +71,118 @@ export default async function pigsRoute(app) {
   );
 
   // =========================================================
+  // GET PIG HISTORY
+  // =========================================================
+  app.get(
+    "/:id/history",
+    { preHandler: protect('ADMIN', 'FARM_WORKER', 'VET_DOCTOR') },
+
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const pigId = Number(id);
+
+        const pig = await prisma.pigs.findUnique({
+          where: { id: pigId }
+        });
+
+        if (!pig) {
+          return reply.status(404).send({ success: false, message: "Không tìm thấy lợn" });
+        }
+
+        // 1. Lịch sử bệnh (reports)
+        const reports = await prisma.pig_reports.findMany({
+          where: { pig_id: pigId },
+          orderBy: { created_at: 'desc' }
+        });
+
+        // 2. Lịch sử tiêm phòng (vaccinations)
+        const vaccinations = await prisma.vaccine_usages.findMany({
+          where: {
+            OR: [
+              { pig_id: pigId },
+              { AND: [{ barn_id: pig.barn_id }, { pig_id: null }] }
+            ]
+          },
+          include: {
+            vaccines: { select: { name: true } },
+            staffs: { select: { full_name: true } }
+          },
+          orderBy: { vaccinated_at: 'desc' }
+        });
+
+        // 3. Lịch sử dùng thuốc (medicines)
+        const medicines = await prisma.medicine_usages.findMany({
+          where: {
+            OR: [
+              { pig_id: pigId },
+              { AND: [{ barn_id: pig.barn_id }, { pig_id: null }] }
+            ]
+          },
+          include: {
+            medicines: { select: { name: true } },
+            staffs: { select: { full_name: true } }
+          },
+          orderBy: { used_at: 'desc' }
+        });
+
+        // 4. Lịch sử chuyển chuồng (movements)
+        const movements = await prisma.pig_movements.findMany({
+          where: { pig_id: pigId },
+          include: {
+            barns_pig_movements_from_barn_idTobarns: { select: { name: true } },
+            barns_pig_movements_to_barn_idTobarns: { select: { name: true } },
+            staffs: { select: { full_name: true } }
+          },
+          orderBy: { move_date: 'desc' }
+        });
+
+        const data = {
+          reports: reports.map(r => ({
+            id: r.id,
+            created_at: r.created_at,
+            description: r.description,
+            status: r.status,
+            vet_note: r.vet_note
+          })),
+          vaccinations: vaccinations.map(v => ({
+            id: v.id,
+            vaccinated_at: v.vaccinated_at,
+            vaccine_name: v.vaccines?.name,
+            barn_id: v.barn_id,
+            pig_id: v.pig_id,
+            staff_name: v.staffs?.full_name,
+            note: v.note
+          })),
+          medicines: medicines.map(m => ({
+            id: m.id,
+            used_at: m.used_at,
+            medicine_name: m.medicines?.name,
+            quantity: m.quantity,
+            unit: m.unit,
+            pig_id: m.pig_id,
+            staff_name: m.staffs?.full_name,
+            note: m.note
+          })),
+          movements: movements.map(m => ({
+            id: m.id,
+            move_date: m.move_date,
+            from_barn_name: m.barns_pig_movements_from_barn_idTobarns?.name,
+            to_barn_name: m.barns_pig_movements_to_barn_idTobarns?.name,
+            staff_name: m.staffs?.full_name,
+            created_at: m.created_at
+          }))
+        };
+
+        return reply.send({ success: true, data });
+      } catch (err) {
+        console.error("GET PIG HISTORY ERROR:", err);
+        return reply.status(500).send({ success: false, message: "Không tải được lịch sử cá thể lợn" });
+      }
+    }
+  );
+
+  // =========================================================
   // CREATE PIG
   // =========================================================
   app.post(
