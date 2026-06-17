@@ -76,7 +76,7 @@
     }
 
     &__title {
-      font-size: 14px;
+      font-size: 20px;
       font-weight: 600;
       color: #5a6c5a;
       text-transform: uppercase;
@@ -88,7 +88,7 @@
     }
 
     &__value {
-      font-size: 32px;
+      font-size: 40px;
       font-weight: 700;
       color: $farm-primary;
       margin-bottom: 4px;
@@ -96,7 +96,7 @@
     }
 
     &__label {
-      font-size: 13px;
+      font-size: 20px;
       color: #7a8c7a;
     }
 
@@ -104,7 +104,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 12px;
+      font-size: 14px;
       padding: 4px 8px;
       border-radius: 20px;
       margin-top: 8px;
@@ -144,7 +144,7 @@
       justify-content: space-between;
 
       h3 {
-        font-size: 16px;
+        font-size: 24px;
         font-weight: 600;
         color: $farm-primary;
         margin: 0;

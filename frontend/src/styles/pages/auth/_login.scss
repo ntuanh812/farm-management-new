@@ -111,7 +111,7 @@
     align-items: center;
     justify-content: center;
 
-    font-size: 42px;
+    font-size: 30px;
 
     color: $white;
 
@@ -131,7 +131,7 @@
   .auth-title {
     margin-bottom: 6px;
 
-    font-size: $font-size-3xl;
+    font-size: 30px;
     font-weight: $font-weight-bold;
 
     color: $farm-primary;
@@ -140,7 +140,7 @@
   .auth-subtitle {
     margin: 0;
 
-    font-size: $font-size-sm;
+    font-size: 16px;
     color: $gray-600;
   }
 
@@ -160,7 +160,7 @@
   }
 
   .ant-form-item-label > label {
-    font-size: $font-size-sm;
+    font-size: 16px;
     font-weight: $font-weight-semibold;
 
     color: $farm-primary;
@@ -215,7 +215,7 @@
     background: transparent !important;
 
     color: $gray-800;
-    font-size: $font-size-base;
+    font-size: 16px;
 
     &::placeholder {
       color: $gray-500;
@@ -240,7 +240,7 @@
     border: none;
     border-radius: $radius-lg;
 
-    font-size: $font-size-base;
+    font-size: 16px;
     font-weight: $font-weight-semibold;
 
     background: linear-gradient(
@@ -319,7 +319,7 @@
     }
 
     .auth-title {
-      font-size: $font-size-2xl;
+      font-size: 30px;
     }
   }
 }

@@ -48,7 +48,7 @@
   }
 
   &__logo-title {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 700;
     color: v.$white;
     letter-spacing: -0.5px;
@@ -56,7 +56,7 @@
   }
 
   &__logo-subtitle {
-    font-size: 12px;
+    font-size: 20px;
     color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -97,11 +97,11 @@
     border-radius: 10px !important;
     color: rgba(255, 255, 255, 0.8) !important;
     font-weight: 500 !important;
-    font-size: 14px !important;
+    font-size: 20px !important;
     transition: all 0.3s ease !important;
 
     .anticon {
-      font-size: 16px !important;
+      font-size: 20px !important;
       transition: transform 0.3s ease;
     }
 
@@ -148,7 +148,7 @@
     }
 
     .anticon {
-      font-size: 18px !important;
+      font-size: 20px !important;
     }
   }
 
@@ -211,7 +211,7 @@
 .ant-menu {
   &-item {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 20px;
     padding-left: 20px !important;
 
     &:hover {
@@ -222,7 +222,7 @@
 
   &-submenu-title {
     font-weight: 500;
-    font-size: 14px;
+    font-size: 18px;
     padding-left: 20px !important;
 
     &:hover {
@@ -234,7 +234,7 @@
   &-sub {
     .ant-menu-item {
       font-weight: 400;
-      font-size: 13px;
+      font-size: 16px;
       opacity: 0.9;
       padding-left: 52px !important;
 
@@ -252,7 +252,7 @@
 
   &-item-group-title {
     color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 12px !important;
+    font-size: 18px !important;
     font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 1.2px !important;
