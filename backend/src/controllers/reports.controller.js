@@ -9,8 +9,8 @@ export const reportsController = {
       let dateFilter = {};
       if (start_date && end_date) {
         dateFilter = {
-          gte: new Date(`${start_date}T00:00:00.000Z`),
-          lte: new Date(`${end_date}T23:59:59.999Z`)
+          gte: new Date(`${start_date}T00:00:00.000+07:00`),
+          lte: new Date(`${end_date}T23:59:59.999+07:00`)
         };
       }
 
