@@ -211,7 +211,7 @@ export default function Bran() {
       <Modal 
         title="Ghi nhận sử dụng cám" 
         open={open} 
-        onCancel={() => setOpen(false)} 
+        onCancel={() => { setOpen(false); form.resetFields(); }} 
         onOk={handleSubmit} 
         okText="Lưu thông tin" 
         cancelText="Hủy" 
@@ -245,7 +245,7 @@ export default function Bran() {
         title="Thêm loại cám mới" 
         open={isAddFeedModalOpen} 
         zIndex={1050}
-        onCancel={() => setIsAddFeedModalOpen(false)}
+        onCancel={() => { setIsAddFeedModalOpen(false); addFeedForm.resetFields(); }}
         onOk={handleAddFeed}
         okText="Thêm mới"
         cancelText="Hủy"
@@ -272,7 +272,7 @@ export default function Bran() {
         </Form>
       </Modal>
 
-      <Modal title="Nhập thêm cám vào kho" open={isImportModalOpen} onCancel={() => setIsImportModalOpen(false)} onOk={handleImportSubmit} okText="Xác nhận" cancelText="Hủy">
+      <Modal title="Nhập thêm cám vào kho" open={isImportModalOpen} onCancel={() => { setIsImportModalOpen(false); importForm.resetFields(); }} onOk={handleImportSubmit} okText="Xác nhận" cancelText="Hủy">
         <Form form={importForm} layout="vertical">
           <Form.Item label="Loại cám" required>
             <div style={{ display: 'flex', gap: '8px' }}>

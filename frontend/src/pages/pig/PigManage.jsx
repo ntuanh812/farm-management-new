@@ -89,7 +89,8 @@ export default function PigManage() {
   // Lọc dữ liệu hiển thị trên bảng
   const filteredPigs = useMemo(() => {
     const filtered = augmentedPigs.filter(p => {
-      const matchSearch = !searchText || String(p.id).includes(searchText);
+      const pigCode = `PIG${String(p.id).padStart(3, '0')}`;
+      const matchSearch = !searchText || pigCode.toLowerCase().includes(searchText.trim().toLowerCase());
       const bId = p.barn_id;
       const matchBarn = !filterBarn || bId === filterBarn;
       const matchCategory = !filterCategory || p.category === filterCategory;

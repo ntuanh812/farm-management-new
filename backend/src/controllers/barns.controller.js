@@ -40,10 +40,18 @@ export const barnsController = {
   create: async (request, reply) => {
     const { code, name, capacity, barn_type, status, note } = request.body;
     try {
+      // Kiểm tra trùng tên chuồng
+      const existingName = await prisma.barns.findFirst({
+        where: { name: name.trim() }
+      });
+      if (existingName) {
+        return reply.code(400).send({ success: false, message: 'Tên chuồng đã tồn tại' });
+      }
+
       await prisma.barns.create({
         data: {
           code,
-          name,
+          name: name.trim(),
           capacity: Number(capacity),
           barn_type,
           status: status || 'ACTIVE',
@@ -65,11 +73,22 @@ export const barnsController = {
     const { id } = request.params;
     const { code, name, capacity, barn_type, status, note } = request.body;
     try {
+      // Kiểm tra trùng tên chuồng (loại trừ bản ghi đang sửa)
+      const existingName = await prisma.barns.findFirst({
+        where: {
+          name: name.trim(),
+          id: { not: Number(id) }
+        }
+      });
+      if (existingName) {
+        return reply.code(400).send({ success: false, message: 'Tên chuồng đã tồn tại' });
+      }
+
       await prisma.barns.update({
         where: { id: Number(id) },
         data: {
           code,
-          name,
+          name: name.trim(),
           capacity: Number(capacity),
           barn_type,
           status,

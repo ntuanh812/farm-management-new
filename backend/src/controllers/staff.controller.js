@@ -64,32 +64,6 @@ export const staffController = {
     }
   },
 
-  // 2. Lấy danh sách NV chưa có tài khoản
-  getstaffsNoAccount: async (request, reply) => {
-    try {
-      const staffs = await prisma.staffs.findMany({
-        where: {
-          accounts: null,
-        },
-        include: { roles: true },
-        orderBy: { full_name: "asc" },
-      });
-      const data = staffs.map((e) => ({
-        id: e.id,
-        full_name: e.full_name,
-        role_id: e.role_id,
-        role_name: e.roles?.name,
-      }));
-      return reply.send({ success: true, data });
-    } catch (error) {
-      if (request.log) request.log.error(error);
-      else console.error(error);
-      return reply
-        .code(500)
-        .send({ success: false, message: "Lỗi tải danh sách nhân viên" });
-    }
-  },
-
   // 3. Thêm nhân viên & Phân công chuồng (Dùng Transaction)
   createstaff: async (request, reply) => {
     const {
@@ -111,12 +85,10 @@ export const staffController = {
       full_name.trim().length === 0 ||
       full_name.length > 100
     ) {
-      return reply
-        .code(400)
-        .send({
-          success: false,
-          message: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)",
-        });
+      return reply.code(400).send({
+        success: false,
+        message: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)",
+      });
     }
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -170,13 +142,11 @@ export const staffController = {
         return newStaffId;
       });
 
-      return reply
-        .code(201)
-        .send({
-          success: true,
-          message: "Thêm nhân viên thành công",
-          data: { id: staffId },
-        });
+      return reply.code(201).send({
+        success: true,
+        message: "Thêm nhân viên thành công",
+        data: { id: staffId },
+      });
     } catch (error) {
       if (request.log) request.log.error(error);
       else console.error(error);
@@ -221,12 +191,10 @@ export const staffController = {
       full_name.trim().length === 0 ||
       full_name.length > 100
     ) {
-      return reply
-        .code(400)
-        .send({
-          success: false,
-          message: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)",
-        });
+      return reply.code(400).send({
+        success: false,
+        message: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)",
+      });
     }
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

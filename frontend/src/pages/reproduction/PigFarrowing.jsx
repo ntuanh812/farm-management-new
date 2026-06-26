@@ -60,11 +60,11 @@ export default function PigFarrowing() {
 
     // 3. Loại bỏ nái đã đẻ (kiểm tra xem có bản ghi đẻ nào diễn ra sau ngày phối này không)
     const validBreedings = Array.from(latestSuccess.values()).filter(b => {
-      const hasFarrowed = farrowings.some(f => 
-        f.sow_id === b.sow_id && 
+      const hasFarrowed = farrowings.some(f =>
+        f.sow_id === b.sow_id &&
         dayjs(f.farrow_date).isAfter(dayjs(b.breeding_date))
       );
-      
+
       if (hasFarrowed) return false;
 
       // 4. Lọc thời gian dự sinh <= 14 ngày (nới lỏng thời gian để không bị ẩn lợn)
@@ -182,8 +182,8 @@ export default function PigFarrowing() {
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} title="Sửa" />
           )}
           {canDelete && (
-            <Popconfirm 
-              title="Chắc chắn xóa bản ghi đẻ con này?" 
+            <Popconfirm
+              title="Chắc chắn xóa bản ghi đẻ con này?"
               description="Lợn mẹ sẽ được hoàn tác về trạng thái Đậu thai."
               onConfirm={() => handleDelete(record.id)}
             >
@@ -201,10 +201,10 @@ export default function PigFarrowing() {
         title="Quản lý Đẻ con"
         subtitle="Ghi nhận số lượng lợn sơ sinh và tình trạng sinh sản"
         actions={canEdit && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { 
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
             setEditingRecord(null);
-            form.resetFields(); 
-            setOpen(true); 
+            form.resetFields();
+            setOpen(true);
           }}>
             Ghi nhận đẻ
           </Button>
@@ -213,163 +213,162 @@ export default function PigFarrowing() {
 
       <div className="dashboard__maincontent">
         <Row gutter={[20, 20]} className="dashboard-stats">
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="stat-card stat-card--pigs">
-            <div className="stat-card__header">
-              <span className="stat-card__title">Tổng số ổ đẻ</span>
-              <div className="stat-card__icon"><UsergroupAddOutlined /></div>
-            </div>
-            <div className="stat-card__value">
-              {farrowings.length}
-              <span className="stat-card__label"> ổ</span>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="stat-card stat-card--barn">
-            <div className="stat-card__header">
-              <span className="stat-card__title">Lợn con sơ sinh (Sống)</span>
-              <div className="stat-card__icon"><CheckCircleOutlined /></div>
-            </div>
-            <div className="stat-card__value">
-              {farrowings.reduce((sum, f) => sum + (f.alive_piglets || 0), 0)}
-              <span className="stat-card__label"> con</span>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="stat-card stat-card--daily-tasks">
-            <div className="stat-card__header">
-              <span className="stat-card__title">Lợn con (Chết/Tật)</span>
-              <div className="stat-card__icon"><WarningOutlined /></div>
-            </div>
-            <div className="stat-card__value">
-              {farrowings.reduce((sum, f) => sum + (f.dead_piglets || 0), 0)}
-              <span className="stat-card__label"> con</span>
-            </div>
-          </Card>
-        </Col>
-      </Row>
+          <Col xs={24} sm={12} lg={8}>
+            <Card className="stat-card stat-card--pigs">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Tổng số ổ đẻ</span>
+                <div className="stat-card__icon"><UsergroupAddOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {farrowings.length}
+                <span className="stat-card__label"> ổ</span>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Card className="stat-card stat-card--barn">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Lợn sơ sinh sống khi đẻ</span>
+                <div className="stat-card__icon"><CheckCircleOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {farrowings.reduce((sum, f) => sum + (f.alive_piglets || 0), 0)}
+                <span className="stat-card__label"> con</span>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Card className="stat-card stat-card--daily-tasks">
+              <div className="stat-card__header">
+                <span className="stat-card__title">Lợn sơ sinh chết/tật</span>
+                <div className="stat-card__icon"><WarningOutlined /></div>
+              </div>
+              <div className="stat-card__value">
+                {farrowings.reduce((sum, f) => sum + (f.dead_piglets || 0), 0)}
+                <span className="stat-card__label"> con</span>
+              </div>
+            </Card>
+          </Col>
+        </Row>
 
-      <Card className="table-card" style={{ marginTop: 24 }}>
-        <Table columns={columns} dataSource={farrowings} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
-      </Card>
+        <Card className="table-card" style={{ marginTop: 24 }}>
+          <Table columns={columns} dataSource={farrowings} rowKey="id" loading={loading} pagination={{ pageSize: 10 }} />
+        </Card>
 
-      <Modal 
-        title={editingRecord ? "Cập nhật thông tin đẻ" : "Ghi nhận nái đẻ"}
-        open={open} 
-        onCancel={() => { setOpen(false); setEditingRecord(null); form.resetFields(); }} 
-        onOk={handleSubmit} 
-        okText="Lưu thông tin" 
-        cancelText="Hủy"
-        footer={canEdit ? undefined : null}
-        width={650}
-      >
-        <Form form={form} layout="vertical" disabled={!canEdit}>
-          <Form.Item name="sow_id" label="Lợn nái mẹ" rules={[{ required: true, message: 'Chọn nái' }]}>
-            <Select disabled={!!editingRecord} showSearch >
-              {editingRecord ? (
-                <Select.Option value={editingRecord.sow_id}>PIG{String(editingRecord.sow_code).padStart(3, "0")}</Select.Option>
-              ) : (
-                eligibleSows.map(p => (
-                  <Select.Option key={p.id} value={p.id}>
-                    {p.pigLabel} (Dự sinh: {p.expected_farrow_date ? dayjs(p.expected_farrow_date).format('DD/MM/YYYY') : 'Không rõ'})
-                  </Select.Option>
-                ))
-              )}
-            </Select>
-          </Form.Item>
+        <Modal
+          title={editingRecord ? "Cập nhật thông tin đẻ" : "Ghi nhận nái đẻ"}
+          open={open}
+          onCancel={() => { setOpen(false); setEditingRecord(null); form.resetFields(); }}
+          onOk={handleSubmit}
+          okText="Lưu thông tin"
+          cancelText="Hủy"
+          footer={canEdit ? undefined : null}
+          width={650}
+        >
+          <Form form={form} layout="vertical" disabled={!canEdit}>
+            <Form.Item name="sow_id" label="Lợn nái mẹ" rules={[{ required: true, message: 'Chọn nái' }]}>
+              <Select disabled={!!editingRecord} showSearch >
+                {editingRecord ? (
+                  <Select.Option value={editingRecord.sow_id}>PIG{String(editingRecord.sow_code).padStart(3, "0")}</Select.Option>
+                ) : (
+                  eligibleSows.map(p => (
+                    <Select.Option key={p.id} value={p.id}>
+                      {p.pigLabel} (Dự sinh: {p.expected_farrow_date ? dayjs(p.expected_farrow_date).format('DD/MM/YYYY') : 'Không rõ'})
+                    </Select.Option>
+                  ))
+                )}
+              </Select>
+            </Form.Item>
 
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="alive_piglets" label="Số con sống" rules={[{ required: true }]}>
-                <InputNumber min={0} className="w-100" disabled={!!editingRecord} onChange={() => form.validateFields(['piglet_barn_id']).catch(() => {})} />
-              </Form.Item>
-            </Col>
-            <Col span={8}><Form.Item name="dead_piglets" label="Số chết/tật" initialValue={0}><InputNumber min={0} className="w-100" /></Form.Item></Col>
-            <Col span={8}><Form.Item name="total_weight" label="Tổng Kg (ổ)"><InputNumber min={0} step={0.1} className="w-100" /></Form.Item></Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              {!editingRecord && (
-                <Form.Item noStyle shouldUpdate={(prev, curr) => prev.alive_piglets !== curr.alive_piglets}>
-                {({ getFieldValue }) => {
-                  
-                  // Chỉ cho phép chọn các chuồng thuộc loại PIGLET (Chuồng lợn con) đang hoạt động
-                  const validBarns = barns.filter(b => (b.status === 'ACTIVE' || !b.status) && b.barn_type === 'PIGLET');
-
-                  return (
-                    <Form.Item 
-                      name="piglet_barn_id" 
-                      label="Chuồng nuôi lợn con" 
-                      rules={[
-                        { required: true, message: 'Chọn chuồng cho lợn con' },
-                        () => ({
-                          validator(_, value) {
-                            if (!value) return Promise.resolve();
-                            const barn = barns.find(b => b.id === value);
-                            if (barn) {
-                              const available = (barn.capacity || 9999) - (barn.current_quantity || 0);
-                              if (available < (getFieldValue('alive_piglets') || 0)) {
-                                return Promise.reject(new Error(`Cảnh báo: Chuồng này chỉ còn trống ${available} chỗ`));
-                              }
-                            }
-                            return Promise.resolve();
-                          }
-                        })
-                      ]}
-                    >
-                      <Select showSearch placeholder="Chọn chuồng lợn con...">
-                        {validBarns.map(b => (
-                          <Select.Option key={b.id} value={b.id}>
-                            {b.name} (Trống: {(b.capacity || 9999) - (b.current_quantity || 0)} chỗ)
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                  );
-                }}
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="alive_piglets" label="Số con sống" rules={[{ required: true }]}>
+                  <InputNumber min={0} className="w-100" disabled={!!editingRecord} onChange={() => form.validateFields(['piglet_barn_id']).catch(() => { })} />
                 </Form.Item>
-              )}
-            </Col>
-            <Col span={12}>
-              <Form.Item name="farrow_date" label="Ngày đẻ thực tế" initialValue={dayjs()} rules={[{ required: true, message: 'Vui lòng chọn ngày đẻ' }]}>
-                <DatePicker 
-                  format="DD/MM/YYYY" 
-                  className="w-100" 
-                  disabledDate={(current) => current && current > dayjs().endOf('day')} 
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+              </Col>
+              <Col span={8}><Form.Item name="dead_piglets" label="Số chết/tật" initialValue={0}><InputNumber min={0} className="w-100" /></Form.Item></Col>
+              <Col span={8}><Form.Item name="total_weight" label="Tổng Kg (ổ)"><InputNumber min={0} step={0.1} className="w-100" /></Form.Item></Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                {!editingRecord && (
+                  <Form.Item noStyle shouldUpdate={(prev, curr) => prev.alive_piglets !== curr.alive_piglets}>
+                    {({ getFieldValue }) => {
 
-          <Form.Item shouldUpdate noStyle>
-            {() => {
-              const alive = form.getFieldValue('alive_piglets') || 0;
-              const dead = form.getFieldValue('dead_piglets') || 0;
-              const weight = form.getFieldValue('total_weight') || 0;
-              const totalPigs = alive + dead;
-              
-              if (totalPigs > 0 && weight > 0) {
-                const avg = (weight / totalPigs).toFixed(2);
-                return (
-                  <div style={{ marginBottom: 16, color: '#1890ff', fontWeight: 500 }}>
-                    💡 Trọng lượng sơ sinh trung bình: {avg} kg/con
-                  </div>
-                );
-              }
-              return null;
-            }}
-          </Form.Item>
+                      // Chỉ cho phép chọn các chuồng thuộc loại PIGLET (Chuồng lợn con) đang hoạt động
+                      const validBarns = barns.filter(b => (b.status === 'ACTIVE' || !b.status) && b.barn_type === 'PIGLET');
 
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea rows={2} placeholder="Sức khỏe nái mẹ, vấn đề phát sinh..." />
-          </Form.Item>
-        </Form>
-      </Modal>
+                      return (
+                        <Form.Item
+                          name="piglet_barn_id"
+                          label="Chuồng nuôi lợn con"
+                          rules={[
+                            { required: true, message: 'Chọn chuồng cho lợn con' },
+                            () => ({
+                              validator(_, value) {
+                                if (!value) return Promise.resolve();
+                                const barn = barns.find(b => b.id === value);
+                                if (barn) {
+                                  const available = (barn.capacity || 9999) - (barn.current_quantity || 0);
+                                  if (available < (getFieldValue('alive_piglets') || 0)) {
+                                    return Promise.reject(new Error(`Cảnh báo: Chuồng này chỉ còn trống ${available} chỗ`));
+                                  }
+                                }
+                                return Promise.resolve();
+                              }
+                            })
+                          ]}
+                        >
+                          <Select showSearch placeholder="Chọn chuồng lợn con...">
+                            {validBarns.map(b => (
+                              <Select.Option key={b.id} value={b.id}>
+                                {b.name} (Trống: {(b.capacity || 9999) - (b.current_quantity || 0)} chỗ)
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      );
+                    }}
+                  </Form.Item>
+                )}
+              </Col>
+              <Col span={12}>
+                <Form.Item name="farrow_date" label="Ngày đẻ thực tế" initialValue={dayjs()} rules={[{ required: true, message: 'Vui lòng chọn ngày đẻ' }]}>
+                  <DatePicker
+                    format="DD/MM/YYYY"
+                    className="w-100"
+                    disabledDate={(current) => current && current > dayjs().endOf('day')}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item shouldUpdate noStyle>
+              {() => {
+                const alive = form.getFieldValue('alive_piglets') || 0;
+                const dead = form.getFieldValue('dead_piglets') || 0;
+                const weight = form.getFieldValue('total_weight') || 0;
+                const totalPigs = alive + dead;
+
+                if (totalPigs > 0 && weight > 0) {
+                  const avg = (weight / totalPigs).toFixed(2);
+                  return (
+                    <div style={{ marginBottom: 16, color: '#1890ff', fontWeight: 500 }}>
+                      💡 Trọng lượng sơ sinh trung bình: {avg} kg/con
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            </Form.Item>
+
+            <Form.Item name="note" label="Ghi chú">
+              <Input.TextArea rows={2} placeholder="Sức khỏe nái mẹ, vấn đề phát sinh..." />
+            </Form.Item>
+          </Form>
+        </Modal>
       </div>
     </div>
   );
 }
-      

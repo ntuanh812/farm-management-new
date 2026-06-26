@@ -7,20 +7,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOu
 import axiosClient from '@/utils/axiosClient';
 import { useAuthStore } from '@/store/authStore';
 import { PageHeader } from '@/components/layout/PageHeader';
-
-const BARN_TYPES = {
-  'SOW': 'Chuồng lợn nái',
-  'BOAR': 'Chuồng lợn đực',
-  'PIGLET': 'Chuồng lợn con',
-  'FATTENING': 'Chuồng lợn thịt',
-  'QUARANTINE': 'Chuồng cách ly'
-};
-
-const STATUS_CONFIG = {
-  'ACTIVE': { text: 'Hoạt động', color: 'green' },
-  'MAINTENANCE': { text: 'Bảo trì', color: 'orange' },
-  'FULL': { text: 'Đã đầy', color: 'red' }
-};
+import { BARN_TYPES, BARN_STATUS_MAP } from '@/utils/constants';
 
 export default function PigBarns() {
   const { user } = useAuthStore();
@@ -192,7 +179,7 @@ export default function PigBarns() {
       title: 'Trạng thái',
       key: 'computedStatus',
       render: (_, record) => {
-        const cfg = STATUS_CONFIG[record.computedStatus];
+        const cfg = BARN_STATUS_MAP[record.computedStatus];
         return cfg ? <Tag color={cfg.color}>{cfg.text}</Tag> : <Tag>{record.computedStatus}</Tag>;
       }
     },
@@ -314,7 +301,7 @@ export default function PigBarns() {
             <Select placeholder="Loại chuồng" allowClear options={Object.entries(BARN_TYPES).map(([val, label]) => ({ label, value: val }))} style={{ width: 180 }} />
           </Form.Item>
           <Form.Item name="status">
-            <Select placeholder="Trạng thái" allowClear options={Object.entries(STATUS_CONFIG).map(([val, cfg]) => ({ label: cfg.text, value: val }))} style={{ width: 160 }} />
+            <Select placeholder="Trạng thái" allowClear options={Object.entries(BARN_STATUS_MAP).map(([val, cfg]) => ({ label: cfg.text, value: val }))} style={{ width: 160 }} />
           </Form.Item>
         </Form>
         <Table
@@ -360,7 +347,25 @@ export default function PigBarns() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="name" label="Tên chuồng" rules={[{ required: true, message: 'Vui lòng nhập tên chuồng' }]}>
+              <Form.Item
+                name="name"
+                label="Tên chuồng"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập tên chuồng' },
+                  () => ({
+                    validator(_, value) {
+                      if (!value) return Promise.resolve();
+                      const exists = barns.find(
+                        b => b.name.trim().toLowerCase() === value.trim().toLowerCase()
+                      );
+                      if (exists && exists.id !== editingId) {
+                        return Promise.reject(new Error('Tên chuồng này đã tồn tại!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  })
+                ]}
+              >
                 <Input placeholder="VD: Chuồng nái 1..." />
               </Form.Item>
             </Col>

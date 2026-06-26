@@ -30,23 +30,22 @@ body {
   font-family: inherit;
 }
 
-/* Make table font sizes larger globally */
 .ant-table-wrapper {
   .ant-table {
-    font-size: 18px; // Tăng kích thước chữ chung trong bảng
+    font-size: 18px;
 
-    .ant-table-thead > tr > th {
-      font-size: 16px; // Tăng kích thước chữ cho tiêu đề cột
+    .ant-table-thead>tr>th {
+      font-size: 16px;
       font-weight: 600;
     }
 
-    .ant-table-tbody > tr > td {
-      font-size: 16px; // Tăng kích thước chữ cho nội dung hàng
+    .ant-table-tbody>tr>td {
+      font-size: 16px;
     }
   }
-  
+
   .ant-pagination {
-    font-size: 16px; // Tăng kích thước phân trang (nếu muốn)
+    font-size: 12px;
   }
 }
 

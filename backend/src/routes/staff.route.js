@@ -2,151 +2,115 @@
 // backend/src/routes/staff.route.js
 // =========================================================
 
-import { staffController } from '../controllers/staff.controller.js';
-import { protect } from '../middleware/auth.js';
+import { staffController } from "../controllers/staff.controller.js";
+import { protect } from "../middleware/auth.js";
 
-import { pipeline } from 'stream/promises';
+import { pipeline } from "stream/promises";
 
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(
-  fileURLToPath(import.meta.url)
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const UPLOAD_DIR = path.resolve(
-  __dirname,
-  '../../uploads'
-);
+const UPLOAD_DIR = path.resolve(__dirname, "../../uploads");
 
 // Tạo uploads nếu chưa có
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, {
-    recursive: true
+    recursive: true,
   });
 }
 
 function uniqueFilename(originalName) {
-
   const ext = path.extname(originalName);
 
-  const rand = Math.random()
-    .toString(36)
-    .slice(2, 8);
+  const rand = Math.random().toString(36).slice(2, 8);
 
   return `${Date.now()}_${rand}${ext}`;
 }
 
 export default async function staffRoutes(app) {
-
   // =====================================================
   // Upload Avatar
   // =====================================================
   app.post(
-    '/upload',
+    "/upload",
     {
-      preHandler: protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
 
     async (request, reply) => {
-
       try {
-
         const data = await request.file();
 
         if (!data) {
           return reply.code(400).send({
             success: false,
-            message: 'Không có file upload'
+            message: "Không có file upload",
           });
         }
 
-        if (
-          !data.mimetype.startsWith(
-            'image/'
-          )
-        ) {
+        if (!data.mimetype.startsWith("image/")) {
           return reply.code(400).send({
             success: false,
-            message:
-              'Chỉ chấp nhận file ảnh'
+            message: "Chỉ chấp nhận file ảnh",
           });
         }
 
-        const filename = uniqueFilename(
-          data.filename
-        );
+        const filename = uniqueFilename(data.filename);
 
-        const filepath = path.join(
-          UPLOAD_DIR,
-          filename
-        );
+        const filepath = path.join(UPLOAD_DIR, filename);
 
-        await pipeline(
-          data.file,
-          fs.createWriteStream(filepath)
-        );
+        await pipeline(data.file, fs.createWriteStream(filepath));
 
         return reply.send({
           success: true,
-          data: `/uploads/${filename}`
+          data: `/uploads/${filename}`,
         });
-
       } catch (error) {
-
         console.error(error);
 
         return reply.code(500).send({
           success: false,
-          message:
-            'Upload ảnh thất bại'
+          message: "Upload ảnh thất bại",
         });
       }
-    }
+    },
   );
 
   // =====================================================
   // Xóa ảnh
   // =====================================================
   app.delete(
-    '/upload/:filename',
+    "/upload/:filename",
     {
-      preHandler: protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
 
     async (request, reply) => {
-
       try {
+        const { filename } = request.params;
 
-        const { filename } =
-          request.params;
-
-        const filepath = path.join(
-          UPLOAD_DIR,
-          filename
-        );
+        const filepath = path.join(UPLOAD_DIR, filename);
 
         if (fs.existsSync(filepath)) {
           fs.unlinkSync(filepath);
         }
 
         return reply.send({
-          success: true
+          success: true,
         });
-
       } catch (error) {
-
         console.error(error);
 
         return reply.code(500).send({
           success: false,
-          message:
-            'Xóa ảnh thất bại'
+          message: "Xóa ảnh thất bại",
         });
       }
-    }
+    },
   );
 
   // =====================================================
@@ -154,65 +118,50 @@ export default async function staffRoutes(app) {
   // =====================================================
 
   app.get(
-    '/',
+    "/",
     {
-      preHandler:
-        protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
-    staffController.getAllStaff
-  );
-
-  app.get(
-    '/no-account',
-    {
-      preHandler:
-        protect('ADMIN')
-    },
-    staffController.getstaffsNoAccount
+    staffController.getAllStaff,
   );
 
   app.post(
-    '/',
+    "/",
     {
-      preHandler:
-        protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
-    staffController.createstaff
+    staffController.createstaff,
   );
 
   app.put(
-    '/:id',
+    "/:id",
     {
-      preHandler:
-        protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
-    staffController.updatestaff
+    staffController.updatestaff,
   );
 
   app.post(
-    '/accounts',
+    "/accounts",
     {
-      preHandler:
-        protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
-    staffController.createAccount
+    staffController.createAccount,
   );
 
   app.patch(
-    '/accounts/:id/toggle',
+    "/accounts/:id/toggle",
     {
-      preHandler:
-        protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
-    staffController.toggleAccountStatus
+    staffController.toggleAccountStatus,
   );
 
   app.post(
-    '/accounts/:id/reset-password',
+    "/accounts/:id/reset-password",
     {
-      preHandler:
-        protect('ADMIN')
+      preHandler: protect("ADMIN"),
     },
-    staffController.resetPassword
+    staffController.resetPassword,
   );
 }

@@ -8,6 +8,7 @@ import {
   UnlockOutlined, KeyOutlined, UserAddOutlined, UploadOutlined, UserOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import axiosClient from '@/utils/axiosClient';
+import { BASE_URL } from '@/config/env';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -80,7 +81,7 @@ export default function StaffManagement() {
           });
           avatarUrl = uploadRes.data.data;
         } else if (file.url) {
-          avatarUrl = file.url.replace('http://localhost:3000', '');
+          avatarUrl = file.url.replace(BASE_URL, '');
         }
       }
       values.avatar = avatarUrl || null;
@@ -151,7 +152,7 @@ export default function StaffManagement() {
 
   const handleEdit = (record) => {
     setEditingStaff(record);
-    setFileList(record.avatar ? [{ uid: '-1', name: 'avatar.png', status: 'done', url: `http://localhost:3000${record.avatar}` }] : []);
+    setFileList(record.avatar ? [{ uid: '-1', name: 'avatar.png', status: 'done', url: `${BASE_URL}${record.avatar}` }] : []);
     staffForm.setFieldsValue({
       ...record,
       dob: record.dob ? dayjs(record.dob) : null,
@@ -173,7 +174,7 @@ export default function StaffManagement() {
       key: 'staff_info',
       render: (_, record) => (
         <Space>
-          <Avatar src={record.avatar ? `http://localhost:3000${record.avatar}` : null} icon={<UserOutlined />} />
+          <Avatar src={record.avatar ? `${BASE_URL}${record.avatar}` : null} icon={<UserOutlined />} />
           <strong>{record.full_name}</strong>
         </Space>
       ),
@@ -339,7 +340,7 @@ export default function StaffManagement() {
                 label="Số điện thoại" 
                 rules={[
                   { required: true, message: 'Vui lòng nhập SĐT' },
-                  { pattern: /^(\+84|0)[0-9\s-.]{8,12}$/, message: 'SĐT không hợp lệ (Bắt đầu bằng 0 hoặc +84)' },
+                  { pattern: /^(\+84|0)[0-9\s-.]{8,12}$/},
                   () => ({
                     validator(_, value) {
                       if (!value) return Promise.resolve();

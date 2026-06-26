@@ -50,9 +50,7 @@ import vaccinesRoute from "./routes/vaccines.route.js";
 // =========================================================
 // APP
 // =========================================================
-const __dirname = path.dirname(
-  fileURLToPath(import.meta.url)
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = Fastify({
   logger: true,
@@ -61,10 +59,7 @@ const app = Fastify({
 // =========================================================
 // UPLOAD PATH
 // =========================================================
-const UPLOAD_DIR = path.resolve(
-  __dirname,
-  "../uploads"
-);
+const UPLOAD_DIR = path.resolve(__dirname, "../uploads");
 
 // =========================================================
 // PLUGINS
@@ -206,33 +201,22 @@ app.setNotFoundHandler((request, reply) => {
 // =========================================================
 // ERROR HANDLER
 // =========================================================
-app.setErrorHandler(
-  (error, request, reply) => {
+app.setErrorHandler((error, request, reply) => {
+  console.error(error);
 
-    console.error(error);
+  return reply.status(error.statusCode || 500).send({
+    success: false,
 
-    return reply.status(
-      error.statusCode || 500
-    ).send({
-      success: false,
-
-      message:
-        error.message ||
-        "Internal Server Error",
-    });
-  }
-);
+    message: error.message || "Internal Server Error",
+  });
+});
 
 // =========================================================
 // START SERVER
 // =========================================================
 try {
-
   await app.listen({
-    port:
-      Number(
-        process.env.PORT
-      ) || 3000,
+    port: Number(process.env.PORT) || 3000,
 
     host: "0.0.0.0",
   });
@@ -244,9 +228,7 @@ try {
  PORT: ${process.env.PORT || 3000}
 =================================
   `);
-
 } catch (err) {
-
   app.log.error(err);
 
   process.exit(1);

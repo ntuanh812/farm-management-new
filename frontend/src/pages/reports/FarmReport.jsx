@@ -16,16 +16,10 @@ import {
 } from 'recharts';
 import axiosClient from '@/utils/axiosClient';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { CATEGORY_MAP } from '@/utils/constants';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
-
-const CATEGORY_MAP = {
-  'SOW': 'Lợn nái',
-  'BOAR': 'Lợn đực',
-  'PIGLET': 'Lợn con',
-  'FATTENING': 'Lợn thịt'
-};
 
 export default function FarmReport() {
   

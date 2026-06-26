@@ -5,19 +5,15 @@ import {
 } from 'antd'
 import { AuditOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons'
 import axiosClient from '@/utils/axiosClient'
+import { BASE_URL } from '@/config/env'
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { uploadFile } from '@/utils/upload'; // Gợi ý: Tách hàm upload ra file riêng
-
-dayjs.extend(utc)
+import { uploadFile } from '@/utils/upload';
+import { REPORT_STATUS_MAP } from '@/utils/constants'
 
 const { TextArea } = Input
 const { Option }   = Select
-
-const STATUS_COLOR = { cho_xu_ly: 'orange', dang_xu_ly: 'blue', da_xu_ly: 'green' }
-const STATUS_LABEL = { cho_xu_ly: 'Chờ xử lý', dang_xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' }
 
 export default function VetReview() {
   const { user } = useAuthStore()
@@ -70,7 +66,7 @@ export default function VetReview() {
     try {
       const images = messageFileList
         .filter(f => f.status === 'done')
-        .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
+        .map(f => f.response?.data?.[0] || f.url?.replace(BASE_URL, ''))
         .filter(Boolean)
 
       const currentStatus = form.getFieldValue('status');
@@ -103,7 +99,7 @@ export default function VetReview() {
       width: 60,
       render: (_, __, index) => index + 1,
     },
-    { title: 'Thời gian', dataIndex: 'created_at', width: 130, render: v => dayjs.utc(v).format('DD/MM/YYYY HH:mm') },
+    { title: 'Thời gian', dataIndex: 'created_at', width: 130, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Lợn & Chuồng',
       key: 'pig_info',
@@ -134,7 +130,7 @@ export default function VetReview() {
         <Image.PreviewGroup>
           <Space size={4}>
             {rec.images.slice(0, 3).map((url, i) => (
-              <Image key={i} width={32} height={32} src={`http://localhost:3000${url}`} className="reports-page__img-thumb" />
+              <Image key={i} width={32} height={32} src={`${BASE_URL}${url}`} className="reports-page__img-thumb" />
             ))}
             {rec.images.length > 3 && <span className="reports-page__img-more">+{rec.images.length - 3}</span>}
           </Space>
@@ -145,7 +141,10 @@ export default function VetReview() {
     },
     {
       title: 'Trạng thái', dataIndex: 'status', width: 110,
-      render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v]}</Tag>,
+      render: v => {
+        const cfg = REPORT_STATUS_MAP[v] || { text: v, color: 'default' };
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
     },
     {
       title: 'Nội dung phản hồi', 
@@ -232,9 +231,9 @@ export default function VetReview() {
                         setSelected({...selected, status: val})
                       }}
                     >
-                      <Option value="cho_xu_ly">Chờ xử lý</Option>
-                      <Option value="dang_xu_ly">Đang xử lý</Option>
-                      <Option value="da_xu_ly">Đã xử lý</Option>
+                      {Object.entries(REPORT_STATUS_MAP).map(([val, cfg]) => (
+                        <Option key={val} value={val}>{cfg.text}</Option>
+                      ))}
                     </Select>
                   </Form.Item>
                 </Form>
@@ -248,7 +247,7 @@ export default function VetReview() {
                 <div className="reports-chat__item">
                   <div className="reports-chat__item-content">
                     <div className="reports-chat__meta">
-                      <b>{selected.reporter_name}</b> (Người báo cáo) - {dayjs.utc(selected.created_at).format('HH:mm DD/MM')}
+                      <b>{selected.reporter_name}</b> (Người báo cáo) - {dayjs(selected.created_at).format('HH:mm DD/MM')}
                     </div>
                     <div className="reports-chat__bubble reports-chat__bubble--other">
                       <div className="reports-chat__text">{selected.description}</div>
@@ -257,7 +256,7 @@ export default function VetReview() {
                           <Image.PreviewGroup>
                             <Space size={8} wrap>
                               {selected.images.map((url, i) => (
-                                <Image key={i} width={60} height={60} src={`http://localhost:3000${url}`} className="reports-chat__img" />
+                                <Image key={i} width={60} height={60} src={`${BASE_URL}${url}`} className="reports-chat__img" />
                               ))}
                             </Space>
                           </Image.PreviewGroup>
@@ -273,7 +272,7 @@ export default function VetReview() {
                     <div key={msg.id} className={`reports-chat__item ${isMe ? 'reports-chat__item--me' : ''}`}>
                       <div className={`reports-chat__item-content ${isMe ? 'reports-chat__item-content--me' : ''}`}>
                         <div className="reports-chat__meta">
-                            <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs.utc(msg.created_at).format('HH:mm DD/MM')}
+                            <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs(msg.created_at).format('HH:mm DD/MM')}
                         </div>
                         <div className={`reports-chat__bubble ${isMe ? 'reports-chat__bubble--me' : 'reports-chat__bubble--other'}`}>
                           <div className="reports-chat__text">{msg.message}</div>
@@ -282,7 +281,7 @@ export default function VetReview() {
                               <Image.PreviewGroup>
                                 <Space size={8} wrap>
                                   {msg.images.map((url, i) => (
-                                    <Image key={i} width={60} height={60} src={`http://localhost:3000${url}`} className="reports-chat__img" />
+                                    <Image key={i} width={60} height={60} src={`${BASE_URL}${url}`} className="reports-chat__img" />
                                   ))}
                                 </Space>
                               </Image.PreviewGroup>

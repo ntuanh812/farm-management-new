@@ -22,12 +22,15 @@
     &::-webkit-scrollbar {
       width: 6px;
     }
+
     &::-webkit-scrollbar-track {
       background: rgba(255, 255, 255, 0.1);
     }
+
     &::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.3);
       border-radius: 3px;
+
       &:hover {
         background: rgba(255, 255, 255, 0.5);
       }
@@ -62,31 +65,40 @@
   .app {
     &__sidebar {
       width: 80px;
+
       .sidebar {
         &__logo-text {
           display: none;
         }
+
         &__header {
           justify-content: center;
           padding: 20px 10px;
         }
+
         &__logo-mark {
           margin-right: 0;
         }
       }
+
       .ant-menu {
-        &-item, &-submenu-title {
+
+        &-item,
+        &-submenu-title {
           padding: 0 !important;
           text-align: center;
+
           span:not(.anticon) {
             display: none;
           }
         }
+
         &-inline-collapsed {
           width: 80px;
         }
       }
     }
+
     &__main {
       margin-left: 80px;
     }
@@ -99,13 +111,14 @@
       transform: translateX(-100%);
       transition: transform 0.3s ease;
       width: 280px;
+
       &.is-open {
         transform: translateX(0);
       }
     }
+
     &__main {
       margin-left: 0;
     }
   }
 }
-

@@ -5,19 +5,15 @@ import {
 } from 'antd'
 import { PlusOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons'
 import axiosClient from '@/utils/axiosClient'
+import { BASE_URL } from '@/config/env'
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { uploadFile } from '@/utils/upload'
-
-dayjs.extend(utc)
+import { REPORT_STATUS_MAP } from '@/utils/constants'
 
 const { TextArea } = Input
 const { Option }   = Select
-
-const STATUS_COLOR = { cho_xu_ly: 'orange', dang_xu_ly: 'blue', da_xu_ly: 'green' }
-const STATUS_LABEL = { cho_xu_ly: 'Chờ xử lý', dang_xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' }
 
 export default function PigReport() {
   const { user } = useAuthStore()
@@ -71,7 +67,7 @@ export default function PigReport() {
       // Lấy URL ảnh đã upload thành công
       const images = fileList
         .filter(f => f.status === 'done')
-        .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
+        .map(f => f.response?.data?.[0] || f.url?.replace(BASE_URL, ''))
         .filter(Boolean)
 
       await axiosClient.post(`/pig-reports`, {
@@ -117,7 +113,7 @@ export default function PigReport() {
     try {
       const images = messageFileList
         .filter(f => f.status === 'done')
-        .map(f => f.response?.data?.[0] || f.url?.replace('http://localhost:3000', ''))
+        .map(f => f.response?.data?.[0] || f.url?.replace(BASE_URL, ''))
         .filter(Boolean)
 
       await axiosClient.post(`/pig-reports/${selectedReport.id}/messages`, { message: newMessage, images })
@@ -142,7 +138,7 @@ export default function PigReport() {
       width: 60,
       render: (_, __, index) => index + 1,
     },
-    { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs.utc(v).format('DD/MM/YYYY HH:mm') },
+    { title: 'Thời gian', dataIndex: 'created_at', width: 120, render: v => dayjs(v).format('DD/MM/YYYY HH:mm') },
     {
       title: 'Lợn & Chuồng',
       key: 'pig_info',
@@ -172,7 +168,7 @@ export default function PigReport() {
         <Image.PreviewGroup>
           <Space size={4}>
             {rec.images.slice(0, 3).map((url, i) => (
-              <Image key={i} width={32} height={32} src={`http://localhost:3000${url}`} className="reports-page__img-thumb" />
+              <Image key={i} width={32} height={32} src={`${BASE_URL}${url}`} className="reports-page__img-thumb" />
             ))}
             {rec.images.length > 3 && <span className="reports-page__img-more">+{rec.images.length - 3}</span>}
           </Space>
@@ -183,7 +179,10 @@ export default function PigReport() {
     },
     {
       title: 'Trạng thái', dataIndex: 'status', width: 110,
-      render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v]}</Tag>,
+      render: v => {
+        const cfg = REPORT_STATUS_MAP[v] || { text: v, color: 'default' };
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
     },
     {
       title: 'Phản hồi từ Thú y', key: 'vet_feedback', width: 220,
@@ -321,7 +320,7 @@ export default function PigReport() {
               <div className="reports-chat__item">
                 <div className="reports-chat__item-content">
                   <div className="reports-chat__meta">
-                    <b>{selectedReport.reporter_name}</b> (Người báo cáo) - {dayjs.utc(selectedReport.created_at).format('HH:mm DD/MM')}
+                    <b>{selectedReport.reporter_name}</b> (Người báo cáo) - {dayjs(selectedReport.created_at).format('HH:mm DD/MM')}
                   </div>
                   <div className="reports-chat__bubble reports-chat__bubble--other">
                     <div className="reports-chat__text">{selectedReport.description}</div>
@@ -330,7 +329,7 @@ export default function PigReport() {
                         <Image.PreviewGroup>
                           <Space size={8} wrap>
                             {selectedReport.images.map((url, i) => (
-                              <Image key={i} width={60} height={60} src={`http://localhost:3000${url}`} className="reports-chat__img" />
+                              <Image key={i} width={60} height={60} src={`${BASE_URL}${url}`} className="reports-chat__img" />
                             ))}
                           </Space>
                         </Image.PreviewGroup>
@@ -346,7 +345,7 @@ export default function PigReport() {
                   <div key={msg.id} className={`reports-chat__item ${isMe ? 'reports-chat__item--me' : ''}`}>
                     <div className={`reports-chat__item-content ${isMe ? 'reports-chat__item-content--me' : ''}`}>
                       <div className="reports-chat__meta">
-                        <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs.utc(msg.created_at).format('HH:mm DD/MM')}
+                        <b>{isMe ? 'Bạn' : msg.sender_name}</b> {msg.sender_role ? `(${msg.sender_role})` : ''} - {dayjs(msg.created_at).format('HH:mm DD/MM')}
                       </div>
                       <div className={`reports-chat__bubble ${isMe ? 'reports-chat__bubble--me' : 'reports-chat__bubble--other'}`}>
                         <div className="reports-chat__text">{msg.message}</div>
@@ -355,7 +354,7 @@ export default function PigReport() {
                             <Image.PreviewGroup>
                               <Space size={8} wrap>
                                 {msg.images.map((url, i) => (
-                                  <Image key={i} width={60} height={60} src={`http://localhost:3000${url}`} className="reports-chat__img" />
+                                  <Image key={i} width={60} height={60} src={`${BASE_URL}${url}`} className="reports-chat__img" />
                                 ))}
                               </Space>
                             </Image.PreviewGroup>
