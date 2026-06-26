@@ -45,8 +45,8 @@ export default function FarmReport() {
     try {
       let params = {};
       if (values.dateRange && values.dateRange.length === 2) {
-        params.startDate = values.dateRange[0].format('YYYY-MM-DD');
-        params.endDate = values.dateRange[1].format('YYYY-MM-DD');
+        params.start_date = values.dateRange[0].format('YYYY-MM-DD');
+        params.end_date = values.dateRange[1].format('YYYY-MM-DD');
       }
 
       const res = await axiosClient.get(`/reports/farm-overview`, { params });
@@ -253,9 +253,24 @@ export default function FarmReport() {
             <Card title="Doanh thu xuất bán (Chi tiết theo ngày)" bordered={false} style={{ height: '100%' }}>
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.revenue_trend} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <LineChart data={data.revenue_trend} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
+                    <XAxis 
+                      dataKey="date" 
+                      angle={-40}
+                      textAnchor="end"
+                      interval="preserveStartEnd"
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(value, index) => {
+                        const total = data.revenue_trend?.length || 1;
+                        // Nếu quá 20 điểm: chỉ hiện mỗi N ngày một lần
+                        if (total > 20) {
+                          const step = Math.ceil(total / 10);
+                          return index % step === 0 ? value : '';
+                        }
+                        return value;
+                      }}
+                    />
                     <YAxis tickFormatter={(val) => `${(Number(val) / 1000000).toFixed(0)}M`} />
                     <RechartsTooltip formatter={(value) => [`${Math.round(Number(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')} VNĐ`, 'Doanh thu']} />
                     <Legend />

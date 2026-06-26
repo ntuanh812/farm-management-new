@@ -70,16 +70,5 @@ export const deathsController = {
       request.log.error(error);
       return reply.code(500).send({ success: false, message: 'Lỗi hệ thống khi ghi nhận' });
     }
-  },
-
-  delete: async (request, reply) => {
-    try {
-      await prisma.pig_deaths.delete({
-        where: { id: Number(request.params.id) }
-      });
-      return reply.send({ success: true, message: 'Xóa bản ghi thành công' });
-    } catch (error) {
-      return reply.code(500).send({ success: false, message: 'Lỗi khi xóa bản ghi' });
-    }
   }
 };
