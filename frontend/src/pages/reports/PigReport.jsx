@@ -142,7 +142,7 @@ export default function PigReport() {
     {
       title: 'Lợn & Chuồng',
       key: 'pig_info',
-      width: 130,
+      width: 150,
       render: (_, rec) => (
         <div>
           <div className="reports-page__pig-id">PIG{String(rec.pig_id).padStart(3, "0")}</div>
@@ -185,15 +185,6 @@ export default function PigReport() {
       },
     },
     {
-      title: 'Phản hồi từ Thú y', key: 'vet_feedback', width: 220,
-      render: (_, rec) => rec.vet_note ? (
-        <div>
-          <div className="reports-page__vet-name">BS. {rec.vet_name}</div>
-          <div className="reports-page__vet-note">"{rec.vet_note}"</div>
-        </div>
-      ) : <span className="reports-page__empty-text">Chưa có phản hồi</span>
-    },
-    {
       title: 'Thao tác', key: 'action', width: 100, align: 'center',
       render: (_, rec) => (
         <Space>
@@ -228,7 +219,7 @@ export default function PigReport() {
           dataSource={list}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 900 }}
+          scroll={{ x: 700 }}
           pagination={{ pageSize: 10 }}
         />
       </Card>

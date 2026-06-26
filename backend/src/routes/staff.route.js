@@ -130,7 +130,7 @@ export default async function staffRoutes(app) {
     {
       preHandler: protect("ADMIN"),
     },
-    staffController.createstaff,
+    staffController.createStaff,
   );
 
   app.put(
@@ -138,7 +138,7 @@ export default async function staffRoutes(app) {
     {
       preHandler: protect("ADMIN"),
     },
-    staffController.updatestaff,
+    staffController.updateStaff,
   );
 
   app.post(

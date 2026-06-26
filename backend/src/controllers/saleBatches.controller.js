@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { LIFECYCLE } from '../config/constants.js';
 
 export const saleBatchesController = {
   // Lấy danh sách các lô xuất bán
@@ -51,7 +52,7 @@ export const saleBatchesController = {
         for (const l of lines) {
           const pig = pigs.find(p => p.id === Number(l.pig_id));
           if (!pig) throw new Error(`Không tìm thấy cá thể lợn PIG${String(l.pig_id).padStart(3, "0")}`);
-          if (pig.lifecycle_status === 'SOLD' || pig.lifecycle_status === 'DEAD') {
+          if (pig.lifecycle_status === LIFECYCLE.SOLD || pig.lifecycle_status === LIFECYCLE.DEAD) {
             throw new Error(`Cá thể PIG${String(l.pig_id).padStart(3, "0")} đã chết hoặc đã xuất bán`);
           }
 
@@ -75,7 +76,7 @@ export const saleBatchesController = {
         await tx.sale_batch_lines.createMany({ data: lineValues });
 
         // 3. Cập nhật trạng thái những con lợn này thành SOLD
-        await tx.pigs.updateMany({ where: { id: { in: pigIds } }, data: { lifecycle_status: 'SOLD', updated_at: new Date() } });
+        await tx.pigs.updateMany({ where: { id: { in: pigIds } }, data: { lifecycle_status: LIFECYCLE.SOLD, updated_at: new Date() } });
       });
 
       return reply.code(201).send({ success: true, message: 'Ghi nhận xuất bán thành công' });

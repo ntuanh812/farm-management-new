@@ -172,22 +172,26 @@ export default function StaffManagement() {
     {
       title: 'Nhân sự',
       key: 'staff_info',
+      width: 190,
       render: (_, record) => (
         <Space>
           <Avatar src={record.avatar ? `${BASE_URL}${record.avatar}` : null} icon={<UserOutlined />} />
           <strong>{record.full_name}</strong>
         </Space>
       ),
+      fixed: 'left',
     },
     {
       title: 'Username',
       dataIndex: 'username',
       key: 'username',
+      width: 120,
       render: (text) => text ? <span className="staff-management__username-highlight">@{text}</span> : <span className="text-muted">Chưa có</span>,
     },
     {
       title: 'Liên hệ',
       key: 'contact',
+      width: 220,
       render: (_, record) => (
         <div className="text-sm">
           <div>📞 {record.phone || 'Chưa cập nhật'}</div>
@@ -199,6 +203,7 @@ export default function StaffManagement() {
       title: 'Vai trò',
       dataIndex: 'role_code',
       key: 'role_code',
+      width: 140,
       render: (role_code) => {
         const config = ROLE_CONFIG[role_code] || { text: 'Không rõ', color: 'default' };
         return <Tag color={config.color}>{config.text}</Tag>;
@@ -207,6 +212,7 @@ export default function StaffManagement() {
     {
       title: 'Chuồng quản lý',
       key: 'assigned_barns',
+      // Để trống width để cột này tự động co giãn
       render: (_, record) => {
         if (record.role_code === 'ADMIN' || record.role_code === 'VET_DOCTOR') {
           return <span className="text-muted staff-management__dash">-</span>;
@@ -225,6 +231,7 @@ export default function StaffManagement() {
     {
       title: 'Trạng thái',
       key: 'is_active',
+      width: 110,
       render: (_, record) => {
         if (!record.account_id) return <Tag color="default">Chưa có TK</Tag>;
         if (record.role_code === 'ADMIN') return <Tag color="blue">Luôn mở</Tag>;
@@ -246,13 +253,14 @@ export default function StaffManagement() {
       title: 'Ngày tạo',
       dataIndex: 'created_at',
       key: 'created_at',
+      width: 120,
       render: (date) => dayjs.utc(date).format('DD/MM/YYYY'),
     },
     {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => {
-        if (record.role_code === 'ADMIN') return <span className="text-muted staff-management__dash">-</span>;
+        if (record.role_code === 'ADMIN') return <span className="text-muted staff-management__dash">-</span>; // Admin không có thao tác trên chính mình hoặc các admin khác
         return (
           <Space size="middle">
             <Button type="text" icon={<EditOutlined />} className="text-primary" title="Sửa" onClick={() => handleEdit(record)} />
@@ -267,6 +275,8 @@ export default function StaffManagement() {
           </Space>
         );
       },
+      width: 120,
+      fixed: 'right',
     },
   ];
 
@@ -299,6 +309,7 @@ export default function StaffManagement() {
           dataSource={staffData} 
           rowKey="id"
           loading={loading}
+          scroll={{ x: 1300 }}
           pagination={{ pageSize: 10 }}
         />
       </Card>
@@ -340,7 +351,6 @@ export default function StaffManagement() {
                 label="Số điện thoại" 
                 rules={[
                   { required: true, message: 'Vui lòng nhập SĐT' },
-                  { pattern: /^(\+84|0)[0-9\s-.]{8,12}$/},
                   () => ({
                     validator(_, value) {
                       if (!value) return Promise.resolve();

@@ -1,11 +1,12 @@
 import prisma from '../config/prisma.js';
+import { ROLE } from '../config/constants.js';
 
 export const vaccinesUsageController = {
   // Lấy danh sách lịch sử tiêm phòng
   getAll: async (request, reply) => {
     try {
       const whereClause = {};
-      if (request.user.role === 'FARM_WORKER') {
+      if (request.user.role === ROLE.FARM_WORKER) {
         const allowedBarns = await prisma.staff_barns.findMany({
           where: { staff_id: request.user.staff_id },
           select: { barn_id: true }

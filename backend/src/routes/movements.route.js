@@ -2,6 +2,7 @@
 
 import prisma from "../config/prisma.js";
 import { verifyToken } from "../middleware/auth.js";
+import { LIFECYCLE, BARN_STATUS } from "../config/constants.js";
 
 export default async function movementsRoute(app) {
 
@@ -148,11 +149,11 @@ export default async function movementsRoute(app) {
 
           const barn = await tx.barns.findUnique({
             where: { id: Number(to_barn_id) },
-            include: { _count: { select: { pigs: { where: { lifecycle_status: 'ACTIVE' } } } } }
+            include: { _count: { select: { pigs: { where: { lifecycle_status: LIFECYCLE.ACTIVE } } } } }
           });
           if (!barn) throw new Error("Không tìm thấy chuồng");
 
-          if (barn.status === 'MAINTENANCE') {
+          if (barn.status === BARN_STATUS.MAINTENANCE) {
             throw new Error("Chuồng đang bảo trì, không thể chuyển lợn đến");
           }
 
@@ -161,7 +162,7 @@ export default async function movementsRoute(app) {
           });
           if (!pigs.length) throw new Error("Không tìm thấy lợn");
 
-          const valid = pigs.filter((pig) => pig.lifecycle_status === "ACTIVE" && Number(pig.barn_id) !== Number(to_barn_id));
+          const valid = pigs.filter((pig) => pig.lifecycle_status === LIFECYCLE.ACTIVE && Number(pig.barn_id) !== Number(to_barn_id));
           if (!valid.length) throw new Error("Không có lợn hợp lệ để chuyển");
 
           const totalAfterMove = barn._count.pigs + valid.length;

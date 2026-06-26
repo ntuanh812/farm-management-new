@@ -62,7 +62,7 @@
     letter-spacing: 1px;
   }
 
-  // ✅ Scroll toàn sidebar (không nháy)
+  
   .ant-menu {
     flex: 1;
     overflow-y: scroll; // 🔥 fix nháy scroll
@@ -211,7 +211,7 @@
 .ant-menu {
   &-item {
     font-weight: 600;
-    font-size: 20px;
+    font-size: 18px;
     padding-left: 20px !important;
 
     &:hover {

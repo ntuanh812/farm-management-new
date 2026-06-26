@@ -1,10 +1,11 @@
 import prisma from "../config/prisma.js";
+import { LIFECYCLE, PIG_CATEGORY, GENDER, ROLE } from "../config/constants.js";
 
 export const farrowingsController = {
   getAll: async (request, reply) => {
     try {
       const whereClause = {};
-      if (request.user.role === "FARM_WORKER") {
+      if (request.user.role === ROLE.FARM_WORKER) {
         const allowedPigs = await prisma.pigs.findMany({
           where: {
             barns: {
@@ -103,9 +104,9 @@ export const farrowingsController = {
               pigletData.push({
                 name: `Lợn con ổ ${farrowingId} - ${i + 1}`,
                 barn_id,
-                category: "PIGLET",
-                lifecycle_status: "ACTIVE",
-                gender: "male",
+                category: PIG_CATEGORY.PIGLET,
+                lifecycle_status: LIFECYCLE.ACTIVE,
+                gender: GENDER.MALE,
                 dob: new Date(farrow_date),
                 entry_date: new Date(farrow_date),
                 entry_weight: avg_weight,
@@ -172,7 +173,7 @@ export const farrowingsController = {
               ? Number((total_weight / total_piglets).toFixed(2))
               : 0;
           await tx.pigs.updateMany({
-            where: { farrowing_id: Number(farrowingId), category: "PIGLET" },
+            where: { farrowing_id: Number(farrowingId), category: PIG_CATEGORY.PIGLET },
             data: { entry_weight: avg_weight, current_weight: avg_weight },
           });
         }

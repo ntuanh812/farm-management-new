@@ -1,10 +1,11 @@
 import prisma from '../config/prisma.js';
+import { ROLE, LIFECYCLE } from '../config/constants.js';
 
 export const deathsController = {
   getAll: async (request, reply) => {
     try {
       const whereClause = {};
-      if (request.user.role === 'FARM_WORKER') {
+      if (request.user.role === ROLE.FARM_WORKER) {
         const allowedPigs = await prisma.pigs.findMany({
           where: { barns: { staff_barns: { some: { staff_id: request.user.staff_id } } } },
           select: { id: true }
@@ -60,7 +61,7 @@ export const deathsController = {
         
         await tx.pigs.update({
           where: { id: Number(pig_id) },
-          data: { lifecycle_status: "DEAD", updated_at: new Date() }
+          data: { lifecycle_status: LIFECYCLE.DEAD, updated_at: new Date() }
         });
       });
 

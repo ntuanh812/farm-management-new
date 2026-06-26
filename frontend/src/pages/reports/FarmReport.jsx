@@ -93,10 +93,9 @@ export default function FarmReport() {
     },
     { title: 'Tên Vaccine', dataIndex: 'vaccine_name', key: 'vaccine_name' },
     { 
-      title: 'Số mũi đã tiêm', 
-      dataIndex: 'total_doses', 
-      key: 'total_doses',
-      render: (val) => <Text strong>{Number(val).toLocaleString('vi-VN')} mũi</Text>
+      title: 'Số lượng đã dùng', 
+      key: 'total_quantity',
+      render: (_, record) => <Text strong>{Number(record.total_quantity).toLocaleString('vi-VN')} {record.unit}</Text>
     }
   ];
 

@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { LIFECYCLE, BARN_STATUS } from '../config/constants.js';
 
 export const barnsController = {
   // Lấy danh sách chuồng trại kèm số lượng lợn hiện tại
@@ -15,7 +16,7 @@ export const barnsController = {
         where: whereClause,
         include: {
           _count: {
-            select: { pigs: { where: { lifecycle_status: 'ACTIVE' } } }
+            select: { pigs: { where: { lifecycle_status: LIFECYCLE.ACTIVE } } }
           }
         },
         orderBy: { created_at: 'desc' }
@@ -54,7 +55,7 @@ export const barnsController = {
           name: name.trim(),
           capacity: Number(capacity),
           barn_type,
-          status: status || 'ACTIVE',
+          status: status || BARN_STATUS.ACTIVE,
           note: note || null
         }
       });
@@ -110,7 +111,7 @@ export const barnsController = {
     const { id } = request.params;
     try {
       const activePigsCount = await prisma.pigs.count({
-        where: { barn_id: Number(id), lifecycle_status: 'ACTIVE' }
+        where: { barn_id: Number(id), lifecycle_status: LIFECYCLE.ACTIVE }
       });
       
       if (activePigsCount > 0) {

@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import prisma from "../config/prisma.js";
 import { verifyToken, authorizeRoles } from "../middleware/auth.js";
+import { LIFECYCLE, REPORT_STATUS } from "../config/constants.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads");
@@ -147,7 +148,7 @@ export default async function pigReportsRoute(app) {
         return reply
           .code(404)
           .send({ success: false, message: "Không tìm thấy báo cáo" });
-      if (report.status === "da_xu_ly")
+      if (report.status === REPORT_STATUS.DONE)
         return reply
           .code(400)
           .send({
@@ -298,7 +299,7 @@ export default async function pigReportsRoute(app) {
         return reply
           .code(404)
           .send({ success: false, message: "Báo cáo không tồn tại" });
-      if (report.status === "da_xu_ly")
+      if (report.status === REPORT_STATUS.DONE)
         return reply
           .code(400)
           .send({

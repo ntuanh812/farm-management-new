@@ -3,9 +3,39 @@ import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { GENDER, ROLE } from "../config/constants.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads");
+
+// ── Shared Validation ────────────────────────────────────
+// Trả về { error: string } nếu có lỗi, hoặc { cleanPhone: string|null } nếu OK
+function validateStaffInput({ full_name, email, phone, gender }) {
+  if (
+    !full_name ||
+    typeof full_name !== "string" ||
+    full_name.trim().length === 0 ||
+    full_name.length > 100
+  ) {
+    return { error: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)" };
+  }
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Email không đúng định dạng" };
+  }
+
+  const cleanPhone = phone ? String(phone).replace(/[\s-.]/g, "") : null;
+  if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
+    return { error: "Số điện thoại không hợp lệ" };
+  }
+
+  const validGenders = [GENDER.MALE, GENDER.FEMALE, GENDER.OTHER];
+  if (gender && !validGenders.includes(gender)) {
+    return { error: "Giới tính không hợp lệ" };
+  }
+
+  return { cleanPhone };
+}
 
 export const staffController = {
   // 1. Lấy danh sách nhân sự tổng hợp
@@ -49,8 +79,8 @@ export const staffController = {
 
       // Đưa ADMIN lên đầu danh sách
       data.sort((a, b) => {
-        const aIsAdmin = a.role_code === "ADMIN" ? 0 : 1;
-        const bIsAdmin = b.role_code === "ADMIN" ? 0 : 1;
+        const aIsAdmin = a.role_code === ROLE.ADMIN ? 0 : 1;
+        const bIsAdmin = b.role_code === ROLE.ADMIN ? 0 : 1;
         return aIsAdmin - bIsAdmin;
       });
 
@@ -65,7 +95,7 @@ export const staffController = {
   },
 
   // 3. Thêm nhân viên & Phân công chuồng (Dùng Transaction)
-  createstaff: async (request, reply) => {
+  createStaff: async (request, reply) => {
     const {
       full_name,
       phone,
@@ -79,37 +109,11 @@ export const staffController = {
     } = request.body;
 
     // Validate dữ liệu chặt chẽ (chống sửa F12 hoặc gửi bằng Postman)
-    if (
-      !full_name ||
-      typeof full_name !== "string" ||
-      full_name.trim().length === 0 ||
-      full_name.length > 100
-    ) {
-      return reply.code(400).send({
-        success: false,
-        message: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)",
-      });
+    const validation = validateStaffInput({ full_name, email, phone, gender });
+    if (validation.error) {
+      return reply.code(400).send({ success: false, message: validation.error });
     }
-
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return reply
-        .code(400)
-        .send({ success: false, message: "Email không đúng định dạng" });
-    }
-
-    const cleanPhone = phone ? String(phone).replace(/[\s-.]/g, "") : null;
-    if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
-      return reply
-        .code(400)
-        .send({ success: false, message: "Số điện thoại không hợp lệ" });
-    }
-
-    const validGenders = ["male", "female", "other"];
-    if (gender && !validGenders.includes(gender)) {
-      return reply
-        .code(400)
-        .send({ success: false, message: "Giới tính không hợp lệ" });
-    }
+    const { cleanPhone } = validation;
 
     try {
       const staffId = await prisma.$transaction(async (tx) => {
@@ -171,7 +175,7 @@ export const staffController = {
   },
 
   // 3.5 Cập nhật nhân viên & Phân công chuồng
-  updatestaff: async (request, reply) => {
+  updateStaff: async (request, reply) => {
     const { id } = request.params;
     const {
       full_name,
@@ -185,37 +189,12 @@ export const staffController = {
       avatar,
     } = request.body;
 
-    if (
-      !full_name ||
-      typeof full_name !== "string" ||
-      full_name.trim().length === 0 ||
-      full_name.length > 100
-    ) {
-      return reply.code(400).send({
-        success: false,
-        message: "Vui lòng nhập tên nhân viên hợp lệ (tối đa 100 ký tự)",
-      });
+    // Dùng chung hàm validate — tránh lặp code
+    const validation = validateStaffInput({ full_name, email, phone, gender });
+    if (validation.error) {
+      return reply.code(400).send({ success: false, message: validation.error });
     }
-
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return reply
-        .code(400)
-        .send({ success: false, message: "Email không đúng định dạng" });
-    }
-
-    const cleanPhone = phone ? String(phone).replace(/[\s-.]/g, "") : null;
-    if (cleanPhone && !/^(\+84|0)[0-9]{8,10}$/.test(cleanPhone)) {
-      return reply
-        .code(400)
-        .send({ success: false, message: "Số điện thoại không hợp lệ" });
-    }
-
-    const validGenders = ["male", "female", "other"];
-    if (gender && !validGenders.includes(gender)) {
-      return reply
-        .code(400)
-        .send({ success: false, message: "Giới tính không hợp lệ" });
-    }
+    const { cleanPhone } = validation;
 
     try {
       const oldAvatar = await prisma.$transaction(async (tx) => {

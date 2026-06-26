@@ -1,10 +1,11 @@
 import prisma from '../config/prisma.js';
+import { ROLE } from '../config/constants.js';
 
 export const breedingsController = {
   getAll: async (request, reply) => {
     try {
       const whereClause = {};
-      if (request.user.role === 'FARM_WORKER') {
+      if (request.user.role === ROLE.FARM_WORKER) {
         const allowedPigs = await prisma.pigs.findMany({
           where: { barns: { staff_barns: { some: { staff_id: request.user.staff_id } } } },
           select: { id: true }
